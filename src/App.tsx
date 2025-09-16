@@ -302,7 +302,7 @@ function AppInner() {
 // Si NO hay sesión lista, muestra pantalla con botón de login (popup).
 export default function App() {
   const { ready, account, signIn } = useAuth();
-
+  console.log('[Auth] ready:', ready, 'account:', account?.username);
   if (!ready) {
     return (
       <div className="center muted" style={{ padding: 24 }}>

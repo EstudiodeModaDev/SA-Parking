@@ -1,6 +1,7 @@
+// src/auth/AuthProvider.tsx
 import * as React from 'react';
 import type { AccountInfo } from '@azure/msal-browser';
-import { initMsalOnce, ensureLogin, getAccessToken, logout, msal } from './msal';
+import { initMSAL, ensureLogin, getAccessToken, logout } from './msal';
 
 type AuthCtx = {
   ready: boolean;
@@ -16,20 +17,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [ready, setReady] = React.useState(false);
   const [account, setAccount] = React.useState<AccountInfo | null>(null);
 
-  // Inicializa MSAL y procesa posible redirect (#code) al cargar la app.
+  // Solo inicializa MSAL (no forza login)
   React.useEffect(() => {
     let cancel = false;
     (async () => {
       try {
-        await initMsalOnce();
-        const acc = msal.getActiveAccount() ?? msal.getAllAccounts()[0] ?? null;
+        await initMSAL();
         if (!cancel) {
-          setAccount(acc);
+          // si ya había sesión previa, refléjala
+          const acc = (window as any)._skip_auto_login
+            ? (null)
+            : (/* opcional: intentar “rehidratar” sesión */ null);
+          if (acc) setAccount(acc);
           setReady(true);
         }
       } catch (err) {
         console.error('[AuthProvider] auto-login error:', err);
-        if (!cancel) setReady(true); // Listo para mostrar botón de login
+        if (!cancel) setReady(true);
       }
     })();
     return () => { cancel = true; };
@@ -48,8 +52,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const getToken = React.useCallback(async () => {
-    const token = await getAccessToken();
-    return token;
+    return getAccessToken();
   }, []);
 
   const value = React.useMemo<AuthCtx>(() => ({

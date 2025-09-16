@@ -8,8 +8,8 @@ import {
 
 export const msal = new PublicClientApplication({
   auth: {
-    clientId: '00000003-0000-0000-c000-000000000000',
-    authority: 'https://login.microsoftonline.com/6c4c7443-3903-433c-a2c4-c45a98a8971d',
+    clientId: '60d9a880-0f6c-4e14-b17a-1cc06ea9ba8a',
+    authority: 'https://login.microsoftonline.com/cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c',
     redirectUri: window.location.origin, // Debe estar en SPA redirect URIs
   },
   cache: { cacheLocation: 'localStorage' },

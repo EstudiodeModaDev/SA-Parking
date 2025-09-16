@@ -65,13 +65,7 @@ export function useReservar(
     turn: Exclude<TurnType, 'Dia'>
   ) => {
     const items = await reservationsSvc.getAll({
-      filter: [
-        // 👇 ajusta si tu lookup interno NO es SpotIdLookupId
-        `fields/SpotId eq ${Number(slotId)}`,
-        `fields/Date eq '${dateISO}'`,
-        `fields/Turn eq '${turn}'`,
-        `(fields/Status ne 'Cancelada')`,
-      ].join(' and '),
+
       top: 1_000, // margen de seguridad
       orderby: 'fields/ID asc',
     });
@@ -203,4 +197,5 @@ export function useReservar(
     reservar,
   };
 }
+
 

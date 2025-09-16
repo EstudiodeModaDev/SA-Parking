@@ -1,7 +1,7 @@
-// src/services/SharedServices.ts
+// src/Services/SharedServices.ts
 import { UsuariosParkingService } from './UsuariosParking.service';
 
-export const norm = (s: unknown) => String(s ?? '').trim().toUpperCase();
+const norm = (s: unknown) => String(s ?? '').trim();
 
 export class SharedServices {
   private usuariosSvc: UsuariosParkingService;
@@ -12,41 +12,64 @@ export class SharedServices {
 
   /**
    * Devuelve el rol del usuario según la lista 'usuariosparking'.
-   * Prioriza buscar por la columna 'Correo' (Internal Name).
-   * Fallback: intenta por Title si así guardaron el correo.
+   * Busca primero por la columna 'Correo' (internal name). Si no existe, hace fallback a 'Title'.
+   * Retorna siempre 'admin' o 'usuario'.
    */
-  public async getRole(userEmail: string): Promise<string> {
-    if (!userEmail) return 'Usuario';
+  public async getRole(userEmail: string): Promise<'admin' | 'usuario'> {
+    const raw = norm(userEmail);
+    if (!raw) return 'usuario';
 
-    // Escapa comillas (OData)
-    const emailSafe = String(userEmail).replace(/'/g, "''");
-    const emailLower = emailSafe.toLowerCase();
+    // escape OData + a minúsculas (para usar con tolower())
+    const emailLower = raw.toLowerCase().replace(/'/g, "''");
 
     try {
-      // 1) intenta por Correo (recomendado)
-      const porCorreo = await this.usuariosSvc.getAll({
+      // 1) Por columna Correo
+      const byCorreo = await this.usuariosSvc.getAll({
         filter: `tolower(fields/Correo) eq '${emailLower}'`,
         orderby: 'fields/Title asc',
         top: 1,
       });
 
-      const first = porCorreo[0];
-      if (first?.Rol) return first.Rol;
+      let row: any = Array.isArray(byCorreo) ? byCorreo[0] : null;
 
-      // 2) fallback: si el correo lo guardan en Title
-      const porTitle = await this.usuariosSvc.getAll({
-        filter: `tolower(fields/Title) eq '${emailLower}'`,
-        orderby: 'fields/Title asc',
-        top: 1,
-      });
+      // 2) Fallback por Title si no hubo match por Correo
+      if (!row) {
+        const byTitle = await this.usuariosSvc.getAll({
+          filter: `tolower(fields/Title) eq '${emailLower}'`,
+          orderby: 'fields/Title asc',
+          top: 1,
+        });
+        row = Array.isArray(byTitle) ? byTitle[0] : null;
+      }
 
-      const alt = porTitle[0];
-      if (alt?.Rol) return alt.Rol;
-
-      return 'Usuario';
+      const rolRaw = norm(row?.Rol || row?.rol);
+      const rol = rolRaw.toLowerCase();
+      return (rol === 'admin') ? 'admin' : 'usuario';
     } catch (err) {
       console.error('[SharedServices.getRole] error:', err);
-      return 'Usuario';
+      return 'usuario';
+    }
+  }
+
+  /**
+   * ¿El usuario está marcado como permitido? (útil para mostrar botón 'Cambiar rol', etc.)
+   * Acepta valores true/1/'true' en la columna 'Permitidos' (o variantes comunes).
+   */
+  public async isUserPermitted(userEmail: string): Promise<boolean> {
+    const raw = norm(userEmail);
+    if (!raw) return false;
+
+    const emailLower = raw.toLowerCase().replace(/'/g, "''");
+    try {
+      const res = await this.usuariosSvc.getAll({
+        filter: `tolower(fields/Correo) eq '${emailLower}' or tolower(fields/Title) eq '${emailLower}'`,
+        top: 1,
+      });
+      const row: any = Array.isArray(res) ? res[0] : null;
+      const v = row?.Permitidos ?? row?.Permitido ?? row?.permitidos ?? row?.permitido;
+      return v === true || v === 1 || String(v).toLowerCase() === 'true';
+    } catch {
+      return false;
     }
   }
 }

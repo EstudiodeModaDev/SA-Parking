@@ -7,11 +7,9 @@ import MisReservas from './Components/Mis-Reservas/mis-reservas';
 import AdminCells from './Components/AdminCells/admin-cells';
 import AdminSettings from './Components/Admin-Settings/AdminSettings';
 import ColaboradoresInscritos from './Components/Colaboradores-Permanentes/Colaboradores';
+import { ToastProvider } from './Components/Toast/ToastProvider';
 import Reportes from './Components/Reportes/reportes';
 import PicoPlacaAdmin from './Components/PicoPlaca/PicoPlaca';
-
-import { ToastProvider } from './Components/Toast/ToastProvider';
-import { makeSettingsPortSingle } from './Ports/settingsPort';
 
 import type { GetAllOpts } from './Models/Commons';
 
@@ -48,8 +46,9 @@ function useRoleHelpers() {
     const emailSafe = email.replace(/'/g, "''");
 
     const opt: GetAllOpts = { filter: `Title eq '${emailSafe}'`, top: 1 as any };
-    const rows = await usuariosParking.getAll(opt);
-    const user = Array.isArray(rows) ? rows[0] : null;
+    const res = await usuariosParking.getAll(opt);
+    const rows = Array.isArray(res) ? res : [];
+    const user = rows[0];
     if (!user) throw new Error(`Usuario no encontrado: ${email}`);
 
     const id = (user as any).ID ?? (user as any).Id ?? (user as any).id;
@@ -68,8 +67,9 @@ function useRoleHelpers() {
     const emailSafe = email.replace(/'/g, "''");
 
     const opt: GetAllOpts = { filter: `Title eq '${emailSafe}'`, top: 1 as any };
-    const rows = await usuariosParking.getAll(opt);
-    const user = Array.isArray(rows) ? rows[0] : null;
+    const res = await usuariosParking.getAll(opt);
+    const rows = Array.isArray(res) ? res : [];
+    const user = rows[0];
     if (!user) return false;
 
     const raw =
@@ -91,12 +91,12 @@ function AppInner() {
   const [changingRole, setChangingRole] = useState(false);
   const [canChangeRole, setCanChangeRole] = useState(false);
 
-  const settingsPort = useMemo(() => makeSettingsPortSingle(), []);
   const { graph, shared } = useGraphServices();
   const userSvc = useMemo(() => new UserService(graph), [graph]);
   const { signOut } = useAuth();
 
   const { changeUser, isUserPermitted } = useRoleHelpers();
+  const {settings} = useGraphServices();
 
   const onChangeRole = async () => {
     if (!user?.mail || changingRole) return;
@@ -181,7 +181,7 @@ function AppInner() {
         Cargando permisos…
       </div>
     );
-    }
+  }
 
   return (
     <ToastProvider>
@@ -260,7 +260,7 @@ function AppInner() {
           {isAdmin && selected === 'admin' && (
             <div className="center">
               <h2>Administración</h2>
-              <AdminSettings port={settingsPort} />
+              <AdminSettings settingsSvc={settings} />
             </div>
           )}
 
@@ -297,7 +297,7 @@ function AppInner() {
 }
 
 // ------------------ App raíz ------------------
-// Si NO hay sesión, muestra botón para iniciar sesión (popup).
+// Si NO hay sesión lista, muestra pantalla con botón de login (popup).
 export default function App() {
   const { ready, account, signIn } = useAuth();
 

@@ -1,32 +1,71 @@
-// src/components/PicoPlaca/PicoPlacaAdmin.tsx
+// src/Components/PicoPlaca/PicoPlaca.tsx
 import * as React from 'react';
-import styles from './PicoPlacaAdmin.module.css';
-import ToggleSwitch from '../ToggleSwitch/ToggleSwitch';
-
 import { useGraphServices } from '../../graph/GraphServicesContext';
-import type { Settings } from '../../Services/Setting.service'
-import { dayLabel, isValidPattern } from '../../Hooks/utils';
 
-// Modelo local para filas de Pico y Placa (lo que muestra la UI)
+// ---------- Tipos que esperamos del servicio ----------
 type PicoPlacaRow = {
-  ID: string;
-  Title: string; // 1..5 (lunes..viernes)
-  Moto: string;
-  Carro: string;
+  ID: string;        // item.id en SharePoint/Graph
+  Title: string;     // día (Lunes, Martes, ... o 1..7)
+  Moto: string;      // ej: "1,3,5,7,9"
+  Carro: string;     // ej: "0,2,4,6,8"
 };
 
-const DEFAULT_SETTINGS = {
-  VisibleDays: 7,
-  TyC: '',
-  InicioManana: '07:00',
-  FinalManana: '12:00',
-  InicioTarde: '12:00',
-  FinalTarde: '18:00',
-  PicoPlaca: false,
-} as const;
+// ---------- Helpers locales ----------
+const isValidPattern = (s: string) =>
+  /^\s*\d(?:\s*,\s*\d)*\s*$/.test(String(s ?? '').trim());
+
+const dayLabel = (title: string) => {
+  // Acepta "1..7" o nombres
+  const t = String(title ?? '').trim();
+  const map = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+  const n = Number(t);
+  if (Number.isFinite(n) && n >= 1 && n <= 7) return map[n - 1];
+  // Normaliza capitalización
+  const cap = t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+  return map.includes(cap) ? cap : t;
+};
+
+// Pequeño switch sin dependencias
+function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      onClick={() => onChange(!checked)}
+      role="switch"
+      aria-checked={checked}
+      style={{
+        padding: 6,
+        borderRadius: 999,
+        width: 56,
+        background: checked ? '#22c55e' : '#cbd5e1',
+        border: 'none',
+        cursor: 'pointer',
+        position: 'relative',
+      }}
+      title={checked ? 'Desactivar Pico y Placa' : 'Activar Pico y Placa'}
+    >
+      <span
+        style={{
+          display: 'inline-block',
+          width: 22,
+          height: 22,
+          borderRadius: '999px',
+          background: '#fff',
+          transition: 'transform 150ms',
+          transform: `translateX(${checked ? 28 : 0}px)`,
+          boxShadow: '0 1px 4px rgba(0,0,0,.2)',
+        }}
+      />
+    </button>
+  );
+}
+
+// Simulación de notificación (cámbialo si ya tienes un hook real)
+async function NotifyPicoPlaca() {
+  alert('Se enviará una notificación de cambio de Pico y Placa.');
+}
 
 const PicoPlacaAdmin: React.FC = () => {
-  const { picoYPlaca: ppSvc, settings: settingsSvc } = useGraphServices();
+  const { picoYPlaca, settings } = useGraphServices();
 
   const [rows, setRows] = React.useState<PicoPlacaRow[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -34,108 +73,86 @@ const PicoPlacaAdmin: React.FC = () => {
   const [error, setError] = React.useState<string | null>(null);
   const [ok, setOk] = React.useState<string | null>(null);
 
-  // settings
-  const [settingsItem, setSettingsItem] = React.useState<Settings | null>(null);
-  const [picoPlacaEnabled, setPicoPlacaEnabled] = React.useState<boolean>(false);
+  const [pypEnabled, setPypEnabled] = React.useState(false);
+  const disabled = !pypEnabled;
 
-  // ======= Carga inicial =======
+  // --------- Carga inicial (tabla + flag Settings.PicoPlaca) ----------
   React.useEffect(() => {
     let cancel = false;
     (async () => {
       try {
         setLoading(true);
         setError(null);
+        setOk(null);
 
-        // 1) Cargar filas de pico y placa
-        const pp = await ppSvc.getAll();
-        if (!cancel) {
-          setRows(
-            (pp as any[]).map(i => ({
-              ID: String(i.ID),
-              Title: String(i.Title ?? ''),
-              Moto: String(i.Moto ?? ''),
-              Carro: String(i.Carro ?? ''),
-            }))
-            .sort((a, b) => Number(a.Title) - Number(b.Title))
-          );
-        }
+        const [pp, cfg] = await Promise.all([
+          picoYPlaca.getAll({ orderby: 'fields/Title asc', top: 100 }),
+          settings.get('1'),
+        ]);
 
-        // 2) Cargar/crear settings (primer registro)
-        const list = await settingsSvc.getAll({ top: 1 });
-        let s: Settings;
-        if (!list.length) {
-          s = await settingsSvc.create({
-            VisibleDays: DEFAULT_SETTINGS.VisibleDays,
-            TerminosyCondiciones: DEFAULT_SETTINGS.TyC,
-            InicioManana: DEFAULT_SETTINGS.InicioManana,
-            FinalManana: DEFAULT_SETTINGS.FinalManana,
-            InicioTarde: DEFAULT_SETTINGS.InicioTarde,
-            FinalTarde: DEFAULT_SETTINGS.FinalTarde,
-            PicoPlaca: DEFAULT_SETTINGS.PicoPlaca,
-          });
-        } else {
-          s = list[0];
-        }
-        if (!cancel) {
-          setSettingsItem(s);
-          setPicoPlacaEnabled(!!s.PicoPlaca);
-        }
+        if (cancel) return;
+        const list = (Array.isArray(pp) ? pp : []).map((x: any) => ({
+          ID: String(x?.ID ?? x?.Id ?? x?.id),
+          Title: String(x?.Title ?? ''),
+          Moto: String(x?.Moto ?? ''),
+          Carro: String(x?.Carro ?? ''),
+        }));
+        setRows(list);
+        setPypEnabled(Boolean((cfg as any)?.PicoPlaca ?? false));
       } catch (e: any) {
-        if (!cancel) setError(e?.message ?? 'No se pudieron cargar los datos.');
+        if (!cancel) setError(e?.message ?? 'No se pudo cargar Pico y Placa.');
       } finally {
         if (!cancel) setLoading(false);
       }
     })();
-    return () => { cancel = true; };
-  }, [ppSvc, settingsSvc]);
+    return () => {
+      cancel = true;
+    };
+  }, [picoYPlaca, settings]);
 
-  // ======= Cambiar switch (debounced save) =======
-  const onTogglePicoPlaca = React.useMemo(() => {
+  // --------- Cambiar switch con debounce ----------
+  const onToggle = React.useMemo(() => {
     let t: any;
     return (next: boolean) => {
-      setPicoPlacaEnabled(next);
+      setPypEnabled(next);
       setOk(null);
       setError(null);
-      if (!settingsItem) return;
-
       clearTimeout(t);
       t = setTimeout(async () => {
         try {
-          const updated = await settingsSvc.update(settingsItem.ID, { PicoPlaca: next });
-          setSettingsItem(updated);
+          await settings.update('1', { PicoPlaca: next } as any);
           setOk(`Pico y Placa ${next ? 'activado' : 'desactivado'}.`);
         } catch (e: any) {
-          setError(e?.message ?? 'No se pudo guardar el ajuste Pico y Placa.');
+          setError(e?.message ?? 'No se pudo guardar el estado de Pico y Placa.');
+          // revertir si falla
+          setPypEnabled((v) => !v);
         }
       }, 400);
     };
-  }, [settingsItem, settingsSvc]);
+  }, [settings]);
 
-  // ======= Editar inputs de una fila (solo UI) =======
+  // --------- Editar celdas en memoria ----------
   const editCell = (id: string, key: 'Moto' | 'Carro', value: string) => {
-    if (!picoPlacaEnabled) return;
+    if (disabled) return;
     setRows(prev => prev.map(r => (r.ID === id ? { ...r, [key]: value } : r)));
     setOk(null);
     setError(null);
   };
 
-  // ======= Guardar fila =======
+  // --------- Guardar una fila ----------
   const saveRow = async (row: PicoPlacaRow) => {
-    if (!picoPlacaEnabled) return;
-
+    if (disabled) return;
     const { Moto, Carro } = row;
     if (!isValidPattern(Moto) || !isValidPattern(Carro)) {
       setError('Formato inválido. Usa dígitos separados por comas. Ej: "6,9" o "0,2,4,6,8".');
       return;
     }
-
     setSavingId(row.ID);
     setOk(null);
     setError(null);
     try {
-      await ppSvc.update(row.ID, { Moto, Carro } as any);
-      setRows(prev => prev.map(r => (r.ID === row.ID ? { ...r, Moto, Carro } : r)));
-      setOk(`Fila ${row.Title} guardada.`);
+      await picoYPlaca.update(row.ID, { Moto, Carro } as any);
+      setOk(`Fila ${dayLabel(row.Title)} guardada.`);
     } catch (e: any) {
       setError(e?.message ?? 'No se pudo guardar la fila.');
     } finally {
@@ -143,33 +160,61 @@ const PicoPlacaAdmin: React.FC = () => {
     }
   };
 
-  if (loading) return <div>Cargando Pico y Placa…</div>;
-
-  const ppDisabled = !picoPlacaEnabled;
+  if (loading) return <div style={{ padding: 12 }}>Cargando Pico y Placa…</div>;
 
   return (
-    <section className={styles.section}>
-      <div className={styles.card}>
-        <h2 className={styles.title}>Pico y Placa Medellín</h2>
-
-        <div className={styles.switchRow}>
-          <ToggleSwitch checked={picoPlacaEnabled} onChange={onTogglePicoPlaca} />
+    <section style={{ maxWidth: 900, margin: '0 auto', display: 'grid', gap: 12 }}>
+      <div
+        style={{
+          background: '#fff',
+          borderRadius: 12,
+          boxShadow: '0 2px 10px rgba(0,0,0,.08)',
+          padding: 16,
+          display: 'grid',
+          gap: 12,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Pico y Placa Medellín</h2>
+          <Toggle checked={pypEnabled} onChange={onToggle} />
+          <span style={{ fontSize: 12, color: '#64748b' }}>
+            {pypEnabled ? 'Habilitado' : 'Deshabilitado'}
+          </span>
         </div>
 
-        {error && <div className={styles.error}>{error}</div>}
-        {ok && <div className={styles.ok}>{ok}</div>}
+        {error && (
+          <div style={{ color: '#b91c1c', background: '#fee2e2', padding: 8, borderRadius: 8 }}>
+            {error}
+          </div>
+        )}
+        {ok && (
+          <div style={{ color: '#065f46', background: '#d1fae5', padding: 8, borderRadius: 8 }}>
+            {ok}
+          </div>
+        )}
 
-        <div
-          className={`${styles.tableWrap} ${ppDisabled ? styles.isDisabled : ''}`}
-          aria-disabled={ppDisabled}
-        >
-          <table className={styles.table}>
-            <thead>
+        <div style={{ position: 'relative' }}>
+          <table
+            style={{
+              width: '100%',
+              borderCollapse: 'collapse',
+              border: '1px solid #e2e8f0',
+              borderRadius: 8,
+              overflow: 'hidden',
+            }}
+          >
+            <thead style={{ background: '#f8fafc' }}>
               <tr>
-                <th>Día</th>
-                <th>Moto</th>
-                <th>Carro</th>
-                <th>Acción</th>
+                <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e2e8f0' }}>
+                  Día
+                </th>
+                <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e2e8f0' }}>
+                  Moto
+                </th>
+                <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e2e8f0' }}>
+                  Carro
+                </th>
+                <th style={{ padding: 8, borderBottom: '1px solid #e2e8f0' }}>Acción</th>
               </tr>
             </thead>
             <tbody>
@@ -178,35 +223,68 @@ const PicoPlacaAdmin: React.FC = () => {
                 const carroBad = !isValidPattern(r.Carro);
                 return (
                   <tr key={r.ID}>
-                    <td className={styles.day}>{dayLabel(r.Title)}</td>
-                    <td>
+                    <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>
+                      {dayLabel(r.Title)}
+                    </td>
+                    <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>
                       <input
-                        className={`${styles.input} ${motoBad ? styles.bad : ''}`}
                         value={r.Moto}
                         onChange={e => editCell(r.ID, 'Moto', e.target.value)}
                         placeholder="ej: 6,9"
-                        disabled={ppDisabled}
-                        readOnly={ppDisabled}
-                        tabIndex={ppDisabled ? -1 : 0}
+                        disabled={disabled}
+                        readOnly={disabled}
+                        style={{
+                          width: '100%',
+                          borderRadius: 8,
+                          border: `1px solid ${motoBad ? '#ef4444' : '#cbd5e1'}`,
+                          padding: '6px 8px',
+                          outline: 'none',
+                        }}
                       />
                     </td>
-                    <td>
+                    <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>
                       <input
-                        className={`${styles.input} ${carroBad ? styles.bad : ''}`}
                         value={r.Carro}
                         onChange={e => editCell(r.ID, 'Carro', e.target.value)}
-                        placeholder="ej: 6,9"
-                        disabled={ppDisabled}
-                        readOnly={ppDisabled}
-                        tabIndex={ppDisabled ? -1 : 0}
+                        placeholder="ej: 0,2,4,6,8"
+                        disabled={disabled}
+                        readOnly={disabled}
+                        style={{
+                          width: '100%',
+                          borderRadius: 8,
+                          border: `1px solid ${carroBad ? '#ef4444' : '#cbd5e1'}`,
+                          padding: '6px 8px',
+                          outline: 'none',
+                        }}
                       />
                     </td>
-                    <td>
+                    <td style={{ padding: 8, textAlign: 'center' }}>
                       <button
-                        className={styles.button}
                         onClick={() => saveRow(r)}
-                        disabled={ppDisabled || savingId === r.ID || motoBad || carroBad}
-                        title={ppDisabled ? 'Pico y Placa está deshabilitado' : 'Guardar cambios de esta fila'}
+                        disabled={disabled || savingId === r.ID || motoBad || carroBad}
+                        title={
+                          disabled
+                            ? 'Pico y Placa está deshabilitado'
+                            : motoBad || carroBad
+                            ? 'Formato inválido'
+                            : 'Guardar cambios'
+                        }
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: 8,
+                          border: 'none',
+                          background:
+                            disabled || motoBad || carroBad
+                              ? '#cbd5e1'
+                              : savingId === r.ID
+                              ? '#38bdf8'
+                              : '#0ea5e9',
+                          color: '#fff',
+                          cursor:
+                            disabled || motoBad || carroBad || savingId === r.ID
+                              ? 'default'
+                              : 'pointer',
+                        }}
                       >
                         {savingId === r.ID ? 'Guardando…' : 'Guardar'}
                       </button>
@@ -217,18 +295,46 @@ const PicoPlacaAdmin: React.FC = () => {
             </tbody>
           </table>
 
-          {ppDisabled && (
-            <div className={styles.overlayMsg}>
+          {disabled && (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'rgba(248,250,252,.7)',
+                display: 'grid',
+                placeItems: 'center',
+                fontSize: 14,
+                color: '#334155',
+              }}
+              aria-hidden="true"
+            >
               Pico y Placa está deshabilitado
             </div>
           )}
         </div>
 
-        <p className={styles.hint}>
-          Formato: dígitos 0–9 separados por comas. Ejemplos: <code>6,9</code>, <code>0,2,4,6,8</code>.
-        </p>
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <button
+            onClick={NotifyPicoPlaca}
+            disabled={disabled}
+            style={{
+              padding: '8px 12px',
+              borderRadius: 8,
+              border: '1px solid #0ea5e9',
+              background: disabled ? '#f1f5f9' : '#fff',
+              color: disabled ? '#94a3b8' : '#0ea5e9',
+              cursor: disabled ? 'default' : 'pointer',
+            }}
+            title={disabled ? 'Habilita Pico y Placa para notificar' : 'Enviar notificación'}
+          >
+            Notificar cambio de pico y placa
+          </button>
+        </div>
 
-        {/* Botón de notificación eliminado a petición: sin Notify */}
+        <p style={{ fontSize: 12, color: '#64748b', marginTop: 6 }}>
+          Formato: dígitos 0–9 separados por comas. Ejemplos: <code>6,9</code>,{' '}
+          <code>0,2,4,6,8</code>.
+        </p>
       </div>
     </section>
   );

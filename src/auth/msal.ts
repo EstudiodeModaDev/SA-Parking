@@ -1,44 +1,51 @@
 // src/auth/msal.ts
-import { PublicClientApplication, InteractionRequiredAuthError, type AccountInfo } from '@azure/msal-browser';
-
-let initialized = false;
+import {
+  PublicClientApplication,
+  InteractionRequiredAuthError,
+  EventType,
+  type AccountInfo,
+} from '@azure/msal-browser';
 
 export const msal = new PublicClientApplication({
   auth: {
-    clientId: '60d9a880-0f6c-4e14-b17a-1cc06ea9ba8a',
-    authority: 'https://login.microsoftonline.com/cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c',
-    redirectUri: window.location.origin,
+    clientId: '00000003-0000-0000-c000-000000000000',
+    authority: 'https://login.microsoftonline.com/6c4c7443-3903-433c-a2c4-c45a98a8971d',
+    redirectUri: window.location.origin, // Debe estar en SPA redirect URIs
   },
   cache: { cacheLocation: 'localStorage' },
 });
 
-export async function initMSAL() {
+let initialized = false;
+
+// ⚙️ inicializa y atiende eventos (login/acquireToken)
+export async function initializeMsal() {
   if (initialized) return;
-  await msal.initialize();   // <- MUY IMPORTANTE
+  await msal.initialize();                  // <- evita el error "uninitialized_public_client_application"
+  await msal.handleRedirectPromise();       // <- por si algún flujo usa redirect
+  msal.addEventCallback((e) => {
+    if (e.eventType === EventType.LOGIN_SUCCESS || e.eventType === EventType.ACQUIRE_TOKEN_SUCCESS) {
+      const acc = e.payload && (e.payload as any).account as AccountInfo | undefined;
+      if (acc) {
+        msal.setActiveAccount(acc);
+        // útil para depurar
+        console.log('[MSAL] active account set from event:', acc.username);
+      }
+    }
+  });
   initialized = true;
 }
 
-const SCOPES = [
-  // básicos OIDC (recomendado)
-  'openid', 'profile', 'email',
-  // lo que usa tu app
-  'User.Read', 'Sites.ReadWrite.All',
-];
+// Scopes: incluye login + Graph
+const SCOPES = ['openid','profile','email','User.Read','Sites.ReadWrite.All'];
 
-// Garantiza que siempre haya “active account”
-function ensureActiveAccount() {
-  const acc = msal.getActiveAccount() ?? msal.getAllAccounts()[0] ?? null;
-  if (acc) msal.setActiveAccount(acc);
-  return acc;
-}
-
-// Login interactivo (popup)
+// Login popup garantizando cuenta activa
 export async function ensureLogin(): Promise<AccountInfo> {
-  await initMSAL();
-  let account = ensureActiveAccount();
+  let account = msal.getActiveAccount() ?? msal.getAllAccounts()[0] ?? null;
   if (!account) {
     const res = await msal.loginPopup({ scopes: SCOPES, prompt: 'select_account' });
     account = res.account ?? msal.getAllAccounts()[0]!;
+    msal.setActiveAccount(account);
+  } else {
     msal.setActiveAccount(account);
   }
   return account;
@@ -46,10 +53,8 @@ export async function ensureLogin(): Promise<AccountInfo> {
 
 // Token
 export async function getAccessToken(): Promise<string> {
-  await initMSAL();
-  const account = ensureActiveAccount();
+  const account = msal.getActiveAccount() ?? msal.getAllAccounts()[0];
   if (!account) throw new Error('No hay sesión. Llama a ensureLogin() primero.');
-
   try {
     const res = await msal.acquireTokenSilent({ scopes: SCOPES, account });
     return res.accessToken;
@@ -62,9 +67,7 @@ export async function getAccessToken(): Promise<string> {
   }
 }
 
-// Logout
 export async function logout() {
-  await initMSAL();
-  const account = ensureActiveAccount();
+  const account = msal.getActiveAccount() ?? msal.getAllAccounts()[0];
   await msal.logoutPopup({ account });
 }

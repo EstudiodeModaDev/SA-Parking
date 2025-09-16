@@ -1,0 +1,246 @@
+/* === EXISTENTES (puedes dejar como están) === */
+.section { display: flex; justify-content: center; }
+.card {
+  box-sizing: border-box;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(30,41,59,0.08);
+  padding: 24px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+.title { font-size: 24px; color: #2563eb; margin-bottom: 16px; }
+.tableWrap { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; min-width: 720px; }
+.theadRow { background: #f1f5f9; }
+.th, .td { padding: 8px; text-align: left; }
+.pill { color: #fff; border-radius: 8px; padding: 2px 10px; font-size: 13px; font-weight: 500; }
+.cancelBtn { background: red; color: white; border: none; border-radius: 6px; padding: 4px 12px; cursor: pointer; }
+.button { background: #2563eb; color: #fff; border: none; border-radius: 8px; padding: 8px 18px; font-weight: 600; cursor: pointer; }
+.button:disabled { cursor: not-allowed; opacity: .6; }
+
+/* === NUEVO / MEJORADO === */
+
+/* Barra de filtros (form) */
+.form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 20px;
+
+  /* card look */
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 2px 12px rgba(30,41,59,0.06);
+  width: fit-content;          /* ocupa lo justo */
+  max-width: 100%;
+  margin-inline: auto;         /* centra el bloque blanco */
+}
+
+/* etiqueta + input apilados */
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+.input {
+  margin: 0;                   /* quitamos margen lateral anterior */
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  outline: none;
+  font: inherit;
+  background: #fff;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37,99,235,.15);
+}
+
+/* Mensajes */
+.info { color: #475569; font-size: 14px; }
+.error {
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+/* Paginación */
+.paginationBar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+/* Botones centrados */
+.paginationLeft {
+  flex: 1 1 auto;
+  display: flex;
+  justify-content: center;     /* 👈 centra los botones */
+  align-items: center;
+  gap: 10px;
+}
+
+/* Selector a la derecha */
+.paginationRight {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+/* Botones de página */
+.pageBtn {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  color: #111827;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s ease;
+}
+.pageBtn:hover { background: #f3f4f6; }
+.pageBtn:disabled { opacity: .6; cursor: not-allowed; }
+
+/* Texto "Página X" */
+.pageInfo { font-size: 14px; color: #64748b; }
+
+/* Selector de filas por página */
+.pageSizeLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #111827;
+}
+.pageSizeSelect {
+  padding: 6px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  outline: none;
+  font: inherit;
+}
+.pageSizeSelect:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37,99,235,.15);
+}
+
+/* ====== Top Bar ====== */
+.topBar {
+  display: flex;
+  flex-direction: column;   /* ⬅ apilar en columna */
+  align-items: center;      /* ⬅ centrar horizontalmente */
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+
+}
+
+/* ====== Segmentación (botones de modo) ====== */
+.segmented {
+  display: inline-flex;
+  border: 1px solid #e2e8f0;  /* slate-200 */
+  border-radius: 9999px;      /* pill */
+  overflow: hidden;
+  background: #f8fafc;        /* slate-50 */
+}
+
+.segmentBtn {
+  appearance: none;
+  border: 0;
+  padding: 8px 14px;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1;
+  background: transparent;
+  color: #334155;             /* slate-700 */
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, box-shadow .15s ease;
+}
+
+.segmentBtn + .segmentBtn {
+  border-left: 1px solid #e2e8f0;
+}
+
+.segmentBtn:hover {
+  background: #eef2ff;        /* indigo-50 */
+}
+
+.segmentBtn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, .35); /* focus ring */
+}
+
+.segmentBtn:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.segmentBtnActive {
+  background: #2563eb;        /* indigo-600 */
+  color: #fff;
+}
+
+/* ====== Formulario de fechas (solo historial) ====== */
+.form {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;             /* slate-700 */
+}
+
+.input {
+  height: 36px;
+  padding: 6px 10px;
+  border: 1px solid #cbd5e1;  /* slate-300 */
+  border-radius: 8px;
+  background: #fff;
+  color: #0f172a;             /* slate-900 */
+  min-width: 200px;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.input:hover {
+  border-color: #94a3b8;      /* slate-400 */
+}
+
+.input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, .2);
+}
+
+.button {
+  height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 10px;
+  background: #2563eb;
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: .2px;
+  cursor: pointer;
+  transition: transform .05s ease, box-shadow .15s ease, opacity .15s ease;
+}

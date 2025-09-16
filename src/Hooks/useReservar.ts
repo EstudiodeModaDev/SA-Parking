@@ -67,8 +67,7 @@ export function useReservar(
     const items = await reservationsSvc.getAll({
       filter: [
         // 👇 ajusta si tu lookup interno NO es SpotIdLookupId
-
-        //`fields/SpotId eq ${slotId} and`,
+        `fields/SpotIdLookupId eq ${Number(slotId)}`,
         `fields/Date eq '${dateISO}'`,
         `fields/Turn eq '${turn}'`,
         `(fields/Status ne 'Cancelada')`,
@@ -76,7 +75,6 @@ export function useReservar(
       top: 1_000, // margen de seguridad
       orderby: 'fields/ID asc',
     });
-    console.log(slotId)
     return Array.isArray(items) ? items.length : 0;
   }, [reservationsSvc]);
 
@@ -205,5 +203,3 @@ export function useReservar(
     reservar,
   };
 }
-
-

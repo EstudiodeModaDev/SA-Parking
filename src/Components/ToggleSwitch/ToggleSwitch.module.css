@@ -1,0 +1,77 @@
+:root {
+    --switch-width: 39px;
+    --switch-height: 17px;
+    --switch-padding: 2px;
+    --switch-radius: 999px;
+    --switch-border: 2px;
+    
+    --on-color: #27a9bf;      /* turquesa similar a tu captura */
+    --off-color: #e5e7eb;     /* slate-200 */
+    --text-on: #ffffff;
+    --text-off: #6b7280;      /* slate-500 */
+    --thumb: #ffffff;
+    --ring: rgba(59,130,246,.35);
+}   
+
+.switch {
+  position: relative;
+  width: var(--switch-width);
+  height: var(--switch-height);
+  padding: 0;
+  border: 2px solid #b6bcc7;
+  border-radius: var(--switch-radius);
+  background: var(--off-color);
+  cursor: pointer;
+  outline: none;
+  display: inline-flex;
+  align-items: center;
+  transition: background .2s ease, border-color .2s ease;
+  overflow: hidden;
+}
+
+.switch:focus-visible {
+  box-shadow: 0 0 0 4px var(--ring);
+}
+
+.switch.disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+/* Texto dentro del track */
+.trackText {
+  position: absolute;
+  left: 14px;
+  font: 700 14px/1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  color: var(--text-off);
+  user-select: none;
+}
+
+/* Thumb */
+.thumb {
+  position: absolute;
+  top: var(--switch-padding);
+  left: var(--switch-padding);
+  width: calc(var(--switch-height) - 2 * var(--switch-padding));
+  height: calc(var(--switch-height) - 2 * var(--switch-padding));
+  background: var(--thumb);
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(0,0,0,.25), inset 0 0 0 1px #cbd5e1;
+  transition: transform .22s ease;
+}
+
+/* Estado ON */
+.on {
+  background: var(--on-color);
+  border-color: #8ea0ad;
+}
+.on .trackText { color: var(--text-on); }
+
+.on .thumb {
+  transform: translateX(calc(var(--switch-width) - var(--switch-height)));
+}
+
+.switch.sm .trackText {
+  left: 7px;                 /* 14 / 2 */
+  font: 700 10px/1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; /* ~14 -> 10/11 */
+}

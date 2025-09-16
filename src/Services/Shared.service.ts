@@ -36,7 +36,6 @@ export class SharedServices {
       // 2) fallback: si el correo lo guardan en Title
       const porTitle = await this.usuariosSvc.getAll({
         filter: `tolower(fields/Title) eq '${emailLower}'`,
-        orderby: 'fields/Title asc',
         top: 1,
       });
 
@@ -50,3 +49,4 @@ export class SharedServices {
     }
   }
 }
+

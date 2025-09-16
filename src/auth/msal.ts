@@ -1,39 +1,53 @@
+// src/auth/msal.ts
 import { PublicClientApplication, InteractionRequiredAuthError, type AccountInfo } from '@azure/msal-browser';
+
+let initialized = false;
 
 export const msal = new PublicClientApplication({
   auth: {
-    clientId: '<APP_CLIENT_ID>',
-    authority: 'https://login.microsoftonline.com/<TENANT_ID>',
+    clientId: '60d9a880-0f6c-4e14-b17a-1cc06ea9ba8a',
+    authority: 'https://login.microsoftonline.com/cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c',
     redirectUri: window.location.origin,
   },
-  cache: { cacheLocation: 'localStorage' }, //persistir sesión
+  cache: { cacheLocation: 'localStorage' },
 });
 
-const SCOPES = ['User.Read', 'Sites.ReadWrite.All']; 
+export async function initMSAL() {
+  if (initialized) return;
+  await msal.initialize();   // <- MUY IMPORTANTE
+  initialized = true;
+}
 
+const SCOPES = [
+  // básicos OIDC (recomendado)
+  'openid', 'profile', 'email',
+  // lo que usa tu app
+  'User.Read', 'Sites.ReadWrite.All',
+];
 
-//Metodo para asegurar que siempre se inicie sesion
+// Garantiza que siempre haya “active account”
+function ensureActiveAccount() {
+  const acc = msal.getActiveAccount() ?? msal.getAllAccounts()[0] ?? null;
+  if (acc) msal.setActiveAccount(acc);
+  return acc;
+}
+
+// Login interactivo (popup)
 export async function ensureLogin(): Promise<AccountInfo> {
-  let account = msal.getActiveAccount() ?? msal.getAllAccounts()[0] ?? null;
-
+  await initMSAL();
+  let account = ensureActiveAccount();
   if (!account) {
-    
-    await msal.loginPopup({
-      scopes: SCOPES,
-      prompt: 'select_account', 
-    });
-    account = msal.getAllAccounts()[0]!;
-    msal.setActiveAccount(account);
-  } else {
+    const res = await msal.loginPopup({ scopes: SCOPES, prompt: 'select_account' });
+    account = res.account ?? msal.getAllAccounts()[0]!;
     msal.setActiveAccount(account);
   }
-
   return account;
 }
 
-//Obtener el token del usuaruio
+// Token
 export async function getAccessToken(): Promise<string> {
-  const account = msal.getActiveAccount() ?? msal.getAllAccounts()[0];
+  await initMSAL();
+  const account = ensureActiveAccount();
   if (!account) throw new Error('No hay sesión. Llama a ensureLogin() primero.');
 
   try {
@@ -48,8 +62,9 @@ export async function getAccessToken(): Promise<string> {
   }
 }
 
-//Logout
+// Logout
 export async function logout() {
-  const account = msal.getActiveAccount() ?? msal.getAllAccounts()[0];
+  await initMSAL();
+  const account = ensureActiveAccount();
   await msal.logoutPopup({ account });
 }

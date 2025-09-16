@@ -1,11 +1,11 @@
-// src/hooks/useReservar.ts (versión Graph)
+// src/hooks/useReservar.ts (versión Graph con DEBUG)
 import * as React from 'react';
 import { addDays } from '../utils/date';
 import type { ReserveArgs, ReserveResult } from '../Models/Reservation';
 import type { TurnType } from '../Models/shared';
-import { ReservationsService } from '../Services/Reservations.service';     // 100% Graph
-import { ParkingSlotsService } from '../Services/ParkingSlot.service';     // 100% Graph
-import { SettingsService } from '../Services/Setting.service';             // 100% Graph
+import { ReservationsService } from '../Services/Reservations.service';
+import { ParkingSlotsService } from '../Services/ParkingSlot.service';
+import { SettingsService } from '../Services/Setting.service';
 
 export type UseReservarReturn = {
   maxDate: Date | null;
@@ -16,16 +16,17 @@ export type UseReservarReturn = {
 };
 
 type UseReservarOptions = {
-  /** Se ejecuta tras crear la(s) reserva(s) con éxito (útil para recargar Mis Reservas) */
   onAfterReserve?: () => void | Promise<void>;
 };
 
 const MOTO_CAPACITY = 4 as const;
 
-/**
- * Hook para reservar usando Microsoft Graph.
- * Inyecta servicios Graph para configuración, reservas y celdas.
- */
+// Helpers de debug
+function dbgLabel(label: string) {
+  return `%c${label}`;
+}
+const dbgStyle = 'background:#111;color:#7CFC00;padding:2px 4px;border-radius:3px;';
+
 export function useReservar(
   reservationsSvc: ReservationsService,
   slotsSvc: ParkingSlotsService,
@@ -39,18 +40,44 @@ export function useReservar(
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  // Ventana de fechas visibles (Settings.VisibleDays)
+  // ============== DEBUG: primer dump sin filtros de Reservations ==============
+  React.useEffect(() => {
+    (async () => {
+      try {
+        console.log(dbgLabel('[DEBUG] Reservations: getAll (no filter, top 2000)'), dbgStyle);
+        const all = await reservationsSvc.getAll({
+          orderby: 'fields/ID asc',
+          top: 2000,
+        });
+        // Esto es el modelo mapeado por tu service (no el raw de Graph).
+        console.log('[DEBUG] Reservations getAll (mapped) length:', Array.isArray(all) ? all.length : 0);
+        console.table(all);
+
+        if (Array.isArray(all) && all.length > 0) {
+          console.log('[DEBUG] First reservation (mapped):', all[0]);
+        }
+        console.log('%c— fin dump inicial —', 'color:#999;');
+      } catch (e) {
+        console.error('[DEBUG] Error dump getAll Reservations:', e);
+      }
+    })();
+  }, [reservationsSvc]);
+
+  // ============== Settings.VisibleDays ============
   React.useEffect(() => {
     const hoy = new Date();
     (async () => {
       try {
         setLoading(true);
-        // asumo que tu SettingsService.get(id) devuelve { VisibleDays: number }
+        console.log(dbgLabel('[DEBUG] Settings.get("1")'), dbgStyle);
         const settings = await settingsSvc.get('1');
+        console.log('[DEBUG] Settings.get ->', settings);
         const days: number = (settings as any)?.VisibleDays ?? 3;
         setMaxDate(addDays(hoy, days));
         setMinDate(hoy);
+        console.log('[DEBUG] minDate:', hoy.toISOString(), 'maxDate:', addDays(hoy, days).toISOString());
       } catch (err: any) {
+        console.error('[DEBUG] Settings error:', err);
         setError(err?.message ?? 'Error cargando configuración');
       } finally {
         setLoading(false);
@@ -59,18 +86,34 @@ export function useReservar(
   }, [settingsSvc]);
 
   // Cuenta reservas para un slot/fecha/turno
-  const countReservations = React.useCallback(async (
-    slotId: number | string,
-    dateISO: string,
-    turn: Exclude<TurnType, 'Dia'>
-  ) => {
-    const items = await reservationsSvc.getAll({
+  const countReservations = React.useCallback(
+    async (slotId: number | string, dateISO: string, turn: Exclude<TurnType, 'Dia'>) => {
+      // ⚠️ IMPORTANTE: en Graph el lookup usualmente se filtra por <NombreLookupId>
+      // Ajusta si tu internal name no es SpotIdLookupId
+      const sid = Number(slotId);
+      const filter = [
+        `fields/SpotIdLookupId eq ${sid}`,          // <= si tu columna lookup se llama distinto, cámbiala aquí
+        `fields/Date eq '${dateISO}'`,
+        `fields/Turn eq '${turn}'`,
+        `(fields/Status ne 'Cancelada')`,
+      ].join(' and ');
 
-      top: 1_000, // margen de seguridad
-      orderby: 'fields/ID asc',
-    });
-    return Array.isArray(items) ? items.length : 0;
-  }, [reservationsSvc]);
+      console.log(dbgLabel('[DEBUG] countReservations filter'), dbgStyle, filter);
+
+      const items = await reservationsSvc.getAll({
+        filter,
+        top: 1000,
+        orderby: 'fields/ID asc',
+      });
+
+      console.log('[DEBUG] countReservations -> items length:', Array.isArray(items) ? items.length : 0);
+      if (Array.isArray(items)) {
+        console.table(items);
+      }
+      return Array.isArray(items) ? items.length : 0;
+    },
+    [reservationsSvc]
+  );
 
   // ¿ya tiene una reserva activa el mismo día y turno?
   const hasActiveReservationSameDay = React.useCallback(
@@ -78,116 +121,135 @@ export function useReservar(
       if (!email?.trim() || !dateISO) return false;
       const emailSafe = email.replace(/'/g, "''");
 
+      const filter = [
+        `fields/Title eq '${emailSafe}'`,
+        `fields/Date eq '${dateISO}'`,
+        `(fields/Status ne 'Cancelada')`,
+        `fields/Turn eq '${turn}'`,
+      ].join(' and ');
+
+      console.log(dbgLabel('[DEBUG] hasActiveReservationSameDay filter'), dbgStyle, filter);
+
       const items = await reservationsSvc.getAll({
-        filter: [
-          // si guardas el correo en otra columna, cámbiala aquí
-          `fields/Title eq '${emailSafe}'`,
-          `fields/Date eq '${dateISO}'`,
-          `(fields/Status ne 'Cancelada')`,
-          `fields/Turn eq '${turn}'`,
-        ].join(' and '),
+        filter,
         top: 1,
         orderby: 'fields/ID asc',
       });
 
-      return Array.isArray(items) && items.length > 0;
+      const exists = Array.isArray(items) && items.length > 0;
+      console.log('[DEBUG] hasActiveReservationSameDay ->', exists, items);
+      return exists;
     },
     [reservationsSvc]
   );
 
-  const reservar = React.useCallback(async ({ vehicle, turn, dateISO }: ReserveArgs): Promise<ReserveResult> => {
-    // 0) Validación: ¿ya tiene reserva ese día?
-    if (await hasActiveReservationSameDay(userMail, dateISO, turn)) {
-      return {
-        ok: false,
-        message: `No puedes reservar: ya tienes una reserva activa para el ${dateISO} en el turno de la ${turn}.`,
-      };
-    }
+  const reservar = React.useCallback(
+    async ({ vehicle, turn, dateISO }: ReserveArgs): Promise<ReserveResult> => {
+      console.log(dbgLabel('[DEBUG] reservar() args'), dbgStyle, { vehicle, turn, dateISO, userMail, userName });
 
-    // 1) Traer celdas activas del tipo solicitado (itinerantes)
-    const slots = await slotsSvc.getAll({
-      filter: [
+      // 0) Validación: ¿ya tiene reserva ese día?
+      if (await hasActiveReservationSameDay(userMail, dateISO, turn)) {
+        const msg = `No puedes reservar: ya tienes una reserva activa para el ${dateISO} en el turno de la ${turn}.`;
+        console.warn('[DEBUG] bloquear por reserva existente:', msg);
+        return { ok: false, message: msg };
+      }
+
+      // 1) Traer celdas activas del tipo solicitado (itinerantes)
+      const slotsFilter = [
         `(fields/Activa eq 'Activa')`,
         `fields/TipoCelda eq '${vehicle}'`,
         `fields/Itinerancia eq 'Empleado Itinerante'`,
-      ].join(' and '),
-      top: 2000,
-      orderby: 'fields/Title asc',
-    });
+      ].join(' and ');
 
-    if (!Array.isArray(slots) || slots.length === 0) {
-      return { ok: false, message: `No existen celdas activas para ${vehicle}.` };
-    }
+      console.log(dbgLabel('[DEBUG] slots getAll filter'), dbgStyle, slotsFilter);
 
-    // 2) Turnos a validar
-    const turnsToCheck: Exclude<TurnType, 'Dia'>[] =
-      turn === 'Dia' ? ['Manana', 'Tarde'] : [turn as Exclude<TurnType, 'Dia'>];
+      const slots = await slotsSvc.getAll({
+        filter: slotsFilter,
+        top: 2000,
+        orderby: 'fields/Title asc',
+      });
 
-    for (const slot of slots) {
-      const slotId = (slot as any).ID ?? (slot as any).Id ?? (slot as any).id;
-      if (slotId == null) continue;
-
-      // 3) Validar cupo por turno
-      let available = true;
-      for (const t of turnsToCheck) {
-        const count = await countReservations(slotId, dateISO, t);
-        if (vehicle === 'Carro') {
-          if (count >= 1) { available = false; break; }
-        } else {
-          if (count >= MOTO_CAPACITY) { available = false; break; }
-        }
+      console.log('[DEBUG] slots count:', Array.isArray(slots) ? slots.length : 0);
+      if (!Array.isArray(slots) || slots.length === 0) {
+        return { ok: false, message: `No existen celdas activas para ${vehicle}.` };
       }
-      if (!available) continue;
 
-      // 4) Crear la(s) reserva(s)
-      const turnsToCreate =
-        (turn === 'Dia' ? (['Manana', 'Tarde'] as const) : [turn]) as readonly Exclude<TurnType, 'Dia'>[];
+      // 2) Turnos a validar
+      const turnsToCheck: Exclude<TurnType, 'Dia'>[] = turn === 'Dia' ? ['Manana', 'Tarde'] : [turn as Exclude<TurnType, 'Dia'>];
+      console.log('[DEBUG] turnsToCheck:', turnsToCheck);
 
-      try {
-        let lastCreated: any = null;
+      for (const slot of slots) {
+        const slotId = (slot as any).ID ?? (slot as any).Id ?? (slot as any).id;
+        const code = (slot as any).Title ?? (slot as any).Code ?? (slot as any).Name ?? slotId;
+        console.log('[DEBUG] Evaluando slot:', { slotId, code, slot });
 
-        for (const t of turnsToCreate) {
-          // 👇 En Graph, para escribir un lookup se usa <NombreLookupId>
-          // Cambia 'SpotIdLookupId' si tu internal name real es otro
-          const payload = {
-            Title: userMail,
-            Date: dateISO,
-            Turn: t,
-            SpotIdLookupId: Number(slotId),
-            VehicleType: vehicle,         // si tu internal es 'VehivleType', cámbialo
-            Status: 'Activa',
-            NombreUsuario: userName,
-          };
+        if (slotId == null) continue;
 
-          lastCreated = await reservationsSvc.create(payload as any);
+        // 3) Validar cupo por turno
+        let available = true;
+        for (const t of turnsToCheck) {
+          const count = await countReservations(slotId, dateISO, t);
+          console.log('[DEBUG] cupo', { t, count, vehicle });
+          if (vehicle === 'Carro') {
+            if (count >= 1) { available = false; break; }
+          } else {
+            if (count >= MOTO_CAPACITY) { available = false; break; }
+          }
+        }
+        if (!available) {
+          console.log('[DEBUG] slot sin cupo, sigo con el siguiente ->', code);
+          continue;
         }
 
-        // 5) Refrescar listas/estado externo
-        await opts?.onAfterReserve?.();
+        // 4) Crear la(s) reserva(s)
+        const turnsToCreate = (turn === 'Dia' ? (['Manana', 'Tarde'] as const) : [turn]) as readonly Exclude<TurnType, 'Dia'>[];
+        console.log('[DEBUG] turnsToCreate:', turnsToCreate);
 
-        // Código/Nombre de la celda para mensaje
-        const code =
-          (slot as any).Title ??
-          (slot as any).Code ??
-          (slot as any).Name ??
-          slotId;
+        try {
+          let lastCreated: any = null;
 
-        const successMsg =
-          turn === 'Dia'
-            ? `Reserva de día completo creada en celda ${code} para ${dateISO}.`
-            : `Reserva creada en celda ${code} para ${dateISO} (${turn}).`;
+          for (const t of turnsToCreate) {
+            const payload: any = {
+              Title: userMail,
+              Date: dateISO,
+              Turn: t,
+              SpotIdLookupId: Number(slotId),   // <= revisar nombre de lookup interno
+              // OJO: tu lista tiene 'VehivleType' (typo) o 'VehicleType'? Ajusta el internal name real:
+              VehivleType: vehicle,             // si el internal correcto es VehicleType, cámbialo
+              Status: 'Activa',
+              NombreUsuario: userName,
+            };
 
-        return { ok: true, message: successMsg, reservation: lastCreated };
-      } catch {
-        // Si falla con esta celda, intenta con la siguiente
-        continue;
+            console.log(dbgLabel('[DEBUG] create payload'), dbgStyle, payload);
+            lastCreated = await reservationsSvc.create(payload);
+            console.log('[DEBUG] create OK ->', lastCreated);
+          }
+
+          // 5) Refrescar listas/estado externo
+          await opts?.onAfterReserve?.();
+
+          const successMsg =
+            turn === 'Dia'
+              ? `Reserva de día completo creada en celda ${code} para ${dateISO}.`
+              : `Reserva creada en celda ${code} para ${dateISO} (${turn}).`;
+
+          console.log('[DEBUG] SUCCESS:', successMsg);
+          return { ok: true, message: successMsg, reservation: lastCreated };
+        } catch (e: any) {
+          console.error('[DEBUG] create FAILED para slot', slotId, e?.message ?? e, e);
+          // Si falla con esta celda, intenta con la siguiente
+          continue;
+        }
       }
-    }
 
-    // 6) Si ninguna celda tuvo cupo
-    const turnoTexto = turn === 'Dia' ? 'día completo' : String(turn).toLowerCase();
-    return { ok: false, message: `No hay parqueaderos disponibles para ${vehicle} el ${dateISO} en ${turnoTexto}.` };
-  }, [reservationsSvc, slotsSvc, hasActiveReservationSameDay, countReservations, userMail, userName, opts]);
+      // 6) Si ninguna celda tuvo cupo
+      const turnoTexto = turn === 'Dia' ? 'día completo' : String(turn).toLowerCase();
+      const msg = `No hay parqueaderos disponibles para ${vehicle} el ${dateISO} en ${turnoTexto}.`;
+      console.warn('[DEBUG] sin cupo en todos los slots:', msg);
+      return { ok: false, message: msg };
+    },
+    [reservationsSvc, slotsSvc, hasActiveReservationSameDay, countReservations, userMail, userName, opts]
+  );
 
   return {
     minDate,
@@ -197,5 +259,3 @@ export function useReservar(
     reservar,
   };
 }
-
-

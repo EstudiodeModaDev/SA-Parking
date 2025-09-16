@@ -16,7 +16,7 @@ export class ReservationsService {
     graph: GraphRest,
     hostname = 'estudiodemoda.sharepoint.com',
     sitePath = '/sites/TransformacionDigital/IN/SA',
-    listName = 'Reservations' // ⚠️ usa el displayName EXACTO de la lista
+    listName = 'reservations' // ⚠️ usa el displayName EXACTO de la lista
   ) {
     this.graph = graph;
     this.hostname = hostname;

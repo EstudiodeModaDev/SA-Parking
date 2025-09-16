@@ -67,7 +67,7 @@ export function useReservar(
     const items = await reservationsSvc.getAll({
       filter: [
         // 👇 ajusta si tu lookup interno NO es SpotIdLookupId
-        `fields/SpotIdLookupId eq ${Number(slotId)}`,
+        //`fields/SpotIdLookupId eq ${Number(slotId)}`,
         `fields/Date eq '${dateISO}'`,
         `fields/Turn eq '${turn}'`,
         `(fields/Status ne 'Cancelada')`,
@@ -203,3 +203,4 @@ export function useReservar(
     reservar,
   };
 }
+

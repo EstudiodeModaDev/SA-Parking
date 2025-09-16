@@ -1,1 +1,0 @@
-export type FilterMode = 'upcoming-active' | 'history';

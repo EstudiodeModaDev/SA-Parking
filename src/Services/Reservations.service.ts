@@ -1,9 +1,7 @@
-// src/services/Reservations.service.ts
+// src/Services/Reservations.service.ts
 import { GraphRest } from '../graph/GraphRest';
 import type { GetAllOpts } from '../Models/Commons';
 import type { Reservations } from '../Models/Reservation';
-
-
 
 export class ReservationsService {
   private graph!: GraphRest;
@@ -18,7 +16,7 @@ export class ReservationsService {
     graph: GraphRest,
     hostname = 'estudiodemoda.sharepoint.com',
     sitePath = '/sites/TransformacionDigital/IN/SA',
-    listName = 'Reservations'
+    listName = 'reservations' // ⚠️ usa el displayName EXACTO de la lista
   ) {
     this.graph = graph;
     this.hostname = hostname;
@@ -75,20 +73,20 @@ export class ReservationsService {
       ID: String(item?.id ?? ''),
       Title: f.Title ?? '',
       NombreUsuario: f.NombreUsuario ?? undefined,
-      Date: f.Date ?? undefined,              // Graph entrega ISO
+      Date: f.Date ?? undefined,
       Turn: f.Turn ?? undefined,
 
-      // Lookup SpotId: Graph expone SpotIdLookupId y a veces SpotId (texto)
+      // Lookup SpotId
       SpotIdLookupId: typeof f.SpotIdLookupId === 'number' ? f.SpotIdLookupId : null,
       SpotId: f.SpotId ?? null,
 
-      VehivleType: f.VehivleType ?? undefined,
+      // ⚠️ Asegúrate que el internal name sea el mismo en tu lista.
+      VehivleType: f.VehivleType ?? f.VehicleType ?? undefined,
       Status: f.Status ?? undefined,
       OData__ColorTag: f.OData__ColorTag ?? undefined,
 
       Modified: f.Modified ?? undefined,
       Created: f.Created ?? undefined,
-      // Nota: los user fields “Author/Editor” suelen venir como AuthorLookupId/EditorLookupId
       AuthorLookupId: typeof f.AuthorLookupId === 'number' ? f.AuthorLookupId : null,
       EditorLookupId: typeof f.EditorLookupId === 'number' ? f.EditorLookupId : null,
     };
@@ -98,18 +96,15 @@ export class ReservationsService {
   async create(record: Omit<Reservations, 'ID'>) {
     await this.ensureIds();
 
-    // Payload hacia Graph: usar nombres de columna (Internal Names).
-    // Para el lookup, asegúrate de enviar SpotIdLookupId (número).
     const fieldsPayload: any = {
       Title: record.Title,
       NombreUsuario: record.NombreUsuario,
-      Date: record.Date,               // ISO
+      Date: record.Date,
       Turn: record.Turn,
-      SpotIdLookupId: record.SpotIdLookupId ?? undefined, // 👈 CLAVE para lookup
-      VehivleType: record.VehivleType,
+      SpotIdLookupId: record.SpotIdLookupId ?? undefined,
+      VehivleType: record.VehivleType, // o VehicleType si así se llama tu columna
       Status: record.Status,
       OData__ColorTag: record.OData__ColorTag,
-      // otros campos si los necesitas...
     };
 
     const res = await this.graph.post<any>(
@@ -127,16 +122,12 @@ export class ReservationsService {
     if (changed.NombreUsuario !== undefined) fieldsPatch.NombreUsuario = changed.NombreUsuario;
     if (changed.Date !== undefined) fieldsPatch.Date = changed.Date;
     if (changed.Turn !== undefined) fieldsPatch.Turn = changed.Turn;
-
-    // lookup:
     if (changed.SpotIdLookupId !== undefined) fieldsPatch.SpotIdLookupId = changed.SpotIdLookupId;
-
     if (changed.VehivleType !== undefined) fieldsPatch.VehivleType = changed.VehivleType;
     if (changed.Status !== undefined) fieldsPatch.Status = changed.Status;
     if (changed.OData__ColorTag !== undefined) fieldsPatch.OData__ColorTag = changed.OData__ColorTag;
 
-    const hasAny = Object.keys(fieldsPatch).length > 0;
-    if (hasAny) {
+    if (Object.keys(fieldsPatch).length > 0) {
       await this.graph.patch<any>(
         `/sites/${this.siteId}/lists/${this.listId}/items/${id}/fields`,
         fieldsPatch
@@ -162,23 +153,31 @@ export class ReservationsService {
     return this.toModel(res);
   }
 
-  async getAll(opts?: { filter?: string; orderby?: string; top?: number }) {
+  // ---------- LISTAR (corregido) ----------
+  async getAll(opts?: GetAllOpts) {
     await this.ensureIds();
+
+    // Selecciona solo lo que usas (puedes agregar más campos)
+    const select = [
+      'Title','NombreUsuario','Date','Turn',
+      'SpotIdLookupId','SpotId','VehivleType','Status','OData__ColorTag',
+      'Modified','Created','AuthorLookupId','EditorLookupId'
+    ].join(',');
+
     const qs = new URLSearchParams();
-    qs.set('$expand', 'fields');                // <- SIEMPRE
-    if (opts?.filter)   qs.set('$filter', opts.filter);
-    if (opts?.orderby)  qs.set('$orderby', opts.orderby);
+    qs.set('$expand', `fields($select=${select})`);
+    if (opts?.filter)  qs.set('$filter', opts.filter);
+    if (opts?.orderby) qs.set('$orderby', opts.orderby);
     if (opts?.top != null) qs.set('$top', String(opts.top));
-  
-    return this.graph.get<any>(
+
+    const res = await this.graph.get<any>(
       `/sites/${this.siteId}/lists/${this.listId}/items?${qs.toString()}`
     );
+    const arr = Array.isArray(res?.value) ? res.value : [];
+    return arr.map((x: any) => this.toModel(x));
   }
 
-
-  // ---------- helpers de consulta (opcionales) ----------
-
-  /** Busca reservas de un slot por ID de lookup */
+  // ---------- helpers de consulta ----------
   async findBySpotId(spotItemId: number, top = 100) {
     return this.getAll({
       filter: `fields/SpotIdLookupId eq ${spotItemId}`,
@@ -187,24 +186,20 @@ export class ReservationsService {
     });
   }
 
-  /** Rango de fecha (UTC ISO) — ambos inclusive */
   async findByDateRange(fromIso: string, toIso: string, top = 200) {
-    const f = this.esc(fromIso);
-    const t = this.esc(toIso);
     return this.getAll({
-      filter: `(fields/Date ge '${f}' and fields/Date le '${t}')`,
+      filter: `(fields/Date ge '${this.esc(fromIso)}' and fields/Date le '${this.esc(toIso)}')`,
       orderby: 'fields/Date asc',
       top,
     });
   }
 
-  /** Por usuario (UPN/correo guardado en NombreUsuario) */
   async findByUser(emailOrUpn: string, top = 100) {
     return this.getAll({
+      // usa la columna donde guardas el correo/nombre del usuario
       filter: `fields/NombreUsuario eq '${this.esc(emailOrUpn)}'`,
       orderby: 'fields/Date desc',
       top,
     });
   }
 }
-

@@ -41,8 +41,7 @@ const AdminCells: React.FC = () => {
 
   // Servicios para reservar (mismo flujo que Availability)
   const { reservations, settings, parkingSlots } = useGraphServices();
-  const { minDate, maxDate, reservar, loading: reservarLoading, error: reservarError } =
-    useReservar(reservations, parkingSlots, settings, qrUserEmail, qrUserName);
+  
   const { hours, loading: hoursLoading, error: hoursError } = useSettingsHours();
 
   const minISO = React.useMemo(() => toISODate(minDate), [minDate]);
@@ -62,6 +61,9 @@ const AdminCells: React.FC = () => {
   const [qrQuery, setQrQuery] = React.useState('');
   const [showList, setShowList] = React.useState(false);
   const [activeIdx, setActiveIdx] = React.useState(-1);
+
+  const { minDate, maxDate, reservar, loading: reservarLoading, error: reservarError } =
+    useReservar(reservations, parkingSlots, settings, qrUserEmail, qrUserName);
 
   const workerOptions = React.useMemo(
     () => (workers || []).map((w: any) => ({
@@ -601,6 +603,7 @@ async function submitQuickReserve() {
 };
 
 export default AdminCells;
+
 
 
 

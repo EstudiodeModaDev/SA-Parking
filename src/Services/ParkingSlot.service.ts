@@ -130,10 +130,10 @@ export class ParkingSlotsService {
 
     const query = qs.toString().replace(/\+/g, '%20');
 
-    const url = `/sites/${this.siteId}/lists/${this.listId}/items?{$query}}`;
+    const url = `/sites/${this.siteId}/lists/${this.listId}/items?${query}`;
 
     console.groupCollapsed('[ParkingSlots.getAll] URL');
-        console.log("site" , this.SiteId)
+        console.log("site" , this.siteId)
         console.log("list" , this.listId)
     console.log(url);
     console.log('opts (raw):', opts);
@@ -176,6 +176,7 @@ export class ParkingSlotsService {
     return this.getAll({ filter: 'fields/Disponible eq true', orderby: 'fields/Codigo asc', top });
   }
 }
+
 
 
 

@@ -51,7 +51,7 @@ export class ParkingSlotsService {
     if (!this.siteId || !this.listId) this.loadCache();
 
     if (!this.siteId) {
-      const site = await this.graph.get<any>(`/sites/${this.hostname}:${this.sitePath}`);
+      const site = await this.graph.get<any>(`/sites/${this.hostname}:${this.sitePath}:`);
       this.siteId = site?.id;
       if (!this.siteId) throw new Error('No se pudo resolver siteId');
       this.saveCache();
@@ -172,6 +172,7 @@ export class ParkingSlotsService {
     return this.getAll({ filter: 'fields/Disponible eq true', orderby: 'fields/Codigo asc', top });
   }
 }
+
 
 
 

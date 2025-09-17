@@ -324,3 +324,96 @@ body {
   left: 7px;
   font: 700 10px/1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 }
+
+/* Botón principal: Iniciar sesión / Cambiar rol */
+.btn-change-role{
+  --btn-bg: var(--primary);
+  --btn-bg-hover: var(--primary-600);
+  --btn-fg: #fff;
+  --btn-ring: 0 0 0 4px rgba(37,99,235,.18);
+
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+
+  min-height:44px;
+  padding:10px 18px;
+  border-radius: var(--radius-sm, 8px);
+  border:1px solid transparent;
+
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  font-weight: 700;
+  letter-spacing:.2px;
+  line-height:1;
+  cursor:pointer;
+  box-shadow: var(--shadow, 0 2px 12px rgba(30,41,59,.08));
+  transition:
+    background .15s ease,
+    transform .06s ease,
+    box-shadow .15s ease,
+    opacity .15s ease;
+}
+
+.btn-change-role:hover{
+  background: var(--btn-bg-hover);
+  box-shadow: 0 4px 18px rgba(37,99,235,.20);
+}
+
+.btn-change-role:active{
+  transform: translateY(1px);
+}
+
+/* Focus visible accesible */
+.btn-change-role:focus{
+  outline: none;
+}
+.btn-change-role:focus-visible{
+  box-shadow: var(--btn-ring);
+}
+
+/* Estado disabled */
+.btn-change-role:disabled,
+.btn-change-role[disabled]{
+  opacity:.6;
+  cursor:not-allowed;
+  box-shadow:none;
+}
+
+/* Spinner en estado de carga: usa aria-busy="true" sin tocar el TSX */
+.btn-change-role[aria-busy="true"]{
+  position:relative;
+  pointer-events:none;
+}
+.btn-change-role[aria-busy="true"]::after{
+  content:'';
+  width:16px; height:16px;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,.6);
+  border-top-color:#fff;
+  display:inline-block;
+  margin-left:6px;
+  animation: btn-spin .8s linear infinite;
+}
+@keyframes btn-spin{
+  to{ transform: rotate(360deg); }
+}
+
+/* Versión full-width en pantallas pequeñas (para la pantalla de login) */
+@media (max-width: 520px){
+  .btn-change-role{
+    width:100%;
+  }
+}
+
+/* Respeta usuarios con reducción de movimiento */
+@media (prefers-reduced-motion: reduce){
+  .btn-change-role{
+    transition: none;
+  }
+  .btn-change-role[aria-busy="true"]::after{
+    animation: none;
+  }
+}
+

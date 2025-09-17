@@ -60,6 +60,10 @@
 .segmentBtn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(37,99,235,.35); }
 .segmentBtn:disabled { opacity: .6; cursor: not-allowed; }
 .segmentBtnActive { background: #2563eb; color: #fff; }
+.segmentBtnActive:hover {
+  background: #1d4ed8;   /* un paso más oscuro al hover */
+  color: #fff;
+}
 
 /* ====== Búsqueda centrada ====== */
 .searchForm {
@@ -256,3 +260,4 @@
   color: #b91c1c;
 }
 .iconBtnDanger:hover { background: #ffe4e6; }
+

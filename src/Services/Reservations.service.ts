@@ -75,47 +75,49 @@ export class ReservationsService {
       NombreUsuario: f.NombreUsuario ?? undefined,
       Date: f.Date ?? undefined,
       Turn: f.Turn ?? undefined,
-
-      // ✅ Lookup correcto
-      SpotIdLookupId: typeof f.SpotIdLookupId === 'number' ? f.SpotIdLookupId : null,
-
-      // opcional si tienes un texto visible materializado
+  
+      // Lookup consistente
+      SpotIdLookupId: (typeof f.SpotIdLookupId === 'number') ? f.SpotIdLookupId : null,
+  
+      // opcional si materializas el texto visible
       SpotCode: f.SpotCode ?? null,
-
-      VehicleType: f.VehicleType ?? undefined,
+  
+      VehicleType: f.VehicleType ?? undefined,   // (si en tu lista es 'VehivleType', cámbialo aquí y en create)
       Status: f.Status ?? undefined,
       OData__ColorTag: f.OData__ColorTag ?? undefined,
-
+  
       Modified: f.Modified ?? undefined,
       Created: f.Created ?? undefined,
-      AuthorLookupId: typeof f.AuthorLookupId === 'number' ? f.AuthorLookupId : null,
-      EditorLookupId: typeof f.EditorLookupId === 'number' ? f.EditorLookupId : null,
+      AuthorLookupId: (typeof f.AuthorLookupId === 'number') ? f.AuthorLookupId : null,
+      EditorLookupId: (typeof f.EditorLookupId === 'number') ? f.EditorLookupId : null,
     };
   }
 
   // ---------- CRUD ----------
   async create(record: Omit<Reservations, 'ID'>) {
-    await this.ensureIds();
+  await this.ensureIds();
 
-    const fieldsPayload: any = {
-      Title: record.Title,
-      NombreUsuario: record.NombreUsuario,
-      Date: record.Date,
-      Turn: record.Turn,
-      // ✅ enviar siempre el *_LookupId para lookups
-      SpotIdLookupId: record.SpotIdLookupId ?? undefined,
-      SpotCode: record.SpotCode ?? undefined,     // si usas el texto visible
-      VehicleType: record.VehicleType,
-      Status: record.Status,
-      OData__ColorTag: record.OData__ColorTag,
-    };
+  const fieldsPayload: any = {
+    Title: record.Title,
+    NombreUsuario: record.NombreUsuario,
+    Date: record.Date,
+    Turn: record.Turn,
 
-    const res = await this.graph.post<any>(
-      `/sites/${this.siteId}/lists/${this.listId}/items`,
-      { fields: fieldsPayload }
-    );
-    return this.toModel(res);
-  }
+    // lookup correcto
+    SpotIdLookupId: record.SpotIdLookupId ?? undefined,
+
+    SpotCode: record.SpotCode ?? undefined,     // si lo materializas
+    VehicleType: record.VehicleType,
+    Status: record.Status,
+    OData__ColorTag: record.OData__ColorTag,
+  };
+
+  const res = await this.graph.post<any>(
+    `/sites/${this.siteId}/lists/${this.listId}/items`,
+    { fields: fieldsPayload }
+  );
+  return this.toModel(res);
+}
 
   async update(id: string, changed: Partial<Omit<Reservations, 'ID'>>) {
     await this.ensureIds();
@@ -161,19 +163,19 @@ export class ReservationsService {
 
   // ---------- LISTAR ----------
   async getAll(opts?: GetAllOpts) {
-    await this.ensureIds();
+  await this.ensureIds();
 
+  const qs = new URLSearchParams();                   // 👈 te faltaba esto
+  qs.set('$expand', 'fields');                        // sin $select para ver todo
+  if (opts?.filter)  qs.set('$filter', opts.filter);
+  if (opts?.orderby) qs.set('$orderby', opts.orderby);
+  if (opts?.top != null) qs.set('$top', String(opts.top));
 
-    qs.set('$expand', `fields`);
-    if (opts?.filter)  qs.set('$filter', opts.filter);
-    if (opts?.orderby) qs.set('$orderby', opts.orderby);
-    if (opts?.top != null) qs.set('$top', String(opts.top));
+  const url = `/sites/${this.siteId}/lists/${this.listId}/items?${qs.toString()}`; // 👈 define url local
 
-    const res = await this.graph.get<any>(
-      `/sites/${this.siteId}/lists/${this.listId}/items?${qs.toString()}`
-    );
+  const res = await this.graph.get<any>(url);
 
-    try {
+  try {
     console.groupCollapsed(
       `[Reservations.getAll] RAW from Graph (${Array.isArray(res?.value) ? res.value.length : 0} items)`
     );
@@ -181,18 +183,17 @@ export class ReservationsService {
     console.log('opts:', opts);
     console.log('raw response:', res);
 
-    if (Array.isArray(res?.value)) {
+    if (Array.isArray(res?.value) && res.value.length) {
       console.log('value[0] (item crudo con fields):', res.value[0]);
-      // tabla solo de fields para inspección rápida
       console.table(res.value.map((x: any) => x.fields));
     }
   } finally {
     console.groupEnd();
   }
-    
-    const arr = Array.isArray(res?.value) ? res.value : [];
-    return arr.map((x: any) => this.toModel(x));
-  }
+
+  const arr = Array.isArray(res?.value) ? res.value : [];
+  return arr.map((x: any) => this.toModel(x));
+}
 
   // ---------- helpers de consulta ----------
   async findBySpotId(spotItemId: number, top = 100) {
@@ -219,4 +220,5 @@ export class ReservationsService {
     });
   }
 }
+
 

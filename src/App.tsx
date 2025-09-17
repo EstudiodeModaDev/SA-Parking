@@ -322,11 +322,16 @@ export default function App() {
         </div>
 
         <main className="main">
-          <div className="center" style={{ display: 'grid', gap: 12 }}>
+          <div className="center login-hero">
             <h2>Inicia sesión para continuar</h2>
-            <button className="btn-change-role" onClick={signIn}>
-              Iniciar sesión
-            </button>
+            <p className="login-subtitle">Bienvenido a la aplicación de parqueaderos EDM</p>
+        
+            <div className="login-actions">
+              <button className="btn-change-role btn-narrow" onClick={signIn}>
+                Iniciar sesión
+              </button>
+            </div>
+        
             <small className="muted">
               Si tu navegador bloquea la ventana emergente, habilítala para este sitio.
             </small>

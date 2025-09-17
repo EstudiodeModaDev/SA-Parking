@@ -120,8 +120,8 @@ const AdminCells: React.FC = () => {
         vehicle: qrVehicle,
         turn: qrTurn,
         dateISO: qrDate,
-        userEmail: qrUserEmail,
-        userName: qrUserName,
+        Title: qrUserEmail,
+        NombreUsuario: qrUserName,
       } as any);
       if (res.ok) setQrMsg(res.message);
       else setQrErr(res.message);
@@ -575,3 +575,4 @@ const AdminCells: React.FC = () => {
 };
 
 export default AdminCells;
+

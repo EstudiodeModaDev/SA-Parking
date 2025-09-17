@@ -1,209 +1,212 @@
-// src/pages/admin/useAdminCells.ts
+// src/components/Mis-Reservas/MisReservas.tsx
 import * as React from 'react';
+import styles from './mis-reservas.module.css';
+import { useMisReservas } from '../../Hooks/useMisReservas';
+import { statusColor } from '../../utils/status';
+import { useGraphServices } from '../../graph/GraphServicesContext';
 
-// Hooks propios
-import { useCeldas } from '../../Hooks/useCeldas';
-import { useSettingsHours } from '../../Hooks/useSettingHour';
-import { useTodayOccupancy } from '../../Hooks/useTodayOccupancy';
-import { useWorkers } from '../../Hooks/useWorkers';
+type Props = { userMail: string; isAdmin: boolean };
 
-// Adapters / tipos
-import { deriveHoursLabels, getCurrentTurnFromHours } from '../../Models/time';
-import type { SlotUI } from '../../Models/Celdas'
+const MisReservas: React.FC<Props> = ({ userMail, isAdmin = false }) => {
+  const { reservations,  parkingSlots} = useGraphServices();
 
-// Auth + Graph + Services (Graph)
-import { useAuth } from '../../auth/AuthProvider';
-import { GraphRest } from '../../graph/GraphRest';
-import { ParkingSlotsService } from '../../Services/ParkingSlot.service'
-import { ReservationsService } from '../../Services/Reservations.service';
+  const [spotNames, setSpotNames] = React.useState<Record<string, string>>({});
 
-export const useAdminCells = () => {
-  // ====== construir services Graph con MSAL ======
-  const { ready, getToken } = useAuth();
+  // 👇 servicio primero, luego mail, luego flag
+  const {
+    rows, loading, error,
+    range, setRange, applyRange,
+    pageSize, setPageSize, pageIndex, hasNext, nextPage, prevPage,
+    cancelReservation,
+    filterMode, setFilterMode, reloadAll
+  } = useMisReservas(reservations, userMail, isAdmin);
 
-  const slotsSvc = React.useMemo(() => {
-    if (!ready) return null;
-    const graph = new GraphRest(getToken);
-    return new ParkingSlotsService(
-      graph,
-      'estudiodemoda.sharepoint.com',
-      '/sites/TransformacionDigital/IN/SA',
-      'parkingslots' // 👈 displayName exacto de la lista de celdas
-    );
-  }, [ready, getToken]);
+    React.useEffect(() => {
+    console.groupCollapsed('[MisReservas] debug');
+    console.log('userMail:', userMail);
+    console.log('rows.length:', rows?.length ?? 0);
+    if (Array.isArray(rows) && rows.length > 0) {
+      console.log('rows[0]:', rows[0]);
+    }
+    console.groupEnd();
+  }, [rows, userMail]);
 
-  const reservationsSvc = React.useMemo(() => {
-    if (!ready) return null;
-    const graph = new GraphRest(getToken);
-    return new ReservationsService(
-      graph,
-      'estudiodemoda.sharepoint.com',
-      '/sites/TransformacionDigital/IN/SA',
-      'reservations' // 👈 displayName exacto de la lista de reservas
-    );
-  }, [ready, getToken]);
-
-  // ====== hooks de datos ======
-  // useCeldas AHORA espera el servicio (Graph) como argumento
-  const c = slotsSvc
-    ? useCeldas(slotsSvc)
-    : {
-        rows: [],
-        loading: true,
-        error: null,
-        // filtros/paginación
-        search: '',
-        setSearch: (_: string) => {},
-        tipo: 'all' as const,
-        setTipo: (_: 'all' | 'Carro' | 'Moto') => {},
-        itinerancia: 'all' as const,
-        setItinerancia: (_: 'all' | 'Empleado Fijo' | 'Empleado Itinerante' | 'Directivo') => {},
-        pageSize: 50,
-        setPageSize: (_: number) => {},
-        pageIndex: 0,
-        hasNext: false,
-        nextPage: () => {},
-        prevPage: () => {},
-        // acciones
-        reloadAll: async () => {},
-        toggleEstado: async () => {},
-        // creación
-        createOpen: false,
-        createSaving: false,
-        createError: null,
-        createForm: { Title: '', TipoCelda: 'Carro', Activa: 'Activa', Itinerancia: 'Empleado Fijo' },
-        setCreateForm: () => {},
-        canCreate: false,
-        openModal: () => {},
-        closeModal: () => {},
-        create: async () => {},
-      };
-
-  const s = useSettingsHours();
-
-  // useTodayOccupancy AHORA recibe ReservationsService (Graph)
-  const occ = reservationsSvc
-    ? useTodayOccupancy(reservationsSvc)
-    : { occByTurn: {} as Record<number, any>, loading: true, error: null as string | null, reload: async () => {} };
-
-  const { workers, loading: workersLoading } = useWorkers();
-
-  // ====== mix: filas + ocupación por turno ======
-  const rowsWithOcc: (SlotUI & { __occ?: ReturnType<typeof useTodayOccupancy>['occByTurn'][number] })[] =
-    React.useMemo(() => c.rows.map(r => ({ ...r, __occ: occ.occByTurn[r.Id] })), [c.rows, occ.occByTurn]);
-
-  // Turno actual según settings (puede ser null si fuera de horario)
-  const currentTurn = React.useMemo(
-    () => (s.hours ? getCurrentTurnFromHours(s.hours) : null),
-    [s.hours]
-  );
-
-  // Etiqueta legible de horarios
-  const hoursLabel = React.useMemo(() => {
-    if (!s.hours) return 'Cargando horarios…';
-    const h = deriveHoursLabels(s.hours);
-    return `Mañana: ${h.amStart}–${h.amEnd} · Tarde: ${h.pmStart}–${h.pmEnd}`;
-  }, [s.hours]);
-
-  // Capacidad/ocupación “ahora”
-  const capacidadAhora = React.useMemo(() => {
-    const activas = rowsWithOcc.filter(r => r.Activa === 'Activa');
-
-    const isReservedNow = (slotId: number) => {
-      const f = occ.occByTurn[slotId] || {};
-      if (!currentTurn) return !!(f?.Manana || f?.Tarde);
-      return currentTurn === 'Manana' ? !!f?.Manana : !!f?.Tarde;
-    };
-
-    const totalCarros = activas.filter(s => s.TipoCelda === 'Carro').length;
-    const ocupadosCarros = activas.filter(s => s.TipoCelda === 'Carro' && isReservedNow(s.Id)).length;
-    const libresCarros = Math.max(0, totalCarros - ocupadosCarros);
-
-    const totalMotos = activas.filter(s => s.TipoCelda === 'Moto').length;
-    const ocupadosMotos = activas.filter(s => s.TipoCelda === 'Moto' && isReservedNow(s.Id)).length;
-    const libresMotos = Math.max(0, totalMotos - ocupadosMotos);
-
-    return { turno: currentTurn, totalCarros, libresCarros, totalMotos, libresMotos };
-  }, [rowsWithOcc, occ.occByTurn, currentTurn]);
-
-  // ====== modal de detalles ======
-  const [open, setOpen] = React.useState(false);
-  const [selected, setSelected] = React.useState<SlotUI | null>(null);
-  const openDetails = (row: SlotUI) => { setSelected(row); setOpen(true); };
-  const closeDetails = () => { setSelected(null); setOpen(false); };
-
-  // ====== auto-refresh (5 min) y al volver a la pestaña ======
   React.useEffect(() => {
-    const T = 5 * 60 * 1000;
-    let id: number | null = null;
+    reloadAll();
+  }, [userMail, filterMode, range.from, range.to, pageIndex, pageSize]);
 
-    const tick = () => {
-      c.reloadAll();
-      occ.reload();
+    React.useEffect(() => {
+    const fetchSpots = async () => {
+      if (!rows || rows.length === 0) return;
+
+      const missing = rows
+        .map(r => r.Spot)
+        .filter(id => id && !spotNames[id]);
+
+      if (missing.length === 0) return;
+
+      const updates: Record<string, string> = {};
+      for (const id of missing) {
+        try {
+          // 👇 aquí usas tu servicio real
+          const spot = await parkingSlots.get(id); 
+          updates[id] = spot?.Title ?? `Celda ${id}`;
+        } catch (e) {
+          updates[id] = `Celda ${id}`;
+        }
+      }
+      setSpotNames(prev => ({ ...prev, ...updates }));
     };
 
-    const start = () => { if (id == null) id = window.setInterval(tick, T); };
-    const stop  = () => { if (id != null) { window.clearInterval(id); id = null; } };
+    void fetchSpots();
+  }, [rows, spotNames, parkingSlots]);
+  
+  return (
+    <section className={styles.section}>
+      <div className={styles.card}>
+        <h1 className={styles.title}>Mis reservas</h1>
 
-    if (!document.hidden) start();
-    const onVis = () => (document.hidden ? stop() : (tick(), start()));
-    document.addEventListener('visibilitychange', onVis);
+        <div className={styles.topBar}>
+          <div className={styles.segmented}>
+            <button
+              type="button"
+              className={`${styles.segmentBtn} ${filterMode === 'upcoming-active' ? styles.segmentBtnActive : ''}`}
+              onClick={() => setFilterMode('upcoming-active')}
+              disabled={loading}
+              title="Mostrar próximas con estado Activa"
+            >
+              Próximas activas
+            </button>
+            <button
+              type="button"
+              className={`${styles.segmentBtn} ${filterMode === 'history' ? styles.segmentBtnActive : ''}`}
+              onClick={() => setFilterMode('history')}
+              disabled={loading}
+              title="Ver pasadas y canceladas (con rango de fechas)"
+            >
+              Historial
+            </button>
+          </div>
+        </div>
 
-    return () => { stop(); document.removeEventListener('visibilitychange', onVis); };
-  }, [c.reloadAll, occ.reload]);
+        {filterMode === 'history' && (
+          <form className={styles.form} onSubmit={(e) => { e.preventDefault(); applyRange(); }}>
+            <label className={styles.label}>
+              Desde
+              <input
+                className={styles.input}
+                type="date"
+                value={range.from}
+                max={range.to || undefined}
+                onChange={(e) => setRange(r => ({ ...r, from: e.target.value }))}
+              />
+            </label>
 
-  // Enter en el buscador → recarga
-  const onSearchEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') { e.preventDefault(); c.reloadAll(); }
-  };
+            <label className={styles.label}>
+              Hasta
+              <input
+                className={styles.input}
+                type="date"
+                value={range.to}
+                min={range.from || undefined}
+                onChange={(e) => setRange(r => ({ ...r, to: e.target.value }))}
+              />
+            </label>
+          </form>
+        )}
 
-  // Loading global para banners (no bloquea render)
-  const loading = c.loading || s.loading || occ.loading;
+        {loading && <div className={styles.info}>Cargando…</div>}
+        {error && <div className={styles.error}>{error}</div>}
 
-  // “Añadir celda” solo se desactiva mientras guarda
-  const actionsDisabled = c.createSaving;
+        {!loading && !error && rows.length > 0 && (
+          <>
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr className={styles.theadRow}>
+                    {isAdmin ? <th className={styles.th}>Usuario</th> : null}
+                    <th className={styles.th}>Fecha</th>
+                    <th className={styles.th}>Turno</th>
+                    <th className={styles.th}>Celda</th>
+                    <th className={styles.th}>Vehículo</th>
+                    <th className={styles.th}>Estado</th>
+                    <th className={styles.th}>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.Id}>
+                      {isAdmin ? <td className={styles.td}>{r.User}</td> : null}
+                      <td className={styles.td}>{r.Date}</td>
+                      <td className={styles.td}>{r.Turn}</td>
+                      <td className={styles.td}>{spotNames[r.Spot] ?? 'Cargando…'}</td>
+                      <td className={styles.td}>{r.VehicleType}</td>
+                      <td className={styles.td}>
+                        <span className={styles.pill} style={{ background: statusColor(r.Status) }}>
+                          {r.Status}
+                        </span>
+                      </td>
+                      <td className={styles.td}>
+                        {r.Status === 'Activa' ? (
+                          <button
+                            className={styles.cancelBtn}
+                            onClick={() => { void cancelReservation(r.Id); }}
+                            disabled={loading}
+                            title="Cancelar esta reserva"
+                          >
+                            Cancelar
+                          </button>
+                        ) : (
+                          <p>No hay acciones disponibles</p>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-  return {
-    // estado base
-    loading,
-    error: c.error || s.error || null,
+            <div className={styles.paginationBar}>
+              <div className={styles.paginationLeft}>
+                <button className={styles.pageBtn} onClick={prevPage} disabled={loading || pageIndex === 0}>
+                  ← Anterior
+                </button>
+                <button className={styles.pageBtn} onClick={nextPage} disabled={loading || !hasNext}>
+                  Siguiente →
+                </button>
+                <span className={styles.pageInfo}>Página {pageIndex + 1}</span>
+              </div>
 
-    // filas ya mezcladas con ocupación
-    rows: rowsWithOcc,
+              <div className={styles.paginationRight}>
+                <label className={styles.pageSizeLabel}>
+                  Filas por página
+                  <select
+                    className={styles.pageSizeSelect}
+                    value={pageSize}
+                    onChange={(e) => setPageSize(Number(e.target.value) || 20)}
+                    disabled={loading}
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+          </>
+        )}
 
-    // filtros y paginación
-    search: c.search, setSearch: c.setSearch, onSearchEnter,
-    tipo: c.tipo, setTipo: c.setTipo,
-    itinerancia: c.itinerancia, setItinerancia: c.setItinerancia,
-    pageSize: c.pageSize, setPageSize: c.setPageSize,
-    pageIndex: c.pageIndex, hasNext: c.hasNext,
-    nextPage: c.nextPage, prevPage: c.prevPage,
-
-    // creación
-    createOpen: c.createOpen,
-    createSaving: c.createSaving,
-    createError: c.createError,
-    createForm: c.createForm,
-    canCreate: c.canCreate,
-    openModal: c.openModal,
-    closeModal: c.closeModal,
-    setCreateForm: c.setCreateForm,
-    create: c.create,
-
-    // ocupación/capacidad/turnos
-    occLoading: occ.loading,
-    capacidadAhora,
-    currentTurn,
-    hoursLabel,
-
-    // detalles
-    open, selected, openDetails, closeDetails,
-
-    // colaboradores (para el modal de detalles)
-    workers,
-    workersLoading,
-
-    // acciones UI
-    actionsDisabled,
-  };
+        {!loading && !error && rows.length === 0 && (
+          <div className={styles.info}>
+            {userMail
+              ? 'No hay reservas para los filtros seleccionados.'
+              : 'Proporciona un email para ver reservas.'}
+          </div>
+        )}
+      </div>
+    </section>
+  );
 };
+
+export default MisReservas;

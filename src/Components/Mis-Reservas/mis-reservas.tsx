@@ -6,10 +6,38 @@ import { statusColor } from '../../utils/status';
 import { useGraphServices } from '../../graph/GraphServicesContext';
 
 type Props = { userMail: string; isAdmin: boolean };
+const [spotNames, setSpotNames] = React.useState<Record<string, string>>({});
 
 const MisReservas: React.FC<Props> = ({ userMail, isAdmin = false }) => {
   const { reservations } = useGraphServices();
 
+  React.useEffect(() => {
+    const fetchSpots = async () => {
+      if (!rows || rows.length === 0) return;
+  
+      const missing = rows
+        .map(r => r.Spot)
+        .filter(id => id && !spotNames[id]);
+  
+      if (missing.length === 0) return;
+  
+      const updates: Record<string, string> = {};
+      for (const id of missing) {
+        try {
+          // 👇 aquí usas tu servicio real
+          const spot = await reservations.getSpotById(id); 
+          updates[id] = spot?.Title ?? `Celda ${id}`;
+        } catch (e) {
+          updates[id] = `Celda ${id}`;
+        }
+      }
+      setSpotNames(prev => ({ ...prev, ...updates }));
+  };
+
+  void fetchSpots();
+}, [rows]);
+
+  
   // 👇 servicio primero, luego mail, luego flag
   const {
     rows, loading, error,
@@ -111,7 +139,7 @@ const MisReservas: React.FC<Props> = ({ userMail, isAdmin = false }) => {
                       {isAdmin ? <td className={styles.td}>{r.User}</td> : null}
                       <td className={styles.td}>{r.Date}</td>
                       <td className={styles.td}>{r.Turn}</td>
-                      <td className={styles.td}>{r.Spot}</td>
+                      <td className={styles.td}>spotNames[r.Spot] ?? 'Cargando…'</td>
                       <td className={styles.td}>{r.VehicleType}</td>
                       <td className={styles.td}>
                         <span className={styles.pill} style={{ background: statusColor(r.Status) }}>
@@ -182,4 +210,5 @@ const MisReservas: React.FC<Props> = ({ userMail, isAdmin = false }) => {
 };
 
 export default MisReservas;
+
 

@@ -5,9 +5,9 @@ export interface Reservations {
   Date?: string;              
   Turn?: string;
   // Lookup SpotId:
-  SpotIdLookupId?: number | null; 
+  SpotId?: number | null; 
   SpotId?: string | null;         
-  VehivleType?: string;
+  VehicleType?: string;
   Status?: string;
   OData__ColorTag?: string;
 
@@ -74,4 +74,5 @@ export type ReserveArgs = {
 
 export type ReserveResult =
     |{ ok: true; message: string; reservation: any }
+
     |{ ok: false; message: string };

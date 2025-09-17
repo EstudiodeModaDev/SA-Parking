@@ -1,4 +1,4 @@
-// src/hooks/useReservar.ts (versión Graph + DEBUG)
+// src/hooks/useReservar.ts (versión Graph con DEBUG)
 import * as React from 'react';
 import { addDays } from '../utils/date';
 import type { ReserveArgs, ReserveResult } from '../Models/Reservation';
@@ -22,7 +22,9 @@ type UseReservarOptions = {
 const MOTO_CAPACITY = 4 as const;
 
 // Helpers de debug
-function dbgLabel(label: string) { return `%c${label}`; }
+function dbgLabel(label: string) {
+  return `%c${label}`;
+}
 const dbgStyle = 'background:#111;color:#7CFC00;padding:2px 4px;border-radius:3px;';
 
 export function useReservar(
@@ -38,14 +40,18 @@ export function useReservar(
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  // ============== DEBUG: dump inicial de Reservations sin filtros ==============
+  // ============== DEBUG: primer dump sin filtros de Reservations ==============
   React.useEffect(() => {
     (async () => {
       try {
         console.log(dbgLabel('[DEBUG] Reservations: getAll (no filter, top 2000)'), dbgStyle);
-        const all = await reservationsSvc.getAll({ top: 2000 });
+        const all = await reservationsSvc.getAll({
+          top: 2000,
+        });
+        // Esto es el modelo mapeado por tu service (no el raw de Graph).
         console.log('[DEBUG] Reservations getAll (mapped) length:', Array.isArray(all) ? all.length : 0);
         console.table(all);
+
         if (Array.isArray(all) && all.length > 0) {
           console.log('[DEBUG] First reservation (mapped):', all[0]);
         }
@@ -81,9 +87,11 @@ export function useReservar(
   // Cuenta reservas para un slot/fecha/turno
   const countReservations = React.useCallback(
     async (slotId: number | string, dateISO: string, turn: Exclude<TurnType, 'Dia'>) => {
+      // ⚠️ IMPORTANTE: en Graph el lookup usualmente se filtra por <NombreLookupId>
+      // Ajusta si tu internal name no es SpotIdLookupId
       const sid = Number(slotId);
       const filter = [
-        `fields/SpotIdLookupId eq ${sid}`,   // ✅ lookup correcto
+        `fields/SpotIdLookupId eq ${sid}`,          // <= si tu columna lookup se llama distinto, cámbiala aquí
         `fields/Date eq '${dateISO}'`,
         `fields/Turn eq '${turn}'`,
         `(fields/Status ne 'Cancelada')`,
@@ -91,10 +99,15 @@ export function useReservar(
 
       console.log(dbgLabel('[DEBUG] countReservations filter'), dbgStyle, filter);
 
-      const items = await reservationsSvc.getAll({ filter, top: 1000 });
-      console.log('[DEBUG] countReservations -> items length:', Array.isArray(items) ? items.length : 0);
-      if (Array.isArray(items)) console.table(items);
+      const items = await reservationsSvc.getAll({
+        filter,
+        top: 1000
+      });
 
+      console.log('[DEBUG] countReservations -> items length:', Array.isArray(items) ? items.length : 0);
+      if (Array.isArray(items)) {
+        console.table(items);
+      }
       return Array.isArray(items) ? items.length : 0;
     },
     [reservationsSvc]
@@ -107,10 +120,10 @@ export function useReservar(
       const emailSafe = email.replace(/'/g, "''");
 
       const filter = [
-        `fields/Title eq '${emailSafe}'`,
-        `fields/Date eq '${dateISO}'`,
-        `(fields/Status ne 'Cancelada')`,
-        `fields/Turn eq '${turn}'`,
+        `Title eq '${emailSafe}'`,
+        `Date eq '${dateISO}'`,
+        `(Status ne 'Cancelada')`,
+        `Turn eq '${turn}'`,
       ].join(' and ');
 
       console.log(dbgLabel('[DEBUG] hasActiveReservationSameDay filter'), dbgStyle, filter);
@@ -132,7 +145,7 @@ export function useReservar(
     async ({ vehicle, turn, dateISO }: ReserveArgs): Promise<ReserveResult> => {
       console.log(dbgLabel('[DEBUG] reservar() args'), dbgStyle, { vehicle, turn, dateISO, userMail, userName });
 
-      // 0) Validación: ya tiene reserva ese día/turno
+      // 0) Validación: ¿ya tiene reserva ese día?
       if (await hasActiveReservationSameDay(userMail, dateISO, turn)) {
         const msg = `No puedes reservar: ya tienes una reserva activa para el ${dateISO} en el turno de la ${turn}.`;
         console.warn('[DEBUG] bloquear por reserva existente:', msg);
@@ -160,8 +173,7 @@ export function useReservar(
       }
 
       // 2) Turnos a validar
-      const turnsToCheck: Exclude<TurnType, 'Dia'>[] =
-        turn === 'Dia' ? ['Manana', 'Tarde'] : [turn as Exclude<TurnType, 'Dia'>];
+      const turnsToCheck: Exclude<TurnType, 'Dia'>[] = turn === 'Dia' ? ['Manana', 'Tarde'] : [turn as Exclude<TurnType, 'Dia'>];
       console.log('[DEBUG] turnsToCheck:', turnsToCheck);
 
       for (const slot of slots) {
@@ -188,8 +200,7 @@ export function useReservar(
         }
 
         // 4) Crear la(s) reserva(s)
-        const turnsToCreate =
-          (turn === 'Dia' ? (['Manana', 'Tarde'] as const) : [turn]) as readonly Exclude<TurnType, 'Dia'>[];
+        const turnsToCreate = (turn === 'Dia' ? (['Manana', 'Tarde'] as const) : [turn]) as readonly Exclude<TurnType, 'Dia'>[];
         console.log('[DEBUG] turnsToCreate:', turnsToCreate);
 
         try {
@@ -198,15 +209,13 @@ export function useReservar(
           for (const t of turnsToCreate) {
             const payload: any = {
               Title: userMail,
-              NombreUsuario: userName,
               Date: dateISO,
               Turn: t,
-              // ✅ nombre correcto del lookup
-              SpotIdLookupId: Number(slotId),
-              // ⬇️ asegúrate que el internal name sea VehicleType (o cámbialo si es distinto)
-              VehicleType: vehicle,
+              SpotIdLookupId: Number(slotId),   // <= revisar nombre de lookup interno
+              // OJO: tu lista tiene 'VehivleType' (typo) o 'VehicleType'? Ajusta el internal name real:
+              VehivleType: vehicle,             // si el internal correcto es VehicleType, cámbialo
               Status: 'Activa',
-              // SpotCode: code, // opcional si materializas el string en la lista
+              NombreUsuario: userName,
             };
 
             console.log(dbgLabel('[DEBUG] create payload'), dbgStyle, payload);
@@ -214,6 +223,7 @@ export function useReservar(
             console.log('[DEBUG] create OK ->', lastCreated);
           }
 
+          // 5) Refrescar listas/estado externo
           await opts?.onAfterReserve?.();
 
           const successMsg =
@@ -225,10 +235,12 @@ export function useReservar(
           return { ok: true, message: successMsg, reservation: lastCreated };
         } catch (e: any) {
           console.error('[DEBUG] create FAILED para slot', slotId, e?.message ?? e, e);
-          continue; // intenta con la siguiente celda
+          // Si falla con esta celda, intenta con la siguiente
+          continue;
         }
       }
 
+      // 6) Si ninguna celda tuvo cupo
       const turnoTexto = turn === 'Dia' ? 'día completo' : String(turn).toLowerCase();
       const msg = `No hay parqueaderos disponibles para ${vehicle} el ${dateISO} en ${turnoTexto}.`;
       console.warn('[DEBUG] sin cupo en todos los slots:', msg);
@@ -245,3 +257,5 @@ export function useReservar(
     reservar,
   };
 }
+
+

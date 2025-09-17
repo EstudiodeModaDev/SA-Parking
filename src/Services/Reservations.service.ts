@@ -81,7 +81,7 @@ export class ReservationsService {
       SpotId: f.SpotId ?? null,
 
       // ⚠️ Asegúrate que el internal name sea el mismo en tu lista.
-      VehivleType: f.VehivleType ?? f.VehicleType ?? undefined,
+      VehicleType: f.VehicleType ?? f.VehicleType ?? undefined,
       Status: f.Status ?? undefined,
       OData__ColorTag: f.OData__ColorTag ?? undefined,
 
@@ -101,8 +101,8 @@ export class ReservationsService {
       NombreUsuario: record.NombreUsuario,
       Date: record.Date,
       Turn: record.Turn,
-      SpotIdLookupId: record.SpotIdLookupId ?? undefined,
-      VehivleType: record.VehivleType, // o VehicleType si así se llama tu columna
+      SpotId: record.SpotId ?? undefined,
+      VehicleType: record.VehicleType, // o VehicleType si así se llama tu columna
       Status: record.Status,
       OData__ColorTag: record.OData__ColorTag,
     };
@@ -203,4 +203,5 @@ export class ReservationsService {
     });
   }
 }
+
 

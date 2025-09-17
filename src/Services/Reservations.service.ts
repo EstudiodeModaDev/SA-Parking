@@ -157,15 +157,8 @@ export class ReservationsService {
   async getAll(opts?: GetAllOpts) {
     await this.ensureIds();
 
-    // Selecciona solo lo que usas (puedes agregar más campos)
-    const select = [
-      'Title','NombreUsuario','Date','Turn',
-      'SpotIdLookupId','SpotId','VehivleType','Status','OData__ColorTag',
-      'Modified','Created','AuthorLookupId','EditorLookupId'
-    ].join(',');
-
     const qs = new URLSearchParams();
-    qs.set('$expand', `fields($select=${select})`);
+    qs.set('$expand', `fields`);
     if (opts?.filter)  qs.set('$filter', opts.filter);
     if (opts?.orderby) qs.set('$orderby', opts.orderby);
     if (opts?.top != null) qs.set('$top', String(opts.top));
@@ -203,3 +196,4 @@ export class ReservationsService {
     });
   }
 }
+

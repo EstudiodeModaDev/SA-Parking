@@ -395,7 +395,7 @@ export default function SlotDetailsModal({
         }
 
         await reservationsSvc.create({
-          SpotIdLookupId: { Id: Number(slot.Id) },
+          SpotIdLookupId:Number(slot.Id),
           Date: rvDate,
           Turn: rvTurn,
           Status: 'Activa',
@@ -670,6 +670,7 @@ export default function SlotDetailsModal({
     </div>
   );
 }
+
 
 
 

@@ -1,25 +1,23 @@
-// src/Models/Reservation.ts
 export interface Reservations {
-  ID: string;
+  ID: string;                 
   Title: string;
   NombreUsuario?: string;
-  Date?: string;
+  Date?: string;              
   Turn?: string;
-
-  // Lookup a la celda (ID numérico del ítem referenciado)
-  SpotIdLookupId?: number | null;
-
-  // Texto visible opcional (si lo materializas en un campo aparte)
-  SpotCode?: string | null;
-
-  VehicleType?: string;
+  // Lookup SpotId:
+  SpotIdLookupId?: number | null; 
+  SpotId?: string | null;         
+  VehivleType?: string;
   Status?: string;
   OData__ColorTag?: string;
 
+  // Sistema / auditoría (solo lectura normalmente)
   Modified?: string;
   Created?: string;
   AuthorLookupId?: number | null;
   EditorLookupId?: number | null;
+
+
 }
 
 export type ReservationUI = {
@@ -30,36 +28,50 @@ export type ReservationUI = {
   Spot: string;
   VehicleType: string;
   Status: string;
-  User: string;
+  User: string
 };
 
-// Para Graph (items -> { id, fields })
-export const mapReservationToUI = (item: any): ReservationUI => {
-  const f = item?.fields ?? {};
-  const dateStr = String(f.Date ?? '').slice(0, 10);
+export const mapReservationToUI = (r: any): ReservationUI => {
+  const dateStr = String(r.Date ?? r.date ?? r.Fecha ?? r.fecha ?? '').slice(0, 10);
 
-  const spotId = Number.isFinite(f.SpotIdLookupId) ? Number(f.SpotIdLookupId) : 0;
-  const spotTitle = String(f.SpotCode ?? '') || (spotId ? String(spotId) : '');
+  const spotId = Number(
+    r['SpotId#Id'] ??
+    r.SpotId?.Id ??
+    r.SpotId ??
+    0
+  );
+
+  const spotTitle = String(
+    r.SpotId?.Value      // si el lookup “muestra” Title, aquí vendrá el texto visible
+    ?? r['SpotId/Title'] // fallback si usas $expand
+    ?? r.Spot            // algún aplanado
+    ?? (spotId ? String(spotId) : '')
+  );
+
+
 
   return {
-    Id: Number(item?.id ?? 0),
+    Id: Number(r.ID ?? r.Id ?? r.id ?? 0),
     Date: /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? dateStr : '',
-    Turn: String(f.Turn ?? ''),
+    Turn: String(r.Turn ?? r.Turno ?? r.turn ?? ''),
     SpotId: spotId,
     Spot: spotTitle,
-    VehicleType: String(f.VehicleType ?? ''),
-    Status: String(f.Status ?? ''),
-    User: String(f.NombreUsuario ?? ''),
+    VehicleType: String(r.VehicleType ?? r.Vehiculo ?? r.vehicleType ?? ''),
+    Status: String(r.Status ?? r.Estado ?? r.status ?? ''),
+    User: String(r.NombreUsuario)
   };
 };
 
+import type { TurnType, VehicleType } from "./shared";
+
+
 export type ReserveArgs = {
   vehicle: VehicleType;
-  turn: TurnType;
-  dateISO: string;     // 'YYYY-MM-DD'
+  turn: TurnType;        // 'Dia' => valida ambos horarios
+  dateISO: string;       // 'YYYY-MM-DD'
   userEmail: string;
 };
 
 export type ReserveResult =
-  | { ok: true; message: string; reservation: any }
-  | { ok: false; message: string };
+    |{ ok: true; message: string; reservation: any }
+    |{ ok: false; message: string };

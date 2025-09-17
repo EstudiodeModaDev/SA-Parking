@@ -45,10 +45,12 @@
   grid-template-areas:"title details" "badges badges";
   align-items:start !important; gap:6px 10px !important;
 }
+.celdaTitle{ grid-area:title; width:auto !important; text-align:left !important; }
+.cardHeader .btnLink,.cardHeader .btnPrimary{ grid-area:details; justify-self:start; margin-top:2px; }
+
 .cardCode{ font-weight:600; color:#0f172a; }
 .cardBody{ display:grid; gap:6px; }
 .metaLabel{ color:#64748b; font-size:12px; }
-.btnPrimary{ padding:6px 10px; border-radius:8px; border:none; color:#fff; cursor:pointer; }
 .emptyGrid{ margin-top:8px; color:#64748b; font-style:italic; }
 
 /* Badges */
@@ -63,8 +65,6 @@
 .badgeReserved{ background:#ffedd5; color:#9a3412; border-color:#fdba74; }
 .badgeInUse{ background:#fee2e2; color:#991b1b; border-color:#fca5a5; }
 .badgeInactive{ background:#e5e7eb; color:#374151; border-color:#d1d5db; }
-.celdaTitle{ grid-area:title; width:auto !important; text-align:left !important; }
-.cardHeader .btnLink,.cardHeader .btnPrimary{ grid-area:details; justify-self:start; margin-top:2px; }
 .badgeLine{ display:inline-block; }
 .badgeWho{ color:#64748b; font-size:11px; }
 
@@ -85,7 +85,7 @@
 
 /* Paginación */
 .paginationBar{ display:flex; justify-content:center; align-items:center; gap:8px; margin-top:8px; }
-.pageBtn{ padding:6px 10px; border-radius:8px; background:#fff; border:1px solid var(--border); color:#fg; cursor:pointer; font-weight:600; }
+.pageBtn{ padding:6px 10px; border-radius:8px; background:#fff; border:1px solid var(--border); color:var(--fg); cursor:pointer; font-weight:600; }
 .pageBtn:disabled{ opacity:.6; cursor:not-allowed; }
 .pageBtn:hover{ background:#f3f4f6; }
 .pageInfo{ font-size:13px; color:var(--muted); }
@@ -93,15 +93,15 @@
 /* === Tarjetas superiores simétricas (Capacidad izquierda fija, Quick derecha flexible) === */
 .twoCards{
   display:grid;
-  grid-template-columns: 380px 1fr;  /* ¡aquí se hace la magia! */
+  grid-template-columns: 380px 1fr;
   gap:12px;
-  align-items:stretch;              /* ambas a la misma altura */
+  align-items:stretch;              /* mismas alturas */
 }
 @media (max-width:900px){
   .twoCards{ grid-template-columns:1fr; }
 }
 
-/* Tarjetas (no tocamos los estilos internos de capacidad) */
+/* Tarjetas (no tocamos internos de capacidad) */
 .capacityCard,.quickCard{
   background:#fff; border:1px solid var(--border); border-radius:10px;
   padding:16px; box-shadow:0 1px 6px rgba(30,41,59,.05);
@@ -109,37 +109,38 @@
   min-height:260px;
 }
 
+/* Header de capacidad centrado (se mantiene) */
 .capacityHeader{
-  width: 100%;
-  display: flex;
-  flex-direction: column;    /* título arriba, pastilla debajo */
-  align-items: center;       /* centrado horizontal */
-  justify-content: center;   /* por si crece en altura */
-  gap: 8px;
+  width:100%;
+  display:flex;
+  flex-direction:column;    /* título arriba, pastilla debajo */
+  align-items:center;       /* centrado horizontal */
+  justify-content:center;   /* centrado vertical si crece */
+  gap:8px;
 }
 .capacityCard{
-  /* ya tiene min-height; esto permitirá centrar vertical */
-  display: flex;
-  flex-direction: column;
-  justify-content: center;   /* centra vertical */
-  align-items: center;       /* centra horizontal */
-  text-align: center;        /* centra textos */
+  display:flex;
+  flex-direction:column;
+  justify-content:center;   /* centra vertical */
+  align-items:center;       /* centra horizontal */
+  text-align:center;        /* centra textos */
 }
-.capacityCard{ max-width:unset; }
-.capacityHeader,.quickHeader{ display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
 .cardTitle{ font-weight:700; color:#0f172a; }
-
 .turnPill{
   font-size:12px; font-weight:700; background:#eef2ff; color:#3730a3;
   padding:4px 10px; border-radius:9999px;
 }
 .capacityCard small{
-  display: block;
-  text-align: center;
-  margin-top: 6px;
+  display:block; text-align:center; margin-top:6px;
 }
-/* Capacidad interior (no se toca el comportamiento original) */
-.capacityGrid{ display:flex; justify-content:center; align-items:center; gap:12px; flex-wrap:wrap; width 100% }
+
+/* Header de quick independiente (no pisar capacidad) */
+.quickHeader{ display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+
+/* Capacidad interior (sin tocar su comportamiento) */
+.capacityGrid{
+  display:flex; justify-content:center; align-items:center; gap:12px; flex-wrap:wrap; width:100%;
+}
 .capacityItem{ border:1px solid #e5e7eb; border-radius:10px; padding:8px 10px; background:#f8fafc; width:140px; }
 .capacityLabel{ font-size:12px; color:#475569; margin-bottom:4px; }
 .capacityValue{ font-size:18px; font-weight:800; color:#111827; }
@@ -161,7 +162,7 @@
 }
 
 /* Campos y combobox de colaborador */
-.field{ display:grid; gap:6px; margin:0; } /* compacta dentro de quick */
+.field{ display:grid; gap:6px; margin:0; } /* compacto dentro de quick */
 
 .combo{ position:relative; display:flex; align-items:center; }
 .clearBtn{
@@ -186,18 +187,4 @@
 /* Acciones quick */
 .quickActions{ display:flex; justify-content:flex-end; gap:8px; }
 
-/* Modal */
-.modalBackdrop{
-  position:fixed; inset:0; background:rgba(0,0,0,.45);
-  display:flex; align-items:flex-start; justify-content:center; padding:10vh 16px; z-index:2147483647;
-}
-.modal{ width:100%; max-width:520px; background:#fff; border-radius:var(--radius); box-shadow:0 10px 40px rgba(0,0,0,.25); padding:16px; }
-.modalActions{ display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
-.actionsRight{ margin-left:auto; display:flex; align-items:center; }
-.btnGhost{ background:#fff; border:1px solid var(--border); color:#fg; padding:6px 12px; border-radius:8px; cursor:pointer; }
-.btnGhost:hover{ background:#f8fafc; }
-
-/* Mensajes */
-.error{ background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:8px 12px; border-radius:8px; }
-.ok{ background:#dcfce7; color:#14532d; border:1px solid #bbf7d0; padding:8px 12px; border-radius:8px; }
-
+/* Modal*

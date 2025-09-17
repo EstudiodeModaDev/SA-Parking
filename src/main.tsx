@@ -8,10 +8,9 @@ import { AuthProvider } from './auth/AuthProvider';
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthProvider>
-      <GraphServicesProvider>
         <App />
-      </GraphServicesProvider>
     </AuthProvider>
   </StrictMode>
 );
+
 

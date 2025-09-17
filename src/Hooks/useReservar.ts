@@ -102,8 +102,7 @@ export function useReservar(
 
       const items = await reservationsSvc.getAll({
         filter,
-        top: 1000,
-        orderby: 'fields/ID asc',
+        top: 1000
       });
 
       console.log('[DEBUG] countReservations -> items length:', Array.isArray(items) ? items.length : 0);
@@ -259,4 +258,5 @@ export function useReservar(
     reservar,
   };
 }
+
 

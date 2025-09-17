@@ -1,4 +1,4 @@
-// src/Hooks/useCeldas.ts
+// src/hooks/useCeldas.ts (Graph + onSearchEnter + debug)
 import * as React from 'react';
 import { mapSlotToUI, type CreateForm, type SlotUI } from '../Models/Celdas';
 import type { ParkingSlot } from '../Models/Parkingslot';
@@ -11,7 +11,7 @@ export type UseParkingSlotsReturn = {
 
   search: string;
   setSearch: (s: string) => void;
-  onSearchEnter: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onSearchEnter: (e: React.KeyboardEvent<HTMLInputElement>) => void; // 👈 nuevo
 
   tipo: 'all' | 'Carro' | 'Moto';
   setTipo: (t: 'all' | 'Carro' | 'Moto') => void;
@@ -27,7 +27,7 @@ export type UseParkingSlotsReturn = {
   prevPage: () => void;
 
   reloadAll: () => Promise<void>;
-  toggleEstado: (slotId: string | number, currentStatus: 'Activa' | 'Inactiva' | string) => Promise<void>;
+  toggleEstado: (slotId: string | number, currentStatus: 'Activa' | 'No Activa' | string) => Promise<void>;
 
   createOpen: boolean;
   createSaving: boolean;
@@ -40,7 +40,7 @@ export type UseParkingSlotsReturn = {
   create: () => Promise<void>;
 };
 
-export function useCeldas(svc: ParkingSlotsService | null): UseParkingSlotsReturn {
+export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
   const [allRows, setAllRows] = React.useState<SlotUI[]>([]);
   const [rows, setRows] = React.useState<SlotUI[]>([]);
   const [loading, setLoading] = React.useState(false);
@@ -74,12 +74,11 @@ export function useCeldas(svc: ParkingSlotsService | null): UseParkingSlotsRetur
   const closeCreate = () => { setCreateOpen(false); setCreateError(null); };
 
   // -------- acciones ----------
-  const toggleEstado = React.useCallback(async (slotId: string | number, currentStatus: 'Activa' | 'Inactiva' | string) => {
+  const toggleEstado = React.useCallback(async (slotId: string | number, currentStatus: 'Activa' | 'No Activa' | string) => {
     if (!slotId) { alert('ID inválido'); return; }
-    if (!svc)   { alert('Servicio no disponible aún'); return; }
     try {
       setLoading(true);
-      const nuevo: 'Activa' | 'Inactiva' = currentStatus === 'Activa' ? 'Inactiva' : 'Activa';
+      const nuevo: 'Activa' | 'No Activa' = currentStatus === 'Activa' ? 'No Activa' : 'Activa';
       await svc.update(String(slotId), { Activa: nuevo } as any);
       setAllRows(prev => prev.map(r => r.Id === Number(slotId) ? { ...r, Activa: nuevo } : r));
       setRows(prev => prev.map(r => r.Id === Number(slotId) ? { ...r, Activa: nuevo } : r));
@@ -93,7 +92,6 @@ export function useCeldas(svc: ParkingSlotsService | null): UseParkingSlotsRetur
 
   const handleCreate = async () => {
     if (!canCreate) return;
-    if (!svc) { setCreateError('Servicio no disponible aún'); return; }
     setCreateSaving(true);
     setCreateError(null);
     try {
@@ -125,9 +123,6 @@ export function useCeldas(svc: ParkingSlotsService | null): UseParkingSlotsRetur
 
   // -------- carga ----------
   const reloadAll = React.useCallback(async () => {
-    // Servicio aún no listo (MSAL/Graph). Mostramos loading y salimos sin llamar a Graph.
-    if (!svc) { setLoading(true); return; }
-
     setLoading(true);
     setError(null);
     try {
@@ -135,7 +130,7 @@ export function useCeldas(svc: ParkingSlotsService | null): UseParkingSlotsRetur
       const term = search.trim().toLowerCase().replace(/'/g, "''");
 
       const filters: string[] = [];
-      if (term) filters.push(`contains(tolower(fields/Title),'${term}')`);
+      if (term) filters.push(`contains(tolower(fields/Title),'${term}')`);   // 👈 filtra por fields/Title
       if (tipo !== 'all') filters.push(`fields/TipoCelda eq '${tipo}'`);
       if (itinerancia !== 'all') filters.push(`fields/Itinerancia eq '${itinerancia}'`);
 
@@ -166,7 +161,7 @@ export function useCeldas(svc: ParkingSlotsService | null): UseParkingSlotsRetur
     }
   }, [svc, search, pageSize, tipo, itinerancia]);
 
-  // -------- onSearchEnter ----------
+  // -------- onSearchEnter (nuevo) ----------
   const onSearchEnter = React.useCallback(async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter') return;
     console.log('[useCeldas] onSearchEnter -> search =', search);
@@ -212,7 +207,7 @@ export function useCeldas(svc: ParkingSlotsService | null): UseParkingSlotsRetur
   }, [reloadAll]);
 
   React.useEffect(() => {
-    void reloadAll();
+    reloadAll();
   }, [tipo, itinerancia]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
@@ -222,7 +217,7 @@ export function useCeldas(svc: ParkingSlotsService | null): UseParkingSlotsRetur
 
     search,
     setSearch,
-    onSearchEnter,
+    onSearchEnter,     // 👈 exportado
 
     tipo,
     setTipo,

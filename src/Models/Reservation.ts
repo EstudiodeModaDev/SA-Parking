@@ -28,7 +28,6 @@ export type ReservationUI = {
   VehicleType: string;
   Status: string;
   User: string
-  Email?: String
 };
 
 export const mapReservationToUI = (r: any): ReservationUI => {
@@ -75,5 +74,6 @@ export type ReserveArgs = {
 export type ReserveResult =
     |{ ok: true; message: string; reservation: any }
     |{ ok: false; message: string };
+
 
 

@@ -91,10 +91,10 @@ export function useReservar(
       // Ajusta si tu internal name no es SpotIdLookupId
       const sid = Number(slotId);
       const filter = [
-        `fields/SpotIdLookupId eq ${sid}`,          // <= si tu columna lookup se llama distinto, cámbiala aquí
-        `fields/Date eq '${dateISO}'`,
-        `fields/Turn eq '${turn}'`,
-        `(fields/Status ne 'Cancelada')`,
+        `SpotIdLookupId eq ${sid}`,          // <= si tu columna lookup se llama distinto, cámbiala aquí
+        `Date eq '${dateISO}'`,
+        `Turn eq '${turn}'`,
+        `(Status ne 'Cancelada')`,
       ].join(' and ');
 
       console.log(dbgLabel('[DEBUG] countReservations filter'), dbgStyle, filter);
@@ -120,10 +120,10 @@ export function useReservar(
       const emailSafe = email.replace(/'/g, "''");
 
       const filter = [
-        `fields/Title eq '${emailSafe}'`,
-        `fields/Date eq '${dateISO}'`,
-        `(fields/Status ne 'Cancelada')`,
-        `fields/Turn eq '${turn}'`,
+        `Title eq '${emailSafe}'`,
+        `Date eq '${dateISO}'`,
+        `(Status ne 'Cancelada')`,
+        `Turn eq '${turn}'`,
       ].join(' and ');
 
       console.log(dbgLabel('[DEBUG] hasActiveReservationSameDay filter'), dbgStyle, filter);
@@ -131,7 +131,7 @@ export function useReservar(
       const items = await reservationsSvc.getAll({
         filter,
         top: 1,
-        orderby: 'fields/ID asc',
+        orderby: 'ID asc',
       });
 
       const exists = Array.isArray(items) && items.length > 0;
@@ -154,9 +154,9 @@ export function useReservar(
 
       // 1) Traer celdas activas del tipo solicitado (itinerantes)
       const slotsFilter = [
-        `(fields/Activa eq 'Activa')`,
-        `fields/TipoCelda eq '${vehicle}'`,
-        `fields/Itinerancia eq 'Empleado Itinerante'`,
+        `(Activa eq 'Activa')`,
+        `TipoCelda eq '${vehicle}'`,
+        `Itinerancia eq 'Empleado Itinerante'`,
       ].join(' and ');
 
       console.log(dbgLabel('[DEBUG] slots getAll filter'), dbgStyle, slotsFilter);
@@ -164,7 +164,7 @@ export function useReservar(
       const slots = await slotsSvc.getAll({
         filter: slotsFilter,
         top: 2000,
-        orderby: 'fields/Title asc',
+        orderby: 'Title asc',
       });
 
       console.log('[DEBUG] slots count:', Array.isArray(slots) ? slots.length : 0);
@@ -257,6 +257,7 @@ export function useReservar(
     reservar,
   };
 }
+
 
 
 

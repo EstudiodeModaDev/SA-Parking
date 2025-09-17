@@ -44,9 +44,6 @@ const AdminCells: React.FC = () => {
   
   const { hours, loading: hoursLoading, error: hoursError } = useSettingsHours();
 
-  const minISO = React.useMemo(() => toISODate(minDate), [minDate]);
-  const maxISO = React.useMemo(() => toISODate(maxDate), [maxDate]);
-
   // Estado reserva rápida
   const [qrDate, setQrDate] = React.useState<string>('');
   const [qrTurn, setQrTurn] = React.useState<TurnType>('Manana');
@@ -64,7 +61,8 @@ const AdminCells: React.FC = () => {
 
   const { minDate, maxDate, reservar, loading: reservarLoading, error: reservarError } =
     useReservar(reservations, parkingSlots, settings, qrUserEmail, qrUserName);
-
+    const minISO = React.useMemo(() => toISODate(minDate), [minDate]);
+  const maxISO = React.useMemo(() => toISODate(maxDate), [maxDate]);
   const workerOptions = React.useMemo(
     () => (workers || []).map((w: any) => ({
       mail: String(w.mail || '').trim(),
@@ -603,6 +601,7 @@ async function submitQuickReserve() {
 };
 
 export default AdminCells;
+
 
 
 

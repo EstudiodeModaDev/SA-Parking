@@ -25,7 +25,7 @@ export class SharedServices {
     try {
       // 1) intenta por Correo (recomendado)
       const porCorreo = await this.usuariosSvc.getAll({
-        filter: `tolower(fields/Correo) eq '${emailLower}'`,
+        filter: `tolower(fields/Title) eq '${emailLower}'`,
         orderby: 'fields/Title asc',
         top: 1,
       });
@@ -49,4 +49,5 @@ export class SharedServices {
     }
   }
 }
+
 

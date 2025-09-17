@@ -1,277 +1,169 @@
-// src/hooks/useMisReservas.ts (versión Graph)
+// src/Hooks/useMisReservas.ts
 import * as React from 'react';
-import type { ReservationUI } from '../Models/Reservation';
-import type { FilterMode } from '../Models/misReservas';
-import { last30Days } from '../utils/date';
-import { ReservationsService } from '../Services/Reservations.service'; // <-- tu servicio 100% Graph
+import type { Reservations, ReservationUI } from '../Models/Reservation';
+import type { GetAllOpts } from '../Models/Commons';
+import { ReservationsService } from '../Services/Reservations.service';
 
-// Normalizar para mostrar (ajusta a tu mapeo real si difiere)
-const mapToUI = (r: any): ReservationUI => {
-  // r viene mapeado por tu ReservationsService.toModel()
-  const dateStr = String(r.Date ?? '').slice(0, 10);
-  const spotId = Number(r.SpotIdLookupId ?? r.SpotId ?? 0);
-  const spotTitle = String(r.SpotId ?? (spotId ? String(spotId) : ''));
+// ===== Helpers =====
+const toISODate = (d: Date) => d.toISOString().slice(0, 10);
 
-  const ui: ReservationUI & { __UserMail?: string } = {
-    Id: Number(r.ID ?? r.Id ?? r.id ?? 0),
-    Date: /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? dateStr : '',
-    Turn: String(r.Turn ?? ''),
-    SpotId: spotId,
-    Spot: spotTitle,
-    VehicleType: String((r.VehicleType ?? r.VehivleType) ?? ''), // por si tu internal tuvo el typo
-    Status: String(r.Status ?? ''),
-    User: String(r.NombreUsuario ?? ''),
-  };
+// Mapea del modelo (ya “toModel” del service) a la fila UI
+const mapModelToUI = (m: Reservations): ReservationUI => ({
+  Id: Number(m.ID ?? 0),
+  Date: String(m.Date ?? '').slice(0, 10),
+  Turn: String(m.Turn ?? ''),
+  SpotId: Number(m.SpotIdLookupId ?? 0),
+  Spot: String(m.SpotCode ?? (m.SpotIdLookupId ?? '')),
+  VehicleType: String(m.VehicleType ?? ''),
+  Status: String(m.Status ?? ''),
+  User: String(m.NombreUsuario ?? m.Title ?? ''),
+});
 
-  // Para admins: mostrar dueño si el servicio lo mapea en Title/Correo
-  const mail = r.Title ?? r.Usuario ?? r.UserMail ?? r.Correo ?? null;
-  if (mail) ui.__UserMail = String(mail);
+export type FilterMode = 'upcoming-active' | 'history';
 
-  return ui;
+export type Range = {
+  from: string; // YYYY-MM-DD
+  to: string;   // YYYY-MM-DD
 };
 
-export type UseMisReservasReturn = {
-  rows: ReservationUI[];
-  loading: boolean;
-  error: string | null;
-
-  range: { from: string; to: string };
-  setRange: React.Dispatch<React.SetStateAction<{ from: string; to: string }>>;
-  rangeInvalid: boolean;
-  applyRange: () => void;
-
-  pageSize: number;
-  setPageSize: (n: number) => void;
-  pageIndex: number;
-  hasNext: boolean;
-  nextPage: () => void;
-  prevPage: () => void;
-
-  reload: () => void;
-  cancelReservation: (id: number) => Promise<void>;
-
-  filterMode: FilterMode;
-  setFilterMode: (m: FilterMode) => void;
-};
-
-/**
- * Hook adaptado a Microsoft Graph.
- * Pásale tu instancia de ReservationsService (Graph) + mail del usuario y si es admin.
- */
 export function useMisReservas(
-  svc: ReservationsService,
+  reservationsSvc: ReservationsService,
   userMail: string,
-  isAdmin = false
-): UseMisReservasReturn {
-  const [allRows, setAllRows] = React.useState<ReservationUI[]>([]);
-  const [filteredRows, setFilteredRows] = React.useState<ReservationUI[]>([]);
+  isAdmin: boolean
+) {
+  // UI state
   const [rows, setRows] = React.useState<ReservationUI[]>([]);
-
-  const [loading, setLoading] = React.useState(false);
+  const [loading, setLoading] = React.useState<boolean>(false);
   const [error, setError] = React.useState<string | null>(null);
-
-  const [range, setRange] = React.useState(last30Days);
-  const rangeInvalid = !range.from || !range.to || range.from > range.to;
-
-  const [pageSize, _setPageSize] = React.useState(20);
-  const [pageIndex, setPageIndex] = React.useState(0);
-  const [hasNext, setHasNext] = React.useState(false);
 
   const [filterMode, setFilterMode] = React.useState<FilterMode>('upcoming-active');
 
-  const mailSafe = (userMail ?? '').replace(/'/g, "''");
-  const todayLocal = (() => {
-    const d = new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-  })();
+  const today = React.useMemo(() => toISODate(new Date()), []);
+  const [range, setRange] = React.useState<Range>({ from: today, to: today });
 
-  const applyClientFilter = React.useCallback((source: ReservationUI[]) => {
-    let data = source;
+  const [pageSize, setPageSize] = React.useState<number>(10);
+  const [pageIndex, setPageIndex] = React.useState<number>(0);
+
+  // “tick” para forzar recargas controladas (applyRange / reloadAll)
+  const [reloadTick, setReloadTick] = React.useState(0);
+
+  // ===== construir filtro OData según modo =====
+  const buildFilter = React.useCallback((): GetAllOpts => {
+    const filters: string[] = [];
+    if (!isAdmin && userMail?.trim()) {
+      const emailSafe = userMail.replace(/'/g, "''");
+      filters.push(`fields/Title eq '${emailSafe}'`);
+    }
 
     if (filterMode === 'upcoming-active') {
-      data = source.filter(r => r.Status === 'Activa' && r.Date >= todayLocal);
-    } else if (filterMode === 'history') {
-      data = source.filter(r => r.Status !== 'Activa');
+      // Próximas ACTIVAS (>= hoy)
+      filters.push(`fields/Date ge '${today}'`);
+      filters.push(`fields/Status eq 'Activa'`);
+    } else {
+      // Historial dentro del rango (cualquier estado)
+      if (range.from) filters.push(`fields/Date ge '${range.from}'`);
+      if (range.to)   filters.push(`fields/Date le '${range.to}'`);
     }
 
-    setFilteredRows(data);
-    const firstSlice = data.slice(0, pageSize);
-    setRows(firstSlice);
-    setPageIndex(0);
-    setHasNext(data.length > pageSize);
-  }, [filterMode, pageSize, todayLocal]);
+    const orderby = 'fields/Date asc,fields/Turn asc,fields/ID asc';
+    const filter = filters.join(' and ');
 
-  const fetchAllForRange = React.useCallback(async () => {
-    if (!svc) return;
+    return { filter, orderby, top: 2000 };
+  }, [isAdmin, userMail, filterMode, range.from, range.to, today]);
 
-    if (!isAdmin && !mailSafe) {
-      setAllRows([]);
-      setFilteredRows([]);
-      setRows([]);
-      setError('No hay email de usuario para cargar las reservas.');
-      return;
-    }
-    if (rangeInvalid) {
-      setError('Rango de fechas inválido.');
-      return;
-    }
-
+  // ===== cargar datos =====
+  const fetchRows = React.useCallback(async () => {
     setLoading(true);
     setError(null);
-
     try {
-      const MAX_FETCH = 2000;
-      const parts: string[] = [];
+      const opts = buildFilter();
+      // DEBUG opcional
+      // console.log('[MisReservas] getAll opts ->', opts);
 
-      // Filtro por dueño (no admin)
-      if (!isAdmin) {
-        // si guardas el correo en Title:
-        parts.push(`fields/Title eq '${mailSafe}'`);
-        // si usas otra columna (p.ej., NombreUsuario o Correo), cámbiala aquí
-        // parts.push(`fields/NombreUsuario eq '${mailSafe}'`);
-      }
+      const list = await reservationsSvc.getAll(opts);
+      const mapped = (Array.isArray(list) ? list : []).map(mapModelToUI);
 
-      // Filtro de fechas (Date es DateOnly? deja 'YYYY-MM-DD'; si es DateTime usa T00:00:00Z)
-      if (filterMode === 'upcoming-active') {
-        parts.push(`fields/Date ge '${todayLocal}'`);
-      } else {
-        parts.push(`fields/Date ge '${range.from}'`);
-        parts.push(`fields/Date le '${range.to}'`);
-      }
-
-      const filter = parts.join(' and ');
-
-      const items = await svc.getAll({
-        filter,
-        orderby: 'fields/Date desc',
-        top: MAX_FETCH,
-      });
-
-      const ui = items.map(mapToUI);
-
-      setAllRows(ui);
-      applyClientFilter(ui);
+      setRows(mapped);
+      setPageIndex(0); // reset paginación en cada recarga
     } catch (e: any) {
-      console.error('[useMisReservas] fetchAllForRange error:', e);
-      setAllRows([]);
-      setFilteredRows([]);
+      console.error('[MisReservas] fetchRows error:', e);
+      setError(e?.message ?? 'Error cargando reservas');
       setRows([]);
-      setError(e?.message ?? 'Error al cargar');
-      setHasNext(false);
     } finally {
       setLoading(false);
     }
-  }, [svc, isAdmin, mailSafe, range.from, range.to, rangeInvalid, filterMode, todayLocal, applyClientFilter]);
+  }, [buildFilter, reservationsSvc]);
 
-  const applyRange = React.useCallback(() => {
-    if (rangeInvalid) {
-      setError('El rango seleccionado es inválido. "Desde" no puede ser mayor que "Hasta".');
-      return;
-    }
-    fetchAllForRange();
-  }, [rangeInvalid, fetchAllForRange]);
-
-  const setPageSize = React.useCallback((n: number) => {
-    const size = Number.isFinite(n) && n > 0 ? Math.floor(n) : 20;
-    _setPageSize(size);
-
-    const slice = filteredRows.slice(0, size);
-    setRows(slice);
-    setPageIndex(0);
-    setHasNext(filteredRows.length > size);
-  }, [filteredRows]);
-
-  const nextPage = React.useCallback(() => {
-    if (loading) return;
-    const next = pageIndex + 1;
-    const start = next * pageSize;
-    const end = start + pageSize;
-    if (start >= filteredRows.length) return;
-    setRows(filteredRows.slice(start, end));
-    setPageIndex(next);
-    setHasNext(end < filteredRows.length);
-  }, [loading, pageIndex, pageSize, filteredRows]);
-
-  const prevPage = React.useCallback(() => {
-    if (loading || pageIndex === 0) return;
-    const prev = pageIndex - 1;
-    const start = prev * pageSize;
-    const end = start + pageSize;
-    setRows(filteredRows.slice(start, end));
-    setPageIndex(prev);
-    setHasNext(filteredRows.length > end);
-  }, [loading, pageIndex, pageSize, filteredRows]);
-
-  const reload = React.useCallback(() => {
-    const start = pageIndex * pageSize;
-    const end = start + pageSize;
-    setRows(filteredRows.slice(start, end));
-    setHasNext(end < filteredRows.length);
-  }, [filteredRows, pageIndex, pageSize]);
-
-  const cancelReservation = React.useCallback(async (id: number) => {
-    if (!id) {
-      alert('ID de reserva inválido');
-      return;
-    }
-    try {
-      setLoading(true);
-      await svc.update(String(id), { Status: 'Cancelada' } as any);
-      await fetchAllForRange();
-    } catch (e: any) {
-      console.error('[useMisReservas] cancelReservation error:', e);
-      alert('No se pudo cancelar la reserva: ' + (e?.message ?? 'error desconocido'));
-    } finally {
-      setLoading(false);
-    }
-  }, [svc, fetchAllForRange]);
-
-  // re-filtrar cuando cambie el modo
-  React.useEffect(() => {
-    applyClientFilter(allRows);
-  }, [filterMode]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // si cambia isAdmin en caliente, ajusta modo por UX (opcional)
-  React.useEffect(() => {
-    setFilterMode('upcoming-active');
-  }, [isAdmin]);
-
-  // Carga inicial
+  // Primer load + recargas controladas
   React.useEffect(() => {
     let cancel = false;
-    (async () => { if (!cancel) await fetchAllForRange(); })();
+    (async () => {
+      await fetchRows();
+      if (cancel) return;
+    })();
     return () => { cancel = true; };
-  }, [fetchAllForRange]);
+    // reloadTick asegura que sólo apliquemos rango cuando el usuario pulse “Buscar”
+  }, [fetchRows, reloadTick]);
 
-  // Recarga cada 5 minutos (solo cuando la pestaña está visible)
+  // ===== acciones públicas =====
+  const nextPage = React.useCallback(() => {
+    setPageIndex(i => i + 1);
+  }, []);
+  const prevPage = React.useCallback(() => {
+    setPageIndex(i => Math.max(0, i - 1));
+  }, []);
+
+  const hasNext = React.useMemo(() => {
+    const total = rows.length;
+    return (pageIndex + 1) * pageSize < total;
+  }, [rows.length, pageIndex, pageSize]);
+
+  const applyRange = React.useCallback(() => {
+    // Sólo tiene efecto en modo historial; en “upcoming-active” igual recarga.
+    setReloadTick(x => x + 1);
+  }, []);
+
+  const reloadAll = React.useCallback(() => {
+    // Recarga general (úsalo después de reservar/cancelar)
+    setReloadTick(x => x + 1);
+  }, []);
+
+  const cancelReservation = React.useCallback(async (id: number) => {
+    try {
+      setLoading(true);
+      await reservationsSvc.update(String(id), { Status: 'Cancelada' });
+      await fetchRows();
+    } catch (e: any) {
+      console.error('[MisReservas] cancelReservation error:', e);
+      setError(e?.message ?? 'No se pudo cancelar la reserva');
+    } finally {
+      setLoading(false);
+    }
+  }, [reservationsSvc, fetchRows]);
+
+  // ===== depuración opcional =====
   React.useEffect(() => {
-    const T = 5 * 60 * 1000; // 5 min
-    let id: number | null = null;
-
-    const tick = () => { fetchAllForRange(); };
-    const start = () => { if (id == null) id = window.setInterval(tick, T); };
-    const stop = () => { if (id != null) { window.clearInterval(id); id = null; } };
-
-    if (!document.hidden) start();
-    const onVis = () => { if (document.hidden) stop(); else { tick(); start(); } };
-    document.addEventListener('visibilitychange', onVis);
-
-    return () => { stop(); document.removeEventListener('visibilitychange', onVis); };
-  }, [fetchAllForRange]);
+    console.log('[MisReservas] debug');
+    console.log('userMail:', userMail);
+    console.log('rows.length:', rows.length);
+  }, [rows, userMail]);
 
   return {
+    // datos
     rows,
     loading,
     error,
 
+    // filtros
+    filterMode,
+    setFilterMode,
+
+    // rango (para “Historial”)
     range,
     setRange,
-    rangeInvalid,
     applyRange,
 
+    // paginación
     pageSize,
     setPageSize,
     pageIndex,
@@ -279,10 +171,8 @@ export function useMisReservas(
     nextPage,
     prevPage,
 
-    reload,
+    // acciones
     cancelReservation,
-
-    filterMode,
-    setFilterMode,
+    reloadAll, // 👈 expuesto
   };
 }

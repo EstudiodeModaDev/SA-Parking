@@ -1,77 +1,95 @@
+/* ===== Tokens ===== */
 :root {
-    --switch-width: 39px;
-    --switch-height: 17px;
-    --switch-padding: 2px;
-    --switch-radius: 999px;
-    --switch-border: 2px;
-    
-    --on-color: #27a9bf;      /* turquesa similar a tu captura */
-    --off-color: #e5e7eb;     /* slate-200 */
-    --text-on: #ffffff;
-    --text-off: #6b7280;      /* slate-500 */
-    --thumb: #ffffff;
-    --ring: rgba(59,130,246,.35);
-}   
+  --ts-track-off: #e5e7eb;     /* gray-200 */
+  --ts-track-on:  #2563eb;     /* blue-600 */
+  --ts-track-on-600:#1d4ed8;   /* blue-700 */
+  --ts-thumb:     #ffffff;
+  --ts-border:    #cbd5e1;     /* slate-300 */
+  --ts-shadow:    0 1px 3px rgba(0,0,0,.2);
+  --ts-ring:      0 0 0 3px rgba(37,99,235,.25);
+}
 
+/* ===== Botón base ===== */
 .switch {
+  /* reset */
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  border: 0;
+  background: var(--ts-track-off);
   position: relative;
-  width: var(--switch-width);
-  height: var(--switch-height);
-  padding: 0;
-  border: 2px solid #b6bcc7;
-  border-radius: var(--switch-radius);
-  background: var(--off-color);
-  cursor: pointer;
-  outline: none;
   display: inline-flex;
   align-items: center;
-  transition: background .2s ease, border-color .2s ease;
-  overflow: hidden;
+  justify-content: flex-start;
+
+  /* tamaño pequeño */
+  width: 44px;
+  height: 24px;
+  border-radius: 9999px;
+
+  /* estetica */
+  box-shadow: inset 0 0 0 1px var(--ts-border);
+  cursor: pointer;
+  transition: background .18s ease, box-shadow .18s ease;
+  outline: none;
+}
+
+.switch:hover:not(.disabled) {
+  box-shadow: inset 0 0 0 1px var(--ts-border), var(--ts-shadow);
 }
 
 .switch:focus-visible {
-  box-shadow: 0 0 0 4px var(--ring);
-}
-
-.switch.disabled {
-  opacity: .6;
-  cursor: not-allowed;
-}
-
-/* Texto dentro del track */
-.trackText {
-  position: absolute;
-  left: 14px;
-  font: 700 14px/1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  color: var(--text-off);
-  user-select: none;
-}
-
-/* Thumb */
-.thumb {
-  position: absolute;
-  top: var(--switch-padding);
-  left: var(--switch-padding);
-  width: calc(var(--switch-height) - 2 * var(--switch-padding));
-  height: calc(var(--switch-height) - 2 * var(--switch-padding));
-  background: var(--thumb);
-  border-radius: 50%;
-  box-shadow: 0 1px 2px rgba(0,0,0,.25), inset 0 0 0 1px #cbd5e1;
-  transition: transform .22s ease;
+  box-shadow: inset 0 0 0 1px var(--ts-border), var(--ts-ring);
 }
 
 /* Estado ON */
 .on {
-  background: var(--on-color);
-  border-color: #8ea0ad;
+  background: var(--ts-track-on);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.25);
 }
-.on .trackText { color: var(--text-on); }
 
+.on:hover:not(.disabled) {
+  background: var(--ts-track-on-600);
+}
+
+/* Estado disabled */
+.disabled {
+  cursor: not-allowed;
+  opacity: .6;
+  box-shadow: inset 0 0 0 1px var(--ts-border);
+}
+
+/* ===== Thumb ===== */
+.thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--ts-thumb);
+  box-shadow: var(--ts-shadow);
+  transform: translateX(0);
+  transition: transform .18s ease;
+}
+
+/* Mover el thumb cuando está ON:
+   44px ancho - 3px - 3px - 18px = 20px de recorrido */
 .on .thumb {
-  transform: translateX(calc(var(--switch-width) - var(--switch-height)));
+  transform: translateX(20px);
 }
 
-.switch.sm .trackText {
-  left: 7px;                 /* 14 / 2 */
-  font: 700 10px/1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; /* ~14 -> 10/11 */
+/* ===== Texto dentro de la pista =====
+   (lo mantenemos para accesibilidad pero oculto visualmente
+   porque el switch es pequeño) */
+.trackText {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0);
+  white-space: nowrap; border: 0;
+}
+
+/* ===== Reduce motion ===== */
+@media (prefers-reduced-motion: reduce) {
+  .switch, .thumb { transition: none; }
 }

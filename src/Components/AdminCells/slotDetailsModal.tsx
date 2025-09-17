@@ -583,6 +583,7 @@ export default function SlotDetailsModal({
                   >
                     <option value="Manana">AM (06:00–12:59)</option>
                     <option value="Tarde">PM (13:00–19:00)</option>
+                    <option value="Dia completo">Dia completo</option>
                   </select>
                 </label>
 
@@ -669,3 +670,4 @@ export default function SlotDetailsModal({
     </div>
   );
 }
+

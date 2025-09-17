@@ -9,12 +9,12 @@ import { useWorkers } from '../../Hooks/useWorkers';
 
 // Adapters / tipos
 import { deriveHoursLabels, getCurrentTurnFromHours } from '../../Models/time';
-import type { SlotUI } from '../../Models/Celdas';
+import type { SlotUI } from '../../Models/Celdas'
 
 // Auth + Graph + Services (Graph)
 import { useAuth } from '../../auth/AuthProvider';
 import { GraphRest } from '../../graph/GraphRest';
-import { ParkingSlotsService } from '../../Services/ParkingSlot.service';
+import { ParkingSlotsService } from '../../Services/ParkingSlot.service'
 import { ReservationsService } from '../../Services/Reservations.service';
 
 export const useAdminCells = () => {
@@ -28,7 +28,7 @@ export const useAdminCells = () => {
       graph,
       'estudiodemoda.sharepoint.com',
       '/sites/TransformacionDigital/IN/SA',
-      'parkingslots'
+      'parkingslots' // 👈 displayName exacto de la lista de celdas
     );
   }, [ready, getToken]);
 
@@ -39,18 +39,53 @@ export const useAdminCells = () => {
       graph,
       'estudiodemoda.sharepoint.com',
       '/sites/TransformacionDigital/IN/SA',
-      'reservations'
+      'reservations' // 👈 displayName exacto de la lista de reservas
     );
   }, [ready, getToken]);
 
-  // ====== hooks de datos (siempre, sin condicional) ======
-  // Asegúrate de que useCeldas acepte svc: ParkingSlotsService | null
-  const c = useCeldas(slotsSvc);
-
-  // Asegúrate de que useTodayOccupancy acepte svc: ReservationsService | null
-  const occ = useTodayOccupancy(reservationsSvc);
+  // ====== hooks de datos ======
+  // useCeldas AHORA espera el servicio (Graph) como argumento
+  const c = slotsSvc
+    ? useCeldas(slotsSvc)
+    : {
+        rows: [],
+        loading: true,
+        error: null,
+        // filtros/paginación
+        search: '',
+        setSearch: (_: string) => {},
+        tipo: 'all' as const,
+        setTipo: (_: 'all' | 'Carro' | 'Moto') => {},
+        itinerancia: 'all' as const,
+        setItinerancia: (_: 'all' | 'Empleado Fijo' | 'Empleado Itinerante' | 'Directivo') => {},
+        pageSize: 50,
+        setPageSize: (_: number) => {},
+        pageIndex: 0,
+        hasNext: false,
+        nextPage: () => {},
+        prevPage: () => {},
+        // acciones
+        reloadAll: async () => {},
+        toggleEstado: async () => {},
+        // creación
+        createOpen: false,
+        createSaving: false,
+        createError: null,
+        createForm: { Title: '', TipoCelda: 'Carro', Activa: 'Activa', Itinerancia: 'Empleado Fijo' },
+        setCreateForm: () => {},
+        canCreate: false,
+        openModal: () => {},
+        closeModal: () => {},
+        create: async () => {},
+      };
 
   const s = useSettingsHours();
+
+  // useTodayOccupancy AHORA recibe ReservationsService (Graph)
+  const occ = reservationsSvc
+    ? useTodayOccupancy(reservationsSvc)
+    : { occByTurn: {} as Record<number, any>, loading: true, error: null as string | null, reload: async () => {} };
+
   const { workers, loading: workersLoading } = useWorkers();
 
   // ====== mix: filas + ocupación por turno ======

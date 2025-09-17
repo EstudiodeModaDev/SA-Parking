@@ -61,8 +61,8 @@ export function useMisReservas(
       filters.push(`fields/Status eq 'Activa'`);
     } else {
       // Historial dentro del rango (cualquier estado)
-      if (range.from) filters.push(`Date ge '${range.from}'`);
-      if (range.to)   filters.push(`Date le '${range.to}'`);
+      if (range.from) filters.push(`fields/Date ge '${range.from}'`);
+      if (range.to)   filters.push(`fields/Date le '${range.to}'`);
     }
     const filter = filters.join(' and ');
 
@@ -174,6 +174,7 @@ export function useMisReservas(
     reloadAll, // 👈 expuesto
   };
 }
+
 
 
 

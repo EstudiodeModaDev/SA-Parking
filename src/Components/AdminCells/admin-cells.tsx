@@ -110,23 +110,42 @@ const AdminCells: React.FC = () => {
     return 'Fuera';
   }, [currentTurn]);
 
-  // Submit reserva rápida
+  // Submit reserva rápida (corregido)
   async function submitQuickReserve() {
+    console.log('submitQuickReserve()', {
+      qrUserEmail, qrUserName, qrDate, qrTurn, qrVehicle
+    });
+
+    if (!qrUserEmail || !qrUserName) {
+      setQrErr('Selecciona un colaborador válido.');
+      return;
+    }
+
     try {
       setQrSaving(true);
       setQrMsg(null);
       setQrErr(null);
-      alert(`otra: ${qrUserEmail} ${qrUserName}`);
-      const res = await reservar({
+
+      const payload: any = {
         vehicle: qrVehicle,
         turn: qrTurn,
         dateISO: qrDate,
+
+        // claves que usa el hook
+        userEmail: qrUserEmail,
+        userName: qrUserName,
+
+        // y si además persistes así en SP:
         Title: qrUserEmail,
         NombreUsuario: qrUserName,
-      } as any);
+      };
+
+      const res = await reservar(payload);
+
       if (res.ok) setQrMsg(res.message);
       else setQrErr(res.message);
     } catch (e: any) {
+      console.error('submitQuickReserve error', e);
       setQrErr(e?.message ?? 'No se pudo crear la reserva.');
     } finally {
       setQrSaving(false);
@@ -576,9 +595,3 @@ const AdminCells: React.FC = () => {
 };
 
 export default AdminCells;
-
-
-
-
-
-

@@ -122,11 +122,12 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
   };
 
   // -------- carga ----------
-  const reloadAll = React.useCallback(async (term?: string) => {
+  const reloadAll = React.useCallback(async (termArg?: string) => {
     setLoading(true);
     setError(null);
     try {
       const MAX_FETCH = 2000;
+      const term = (termArg ?? search).trim().toLowerCase().replace(/'/g, "''");
       console.log('term', term);
 
       const filters: string[] = [];
@@ -159,7 +160,7 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
     } finally {
       setLoading(false);
     }
-  }, [svc, pageSize, tipo, itinerancia]);
+  }, [svc, pageSize, tipo, itinerancia, search]);
 
   // -------- onSearchEnter (nuevo) ----------
   const onSearchEnter = React.useCallback(
@@ -254,6 +255,7 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
     create: handleCreate,
   };
 }
+
 
 
 

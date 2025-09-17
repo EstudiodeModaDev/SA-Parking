@@ -111,27 +111,52 @@ const AdminCells: React.FC = () => {
   }, [currentTurn]);
 
   // Submit reserva rápida
-  async function submitQuickReserve() {
-    try {
-      setQrSaving(true);
-      setQrMsg(null);
-      setQrErr(null);
-      alert("otra", qrUserEmail, " ",qrUserName)
-      const res = await reservar({
-        vehicle: qrVehicle,
-        turn: qrTurn,
-        dateISO: qrDate,
-        userEmail: qrUserEmail,
-      } as any);
-      alert(res)
-      if (res.ok) setQrMsg(res.message);
-      else setQrErr(res.message);
-    } catch (e: any) {
-      setQrErr(e?.message ?? 'No se pudo crear la reserva.');
-    } finally {
-      setQrSaving(false);
-    }
+async function submitQuickReserve() {
+  // sanity check (evita reservas sin selección)
+  if (!qrUserEmail || !qrUserName) {
+    setQrErr('Selecciona un colaborador válido.');
+    return;
   }
+
+  try {
+    setQrSaving(true);
+    setQrMsg(null);
+    setQrErr(null);
+
+    // mejor logging
+    console.log('submitQuickReserve payload:', {
+      vehicle: qrVehicle,
+      turn: qrTurn,
+      dateISO: qrDate,
+      userEmail: qrUserEmail,
+      userName: qrUserName,
+    });
+    alert(`Reservando para: ${qrUserName} <${qrUserEmail}>`);
+
+    const res = await reservar({
+      vehicle: qrVehicle,
+      turn: qrTurn,
+      dateISO: qrDate,
+
+      // ⬇⬇ IMPORTANTE: manda ambos
+      userEmail: qrUserEmail,
+      userName: qrUserName,
+
+      // Opcional si tu backend/SharePoint los usa
+      Title: qrUserEmail,
+      NombreUsuario: qrUserName,
+    } as any);
+
+    console.log('reservar() ->', res);
+    if (res.ok) setQrMsg(res.message);
+    else setQrErr(res.message);
+  } catch (e: any) {
+    console.error('submitQuickReserve error', e);
+    setQrErr(e?.message ?? 'No se pudo crear la reserva.');
+  } finally {
+    setQrSaving(false);
+  }
+}
 
   const emailOk = /\S+@\S+\.\S+/.test(qrUserEmail);
   const quickDisabled =
@@ -576,6 +601,7 @@ const AdminCells: React.FC = () => {
 };
 
 export default AdminCells;
+
 
 
 

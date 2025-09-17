@@ -46,7 +46,6 @@ export function useReservar(
       try {
         console.log(dbgLabel('[DEBUG] Reservations: getAll (no filter, top 2000)'), dbgStyle);
         const all = await reservationsSvc.getAll({
-          orderby: 'fields/ID asc',
           top: 2000,
         });
         // Esto es el modelo mapeado por tu service (no el raw de Graph).
@@ -258,5 +257,6 @@ export function useReservar(
     reservar,
   };
 }
+
 
 

@@ -163,14 +163,8 @@ export class ReservationsService {
   async getAll(opts?: GetAllOpts) {
     await this.ensureIds();
 
-    const select = [
-      'Title','NombreUsuario','Date','Turn',
-      'SpotIdLookupId','SpotCode','VehicleType','Status','OData__ColorTag',
-      'Modified','Created','AuthorLookupId','EditorLookupId'
-    ].join(',');
 
-    const qs = new URLSearchParams();
-    qs.set('$expand', `fields($select=${select})`);
+    qs.set('$expand', `fields`);
     if (opts?.filter)  qs.set('$filter', opts.filter);
     if (opts?.orderby) qs.set('$orderby', opts.orderby);
     if (opts?.top != null) qs.set('$top', String(opts.top));
@@ -178,6 +172,24 @@ export class ReservationsService {
     const res = await this.graph.get<any>(
       `/sites/${this.siteId}/lists/${this.listId}/items?${qs.toString()}`
     );
+
+    try {
+    console.groupCollapsed(
+      `[Reservations.getAll] RAW from Graph (${Array.isArray(res?.value) ? res.value.length : 0} items)`
+    );
+    console.log('URL:', url);
+    console.log('opts:', opts);
+    console.log('raw response:', res);
+
+    if (Array.isArray(res?.value)) {
+      console.log('value[0] (item crudo con fields):', res.value[0]);
+      // tabla solo de fields para inspección rápida
+      console.table(res.value.map((x: any) => x.fields));
+    }
+  } finally {
+    console.groupEnd();
+  }
+    
     const arr = Array.isArray(res?.value) ? res.value : [];
     return arr.map((x: any) => this.toModel(x));
   }
@@ -207,3 +219,4 @@ export class ReservationsService {
     });
   }
 }
+

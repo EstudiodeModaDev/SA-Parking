@@ -167,16 +167,6 @@ const AdminSettings: React.FC<Props> = ({ settingsSvc, settingsItemId = '1' }) =
             />
           </label>
 
-          {/* Pico y Placa */}
-          <label className={styles.field} style={{ alignItems: 'center', gap: 8 }}>
-            <input
-              type="checkbox"
-              checked={form.PicoPlaca}
-              onChange={onBool('PicoPlaca')}
-            />
-            <span>Activar Pico y Placa</span>
-          </label>
-
           {/* Horarios */}
           <fieldset className={styles.fieldset}>
             <legend>Horario de Mañana</legend>
@@ -264,5 +254,6 @@ const AdminSettings: React.FC<Props> = ({ settingsSvc, settingsItemId = '1' }) =
     </section>
   );
 };
+
 
 export default AdminSettings;

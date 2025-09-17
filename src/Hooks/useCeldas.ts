@@ -164,8 +164,9 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
   // -------- onSearchEnter (nuevo) ----------
   const onSearchEnter = React.useCallback(async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter') return;
-    console.log('[useCeldas] onSearchEnter -> search =', search);
-    await reloadAll(search);
+    const v = (e.currentTarget as HTMLInputElement).value ?? '';
+    console.log('[useCeldas] onSearchEnter -> search =', v);
+    await reloadAll(v);
   }, [reloadAll]);
 
   // -------- paginación ----------
@@ -246,6 +247,7 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
     create: handleCreate,
   };
 }
+
 
 
 

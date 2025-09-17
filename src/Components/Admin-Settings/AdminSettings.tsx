@@ -6,7 +6,7 @@ import type { SettingsService } from '../../Services/Setting.service';
 type FormState = {
   VisibleDays: number;
   TyC: string;                 // Términos y Condiciones (HTML)
-  InicioManana: number;        // 0..23
+  InicioHorarioMa_x00f1_ana: number;        // 0..23
   FinalManana: number;         // 0..23
   InicioTarde: number;         // 0..23
   FinalTarde: number;          // 0..23
@@ -280,3 +280,4 @@ const AdminSettings: React.FC<Props> = ({ settingsSvc, settingsItemId = '1' }) =
 };
 
 export default AdminSettings;
+

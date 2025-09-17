@@ -1,8 +1,8 @@
-// src/hooks/useCeldas.ts (versión Graph)
+// src/hooks/useCeldas.ts (Graph + onSearchEnter + debug)
 import * as React from 'react';
 import { mapSlotToUI, type CreateForm, type SlotUI } from '../Models/Celdas';
 import type { ParkingSlot } from '../Models/Parkingslot';
-import { ParkingSlotsService } from '../Services/ParkingSlot.service'
+import { ParkingSlotsService } from '../Services/ParkingSlot.service';
 
 export type UseParkingSlotsReturn = {
   rows: SlotUI[];
@@ -11,6 +11,7 @@ export type UseParkingSlotsReturn = {
 
   search: string;
   setSearch: (s: string) => void;
+  onSearchEnter: (e: React.KeyboardEvent<HTMLInputElement>) => void; // 👈 nuevo
 
   tipo: 'all' | 'Carro' | 'Moto';
   setTipo: (t: 'all' | 'Carro' | 'Moto') => void;
@@ -39,10 +40,6 @@ export type UseParkingSlotsReturn = {
   create: () => Promise<void>;
 };
 
-/**
- * Hook adaptado a Microsoft Graph.
- * Pásale una instancia de ParkingSlotsService (Graph) ya configurada.
- */
 export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
   const [allRows, setAllRows] = React.useState<SlotUI[]>([]);
   const [rows, setRows] = React.useState<SlotUI[]>([]);
@@ -73,11 +70,7 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
     (createForm.Activa === 'Activa' || createForm.Activa === 'Inactiva') &&
     (createForm.Itinerancia === 'Empleado Itinerante' || createForm.Itinerancia === 'Directivo' || createForm.Itinerancia === 'Empleado Fijo');
 
-  const openCreate = () => {
-    setCreateForm({ Title: '', TipoCelda: 'Carro', Activa: 'Activa', Itinerancia: 'Empleado Fijo' });
-    setCreateError(null);
-    setCreateOpen(true);
-  };
+  const openCreate = () => { setCreateForm({ Title: '', TipoCelda: 'Carro', Activa: 'Activa', Itinerancia: 'Empleado Fijo' }); setCreateError(null); setCreateOpen(true); };
   const closeCreate = () => { setCreateOpen(false); setCreateError(null); };
 
   // -------- acciones ----------
@@ -99,23 +92,15 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
 
   const handleCreate = async () => {
     if (!canCreate) return;
-
     setCreateSaving(true);
     setCreateError(null);
     try {
       const baseTitle = createForm.Title.trim();
-      const payloadBase = {
-        TipoCelda: createForm.TipoCelda,
-        Activa: createForm.Activa,
-        Itinerancia: createForm.Itinerancia,
-      } as const;
+      const payloadBase = { TipoCelda: createForm.TipoCelda, Activa: createForm.Activa, Itinerancia: createForm.Itinerancia } as const;
 
       if (createForm.TipoCelda === 'Moto') {
         const motosCells = ['A', 'B', 'C', 'D', 'E'];
-        const payloads: Partial<ParkingSlot>[] = motosCells.map((suf) => ({
-          Title: `${baseTitle}${suf}`,
-          ...payloadBase,
-        }));
+        const payloads: Partial<ParkingSlot>[] = motosCells.map((suf) => ({ Title: `${baseTitle}${suf}`, ...payloadBase }));
         const results = await Promise.allSettled(payloads.map((p) => svc.create(p as any)));
         const failed = results.map((r, i) => ({ r, i })).filter(({ r }) => r.status === 'rejected');
         if (failed.length > 0) {
@@ -145,17 +130,23 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
       const term = search.trim().toLowerCase().replace(/'/g, "''");
 
       const filters: string[] = [];
-      if (term) filters.push(`contains(tolower(fields/Title),'${term}')`);
+      if (term) filters.push(`contains(tolower(fields/Title),'${term}')`);   // 👈 filtra por fields/Title
       if (tipo !== 'all') filters.push(`fields/TipoCelda eq '${tipo}'`);
       if (itinerancia !== 'all') filters.push(`fields/Itinerancia eq '${itinerancia}'`);
 
-      const items = await svc.getAll({
+      const opts = {
         orderby: 'fields/Title asc',
         top: MAX_FETCH,
         ...(filters.length ? { filter: filters.join(' and ') } : {}),
-      });
+      } as const;
 
+      console.log('[useCeldas] reloadAll opts:', opts);
+
+      const items = await svc.getAll(opts);
       const ui = items.map(mapSlotToUI);
+
+      console.log('[useCeldas] reloadAll -> items:', items.length, 'ui:', ui.length);
+
       setAllRows(ui);
       setRows(ui.slice(0, pageSize));
       setPageIndex(0);
@@ -169,6 +160,13 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
       setLoading(false);
     }
   }, [svc, search, pageSize, tipo, itinerancia]);
+
+  // -------- onSearchEnter (nuevo) ----------
+  const onSearchEnter = React.useCallback(async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter') return;
+    console.log('[useCeldas] onSearchEnter -> search =', search);
+    await reloadAll();
+  }, [search, reloadAll]);
 
   // -------- paginación ----------
   const setPageSize = React.useCallback((n: number) => {
@@ -219,6 +217,7 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
 
     search,
     setSearch,
+    onSearchEnter,     // 👈 exportado
 
     tipo,
     setTipo,

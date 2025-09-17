@@ -11,7 +11,6 @@ type FormState = {
   FinalManana: number;         // 0..23
   InicioTarde: number;         // 0..23
   FinalTarde: number;          // 0..23
-  PicoPlaca: boolean;
 };
 
 // Props: recibes el servicio desde App via contexto
@@ -49,7 +48,6 @@ const AdminSettings: React.FC<Props> = ({ settingsSvc, settingsItemId = '1' }) =
     FinalManana: 12,
     InicioTarde: 12,
     FinalTarde: 18,
-    PicoPlaca: false,
   });
 
   // Cargar settings (item '1')
@@ -70,7 +68,6 @@ const AdminSettings: React.FC<Props> = ({ settingsSvc, settingsItemId = '1' }) =
           FinalManana: fromHH(row?.FinalManana, 12),
           InicioTarde: fromHH(row?.InicioTarde, 12),
           FinalTarde: fromHH(row?.FinalTarde, 18),
-          PicoPlaca: Boolean(row?.PicoPlaca ?? false),
         };
 
         if (!cancel) setForm(next);
@@ -90,12 +87,6 @@ const AdminSettings: React.FC<Props> = ({ settingsSvc, settingsItemId = '1' }) =
     const v = e.target.value;
     const n = Number(v);
     setForm(f => ({ ...f, [key]: Number.isFinite(n) ? n : (f as any)[key] }));
-    setOk(null);
-    setError(null);
-  };
-
-  const onBool = (key: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm(f => ({ ...f, [key]: e.target.checked }));
     setOk(null);
     setError(null);
   };
@@ -130,7 +121,6 @@ const AdminSettings: React.FC<Props> = ({ settingsSvc, settingsItemId = '1' }) =
         FinalManana: toHH(form.FinalManana),
         InicioTarde: toHH(form.InicioTarde),
         FinalTarde: toHH(form.FinalTarde),
-        PicoPlaca: !!form.PicoPlaca,
       };
 
       await settingsSvc.update(settingsItemId, payload);
@@ -254,6 +244,5 @@ const AdminSettings: React.FC<Props> = ({ settingsSvc, settingsItemId = '1' }) =
     </section>
   );
 };
-
 
 export default AdminSettings;

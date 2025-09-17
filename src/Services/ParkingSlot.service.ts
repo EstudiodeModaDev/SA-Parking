@@ -116,51 +116,43 @@ export class ParkingSlotsService {
   }
 
   async getAll(opts?: GetAllOpts) {
-  await this.ensureIds();
+    await this.ensureIds(); // debe fijar this.siteId y this.listId
 
-  const normalizeOrder = (s: string) =>
-    s
-      .replace(/\bID\b/g, 'id')
-      .replace(/(^|[^/])\bTitle\b/g, '$1fields/Title');
+    const normalizeOrder = (s: string) =>
+      s.replace(/\bID\b/g, 'id').replace(/(^|[^/])\bTitle\b/g, '$1fields/Title');
 
-  const qs = new URLSearchParams();
+    const qs = new URLSearchParams();
+    qs.set('$expand', 'fields'); // si quieres: fields($select=Title,TipoCelda,Itinerancia,Activa)
+    qs.set('$select', 'id,webUrl'); // opcional
+    if (opts?.orderby) qs.set('$orderby', normalizeOrder(opts.orderby));
+    if (opts?.top != null) qs.set('$top', String(opts.top));
+    if (opts?.filter) qs.set('$filter', opts.filter); // ← tal cual
 
-  // Siempre expande fields y selecciona lo que usas
-  qs.set('$expand', 'fields($select=Title,TipoCelda,Itinerancia,Activa)');
-  // (opcional) también puedes añadir $select=id,webUrl si te sirve:
-  qs.set('$select', 'id,webUrl');
+    const url = `/sites/${this.siteId}/lists/${this.listId}/items?${qs.toString()}`;
 
-  // NO normalices el filter
-  if (opts?.filter) qs.set('$filter', opts.filter);
-
-  // Sí normaliza el orderby
-  if (opts?.orderby) qs.set('$orderby', normalizeOrder(opts.orderby));
-
-  if (opts?.top != null) qs.set('$top', String(opts.top));
-
-  const url = `/sites/${this.siteId}/lists/${this.listId}/items?${qs.toString()}`;
-
-  console.groupCollapsed('[ParkingSlots.getAll] URL');
-  console.log(url);
-  console.log('opts (raw):', opts);
-  console.groupEnd();
-
-  const res = await this.graph.get<any>(url);
-
-  try {
-    console.groupCollapsed('[ParkingSlots.getAll] RAW response');
-    console.log('value length:', Array.isArray(res?.value) ? res.value.length : 0);
-    if (Array.isArray(res?.value) && res.value.length) {
-      console.log('raw item[0]:', res.value[0]);
-      console.log('fields item[0]:', res.value[0].fields);
-    }
-  } finally {
+    console.groupCollapsed('[ParkingSlots.getAll] URL');
+    console.log(url);
+    console.log('opts (raw):', opts);
     console.groupEnd();
-  }
 
-  const arr = Array.isArray(res?.value) ? res.value : [];
-  return arr.map((x: any) => this.toModel(x));
-}
+    try {
+      console.warn("Iniciando filtro")
+      return (await this.graph.get<any>(url)).value.map((x: any) => this.toModel(x));
+    } catch (e: any) {
+      // Diagnóstico: si es itemNotFound, prueba sin filtro para ver si el problema es ruta o $filter
+      const code = e?.error?.code ?? e?.code;
+      if (code === 'itemNotFound' && opts?.filter) {
+        const qs2 = new URLSearchParams(qs);
+        qs2.delete('$filter');
+        const url2 = `/sites/${this.siteId}/lists/${this.listId}/items?${qs2.toString()}`;
+        console.warn('[ParkingSlots.getAll] 404 con filtro → reintento sin filtro:', url2);
+        const res2 = await this.graph.get<any>(url2);
+        console.warn("Iniciando no filtro")
+        return (res2.value ?? []).map((x: any) => this.toModel(x));
+      }
+      throw e;
+    }
+  }
 
   // ---------- helpers de consulta (opcionales) ----------
   async findByCodigo(codigo: string, top = 1) {
@@ -180,5 +172,6 @@ export class ParkingSlotsService {
     return this.getAll({ filter: 'fields/Disponible eq true', orderby: 'fields/Codigo asc', top });
   }
 }
+
 
 

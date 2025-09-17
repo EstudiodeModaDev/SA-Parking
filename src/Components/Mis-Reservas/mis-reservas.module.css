@@ -192,8 +192,14 @@
 .segmentBtnActive {
   background: #2563eb;        /* indigo-600 */
   color: #fff;
+  background: none
 }
 
+.segmentBtnActive: hover {
+  background: #1d4ed8;        /* indigo-600 */
+  color: #fff;
+  
+}
 /* ====== Formulario de fechas (solo historial) ====== */
 .form {
   display: flex;
@@ -243,4 +249,5 @@
   letter-spacing: .2px;
   cursor: pointer;
   transition: transform .05s ease, box-shadow .15s ease, opacity .15s ease;
+
 }

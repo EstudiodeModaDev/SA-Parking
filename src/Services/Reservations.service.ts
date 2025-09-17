@@ -76,12 +76,13 @@ export class ReservationsService {
       Date: f.Date ?? undefined,
       Turn: f.Turn ?? undefined,
 
-      // Lookup SpotId
-      SpotIdLookupId: typeof f.SpotId === 'number' ? f.SpotId : null,
-      SpotId: f.SpotId ?? null,
+      // ✅ Lookup correcto
+      SpotIdLookupId: typeof f.SpotIdLookupId === 'number' ? f.SpotIdLookupId : null,
 
-      // ⚠️ Asegúrate que el internal name sea el mismo en tu lista.
-      VehicleType: f.VehicleType ?? f.VehicleType ?? undefined,
+      // opcional si tienes un texto visible materializado
+      SpotCode: f.SpotCode ?? null,
+
+      VehicleType: f.VehicleType ?? undefined,
       Status: f.Status ?? undefined,
       OData__ColorTag: f.OData__ColorTag ?? undefined,
 
@@ -101,8 +102,10 @@ export class ReservationsService {
       NombreUsuario: record.NombreUsuario,
       Date: record.Date,
       Turn: record.Turn,
-      SpotId: record.SpotId ?? undefined,
-      VehicleType: record.VehicleType, // o VehicleType si así se llama tu columna
+      // ✅ enviar siempre el *_LookupId para lookups
+      SpotIdLookupId: record.SpotIdLookupId ?? undefined,
+      SpotCode: record.SpotCode ?? undefined,     // si usas el texto visible
+      VehicleType: record.VehicleType,
       Status: record.Status,
       OData__ColorTag: record.OData__ColorTag,
     };
@@ -122,7 +125,10 @@ export class ReservationsService {
     if (changed.NombreUsuario !== undefined) fieldsPatch.NombreUsuario = changed.NombreUsuario;
     if (changed.Date !== undefined) fieldsPatch.Date = changed.Date;
     if (changed.Turn !== undefined) fieldsPatch.Turn = changed.Turn;
+
     if (changed.SpotIdLookupId !== undefined) fieldsPatch.SpotIdLookupId = changed.SpotIdLookupId;
+    if (changed.SpotCode !== undefined) fieldsPatch.SpotCode = changed.SpotCode;
+
     if (changed.VehicleType !== undefined) fieldsPatch.VehicleType = changed.VehicleType;
     if (changed.Status !== undefined) fieldsPatch.Status = changed.Status;
     if (changed.OData__ColorTag !== undefined) fieldsPatch.OData__ColorTag = changed.OData__ColorTag;
@@ -153,14 +159,13 @@ export class ReservationsService {
     return this.toModel(res);
   }
 
-  // ---------- LISTAR (corregido) ----------
+  // ---------- LISTAR ----------
   async getAll(opts?: GetAllOpts) {
     await this.ensureIds();
 
-    // Selecciona solo lo que usas (puedes agregar más campos)
     const select = [
       'Title','NombreUsuario','Date','Turn',
-      'SpotIdLookupId','SpotId','VehicleType','Status','OData__ColorTag',
+      'SpotIdLookupId','SpotCode','VehicleType','Status','OData__ColorTag',
       'Modified','Created','AuthorLookupId','EditorLookupId'
     ].join(',');
 
@@ -196,12 +201,9 @@ export class ReservationsService {
 
   async findByUser(emailOrUpn: string, top = 100) {
     return this.getAll({
-      // usa la columna donde guardas el correo/nombre del usuario
       filter: `fields/NombreUsuario eq '${this.esc(emailOrUpn)}'`,
       orderby: 'fields/Date desc',
       top,
     });
   }
 }
-
-

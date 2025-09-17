@@ -1,4 +1,3 @@
-// src/Components/Admin-Settings/AdminSettings.tsx
 import * as React from 'react';
 import styles from './AdminSettings.module.css';
 import type { SettingsService } from '../../Services/Setting.service';
@@ -20,19 +19,19 @@ type Props = {
   settingsItemId?: string;
 };
 
-const clampHour = (n: number) => {
-  if (!Number.isFinite(n)) return 0;
-  return Math.max(0, Math.min(23, Math.floor(n)));
-};
+const clamp = (v: number, min: number, max: number) =>
+  Math.max(min, Math.min(max, Number.isFinite(v) ? v : min));
+
+const clampHour = (n: number) => clamp(Math.floor(n), 0, 23);
 
 const toHH = (n: number) => String(clampHour(n)).padStart(2, '0') + ':00';
 
 const fromHH = (s: string | number | null | undefined, fallback = 0) => {
   if (typeof s === 'number') return clampHour(s);
   const str = String(s ?? '').trim();
-  const m = /^(\d{1,2})/.exec(str);
-  if (!m) return clampHour(fallback);
-  return clampHour(Number(m[1]));
+  const [hh] = str.split(':');
+  const n = Number(hh);
+  return Number.isFinite(n) ? clampHour(n) : clampHour(fallback);
 };
 
 const AdminSettings: React.FC<Props> = ({ settingsSvc, settingsItemId = '1' }) => {
@@ -77,25 +76,24 @@ const AdminSettings: React.FC<Props> = ({ settingsSvc, settingsItemId = '1' }) =
         if (!cancel) setLoading(false);
       }
     })();
-    return () => {
-      cancel = true;
-    };
+    return () => { cancel = true; };
   }, [settingsSvc, settingsItemId]);
 
   // Handlers de cambio
-  const onNum = (key: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = e.target.value;
-    const n = Number(v);
-    setForm(f => ({ ...f, [key]: Number.isFinite(n) ? n : (f as any)[key] }));
-    setOk(null);
-    setError(null);
-  };
+  const onNum = (key: keyof FormState, min = 1, max = 60) =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const n = Number(e.target.value);
+      setForm(f => ({ ...f, [key]: clamp(n, min, max) as any }));
+      setOk(null);
+      setError(null);
+    };
 
-  const onText = (key: keyof FormState) => (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setForm(f => ({ ...f, [key]: e.target.value }));
-    setOk(null);
-    setError(null);
-  };
+  const onText = (key: keyof FormState) =>
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      setForm(f => ({ ...f, [key]: e.target.value }));
+      setOk(null);
+      setError(null);
+    };
 
   // Validaciones simples
   const horariosInvalid =
@@ -112,7 +110,6 @@ const AdminSettings: React.FC<Props> = ({ settingsSvc, settingsItemId = '1' }) =
       setOk(null);
       setError(null);
 
-      // Mapear a modelo del SP list (Graph)
       const payload: any = {
         VisibleDays: Number(form.VisibleDays) || 0,
         // En tu lista el campo es 'TerminosyCondiciones'
@@ -124,7 +121,7 @@ const AdminSettings: React.FC<Props> = ({ settingsSvc, settingsItemId = '1' }) =
       };
 
       await settingsSvc.update(settingsItemId, payload);
-      setOk('Configuración guardada.');
+      setOk('Ajustes guardados correctamente.');
     } catch (e: any) {
       setError(e?.message ?? 'No se pudo guardar la configuración.');
     } finally {
@@ -133,115 +130,152 @@ const AdminSettings: React.FC<Props> = ({ settingsSvc, settingsItemId = '1' }) =
   };
 
   if (loading) {
-    return <div className={styles.card}>Cargando configuración…</div>;
+    return <div className={styles.card}>Cargando ajustes…</div>;
   }
 
   return (
-    <section className={styles.section}>
+    <div className={styles.wrapper}>
       <div className={styles.card}>
-        <h3 className={styles.title}>Ajustes de Parqueadero</h3>
+        <h2 className={styles.title}>Parámetros de Reservas</h2>
 
-        {error && <div className={styles.error}>{error}</div>}
-        {ok && <div className={styles.ok}>{ok}</div>}
-
-        <div className={styles.grid}>
-          {/* VisibleDays */}
-          <label className={styles.field}>
-            <span>Días visibles para reservar</span>
+        {/* VisibleDays */}
+        <div className={styles.form}>
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="VisibleDays">
+              Días máximos visibles
+              <span title="Con cuánto tiempo de antelación permite reservar la aplicación" style={{ cursor: 'help' }}> ℹ️</span>
+            </label>
             <input
+              id="VisibleDays"
+              className={styles.input}
               type="number"
               min={1}
               max={60}
               value={form.VisibleDays}
-              onChange={onNum('VisibleDays')}
+              onChange={onNum('VisibleDays', 1, 60)}
             />
-          </label>
-
-          {/* Horarios */}
-          <fieldset className={styles.fieldset}>
-            <legend>Horario de Mañana</legend>
-            <div className={styles.row}>
-              <label className={styles.inlineField}>
-                Inicio
-                <input
-                  type="number"
-                  min={0}
-                  max={23}
-                  value={form.InicioManana}
-                  onChange={onNum('InicioManana')}
-                />
-              </label>
-              <label className={styles.inlineField}>
-                Fin
-                <input
-                  type="number"
-                  min={0}
-                  max={23}
-                  value={form.FinalManana}
-                  onChange={onNum('FinalManana')}
-                />
-              </label>
-            </div>
-          </fieldset>
-
-          <fieldset className={styles.fieldset}>
-            <legend>Horario de Tarde</legend>
-            <div className={styles.row}>
-              <label className={styles.inlineField}>
-                Inicio
-                <input
-                  type="number"
-                  min={0}
-                  max={23}
-                  value={form.InicioTarde}
-                  onChange={onNum('InicioTarde')}
-                />
-              </label>
-              <label className={styles.inlineField}>
-                Fin
-                <input
-                  type="number"
-                  min={0}
-                  max={23}
-                  value={form.FinalTarde}
-                  onChange={onNum('FinalTarde')}
-                />
-              </label>
-            </div>
-          </fieldset>
-
-          {horariosInvalid && (
-            <div className={styles.warn}>
-              Revisa los horarios: el inicio debe ser menor que el fin en cada turno.
-            </div>
-          )}
-
-          {/* TyC */}
-          <label className={styles.field} style={{ gridColumn: '1 / -1' }}>
-            <span>Términos y Condiciones (HTML)</span>
-            <textarea
-              className={styles.textarea}
-              rows={10}
-              value={form.TyC}
-              onChange={onText('TyC')}
-              placeholder="<p>Contenido HTML de Términos y Condiciones…</p>"
-            />
-          </label>
+          </div>
         </div>
 
+        {/* TyC */}
+        <div className={styles.form}>
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="TyC">
+              Términos y condiciones
+              <span title="Términos y condiciones del parqueadero de Estudio de Moda." style={{ cursor: 'help' }}> ℹ️</span>
+            </label>
+            <textarea
+              id="TyC"
+              className={styles.textarea}
+              value={form.TyC}
+              onChange={onText('TyC')}
+              rows={12}
+              placeholder="Escribe los términos y condiciones…"
+            />
+          </div>
+        </div>
+
+        {/* Horarios */}
+        <div className={styles.form}>
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="Horarios">
+              Horarios Parqueaderos
+              <span title="A qué hora (exacta) inician y finalizan los turnos del parqueadero" style={{ cursor: 'help' }}> ℹ️</span>
+            </label>
+
+            <div className={styles.horarioswrap}>
+              {/* AM */}
+              <div className={styles.horInline}>
+                <span className={styles.horBadge}>AM</span>
+
+                <input
+                  id="InicioManana"
+                  type="time"
+                  className={styles.time}
+                  step={3600}            /* de hora en hora */
+                  min="01:00" max="12:00"
+                  value={toHH(form.InicioManana)}
+                  onChange={(e) => {
+                    const v = clamp(fromHH(e.target.value, form.InicioManana), 1, 12);
+                    setForm(f => ({ ...f, InicioManana: v }));
+                  }}
+                />
+
+                <span className={styles.sep}>–</span>
+
+                <input
+                  id="FinalManana"
+                  type="time"
+                  className={styles.time}
+                  step={3600}
+                  min="01:00" max="12:00"
+                  value={toHH(form.FinalManana)}
+                  onChange={(e) => {
+                    const v = clamp(fromHH(e.target.value, form.FinalManana), 1, 12);
+                    setForm(f => ({ ...f, FinalManana: v }));
+                  }}
+                />
+              </div>
+
+              {/* PM */}
+              <div className={styles.horInline}>
+                <span className={styles.horBadge}>PM</span>
+
+                <input
+                  id="InicioTarde"
+                  type="time"
+                  className={styles.time}
+                  step={3600}
+                  min="12:00" max="23:00"
+                  value={toHH(form.InicioTarde)}
+                  onChange={(e) => {
+                    const v = clamp(fromHH(e.target.value, form.InicioTarde), 12, 23);
+                    setForm(f => ({ ...f, InicioTarde: v }));
+                  }}
+                />
+
+                <span className={styles.sep}>–</span>
+
+                <input
+                  id="FinalTarde"
+                  type="time"
+                  className={styles.time}
+                  step={3600}
+                  min="12:00" max="23:00"
+                  value={toHH(form.FinalTarde)}
+                  onChange={(e) => {
+                    const v = clamp(fromHH(e.target.value, form.FinalTarde), 12, 23);
+                    setForm(f => ({ ...f, FinalTarde: v }));
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Feedback */}
+        {horariosInvalid && (
+          <div className={styles.error}>
+            Revisa los horarios: el inicio debe ser menor que el fin en cada turno.
+          </div>
+        )}
+        {error && <div className={styles.error}>{error}</div>}
+        {ok && <div className={styles.ok}>{ok}</div>}
+
+        {/* Acciones */}
         <div className={styles.actions}>
           <button
-            className={styles.btnPrimary}
+            className={styles.button}
             onClick={save}
             disabled={!canSave}
             aria-busy={saving || undefined}
             title={!canSave && horariosInvalid ? 'Corrige los horarios' : undefined}
           >
-            {saving ? 'Guardando…' : 'Guardar cambios'}
+            {saving ? 'Guardando…' : 'Guardar'}
           </button>
         </div>
       </div>
-    </section>
+    </div>
   );
 };
 

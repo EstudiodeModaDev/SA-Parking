@@ -69,6 +69,7 @@ export class ReservationsService {
   // ---------- mapping (Graph -> Modelo) ----------
   private toModel(item: any): Reservations {
     const f = item?.fields ?? {};
+    const spotIdLookup = f.SpotIdLookupId == null ? null : Number.isFinite(Number(f.SpotIdLookupId)) ? Number(f.SpotIdLookupId) : null;
     return {
       ID: String(item?.id ?? ''),
       Title: f.Title ?? '',
@@ -78,10 +79,10 @@ export class ReservationsService {
 
       // Lookup SpotId
       SpotIdLookupId: typeof f.SpotIdLookupId === 'number' ? f.SpotIdLookupId : null,
-      SpotId: f.SpotId ?? null,
+
 
       // ⚠️ Asegúrate que el internal name sea el mismo en tu lista.
-      VehivleType: f.VehivleType ?? f.VehicleType ?? undefined,
+      VehicleType: f.VehivleType ?? f.VehicleType ?? undefined,
       Status: f.Status ?? undefined,
       OData__ColorTag: f.OData__ColorTag ?? undefined,
 
@@ -102,7 +103,7 @@ export class ReservationsService {
       Date: record.Date,
       Turn: record.Turn,
       SpotIdLookupId: record.SpotIdLookupId ?? undefined,
-      VehivleType: record.VehivleType, // o VehicleType si así se llama tu columna
+      VehivleType: record.VehicleType, // o VehicleType si así se llama tu columna
       Status: record.Status,
       OData__ColorTag: record.OData__ColorTag,
     };
@@ -198,5 +199,6 @@ export class ReservationsService {
     });
   }
 }
+
 
 

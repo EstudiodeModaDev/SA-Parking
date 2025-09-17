@@ -85,22 +85,28 @@
 
 /* Paginación */
 .paginationBar{ display:flex; justify-content:center; align-items:center; gap:8px; margin-top:8px; }
-.pageBtn{ padding:6px 10px; border-radius:8px; background:#fff; border:1px solid var(--border); color:var(--fg); cursor:pointer; font-weight:600; }
+.pageBtn{ padding:6px 10px; border-radius:8px; background:#fff; border:1px solid var(--border); color:#fg; cursor:pointer; font-weight:600; }
 .pageBtn:disabled{ opacity:.6; cursor:not-allowed; }
 .pageBtn:hover{ background:#f3f4f6; }
 .pageInfo{ font-size:13px; color:var(--muted); }
 
-/* === Tarjetas superiores simétricas === */
+/* === Tarjetas superiores simétricas (Capacidad izquierda fija, Quick derecha flexible) === */
 .twoCards{
-  display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; align-items:stretch;
+  display:grid;
+  grid-template-columns: 380px 1fr;  /* ¡aquí se hace la magia! */
+  gap:12px;
+  align-items:stretch;              /* ambas a la misma altura */
 }
-@media (max-width:900px){ .twoCards{ grid-template-columns:1fr; } }
+@media (max-width:900px){
+  .twoCards{ grid-template-columns:1fr; }
+}
 
+/* Tarjetas (no tocamos los estilos internos de capacidad) */
 .capacityCard,.quickCard{
   background:#fff; border:1px solid var(--border); border-radius:10px;
   padding:16px; box-shadow:0 1px 6px rgba(30,41,59,.05);
   height:100%; display:flex; flex-direction:column; gap:10px;
-  min-height:260px; /* ajusta si quieres menos/mas alto */
+  min-height:260px;
 }
 .capacityCard{ max-width:unset; }
 .capacityHeader,.quickHeader{ display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
@@ -111,7 +117,7 @@
   padding:4px 10px; border-radius:9999px;
 }
 
-/* Capacidad interior */
+/* Capacidad interior (no se toca el comportamiento original) */
 .capacityGrid{ display:flex; justify-content:flex-start; align-items:flex-start; gap:12px; flex-wrap:wrap; }
 .capacityItem{ border:1px solid #e5e7eb; border-radius:10px; padding:8px 10px; background:#f8fafc; width:140px; }
 .capacityLabel{ font-size:12px; color:#475569; margin-bottom:4px; }
@@ -119,7 +125,23 @@
 .capacityTotal{ font-size:12px; color:#64748b; margin-left:6px; }
 @media (max-width:640px){ .capacityGrid{ flex-direction:column; align-items:center; } }
 
-/* Combobox Colaborador */
+/* Quick ocupa toda la segunda columna y no desborda */
+.quickCard{ align-self:stretch; min-width:0; }
+.twoCards > :nth-child(2){ min-width:0; }
+
+/* Quick grid: 2 columnas para alinear Fecha+Turno / Vehículo+Colaborador */
+.quickGrid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;  /* 2 columnas iguales */
+  gap:10px;
+}
+@media (max-width:700px){
+  .quickGrid{ grid-template-columns: 1fr; }
+}
+
+/* Campos y combobox de colaborador */
+.field{ display:grid; gap:6px; margin:0; } /* compacta dentro de quick */
+
 .combo{ position:relative; display:flex; align-items:center; }
 .clearBtn{
   position:absolute; right:8px; top:50%; transform:translateY(-50%);
@@ -140,16 +162,18 @@
 .comboMail{ color:#64748b; font-size:12px; }
 .comboSelected{ color:#64748b; }
 
+/* Acciones quick */
+.quickActions{ display:flex; justify-content:flex-end; gap:8px; }
+
 /* Modal */
 .modalBackdrop{
   position:fixed; inset:0; background:rgba(0,0,0,.45);
   display:flex; align-items:flex-start; justify-content:center; padding:10vh 16px; z-index:2147483647;
 }
 .modal{ width:100%; max-width:520px; background:#fff; border-radius:var(--radius); box-shadow:0 10px 40px rgba(0,0,0,.25); padding:16px; }
-.field{ display:grid; gap:6px; margin:10px 0; }
 .modalActions{ display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
 .actionsRight{ margin-left:auto; display:flex; align-items:center; }
-.btnGhost{ background:#fff; border:1px solid var(--border); color:var(--fg); padding:6px 12px; border-radius:8px; cursor:pointer; }
+.btnGhost{ background:#fff; border:1px solid var(--border); color:#fg; padding:6px 12px; border-radius:8px; cursor:pointer; }
 .btnGhost:hover{ background:#f8fafc; }
 
 /* Mensajes */

@@ -122,6 +122,7 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
   };
 
   // -------- carga ----------
+    const reqIdRef = React.useRef(0);
    const reloadAll = React.useCallback(async (termArg?: string) => {
     const myId = ++reqIdRef.current;
     setLoading(true);
@@ -252,6 +253,7 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
     create: handleCreate,
   };
 }
+
 
 
 

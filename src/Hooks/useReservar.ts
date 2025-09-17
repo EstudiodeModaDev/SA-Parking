@@ -91,7 +91,7 @@ export function useReservar(
       // Ajusta si tu internal name no es SpotIdLookupId
       const sid = Number(slotId);
       const filter = [
-        `fields/SpotIdLookupId eq ${sid}`,          // <= si tu columna lookup se llama distinto, cámbiala aquí
+        `fields/SpotId eq ${sid}`,          // <= si tu columna lookup se llama distinto, cámbiala aquí
         `fields/Date eq '${dateISO}'`,
         `fields/Turn eq '${turn}'`,
         `(fields/Status ne 'Cancelada')`,
@@ -213,7 +213,7 @@ export function useReservar(
               Turn: t,
               SpotIdLookupId: Number(slotId),   // <= revisar nombre de lookup interno
               // OJO: tu lista tiene 'VehivleType' (typo) o 'VehicleType'? Ajusta el internal name real:
-              VehivleType: vehicle,             // si el internal correcto es VehicleType, cámbialo
+              VehicleType: vehicle,             // si el internal correcto es VehicleType, cámbialo
               Status: 'Activa',
               NombreUsuario: userName,
             };
@@ -257,6 +257,7 @@ export function useReservar(
     reservar,
   };
 }
+
 
 
 

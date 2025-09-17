@@ -162,12 +162,19 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
   }, [svc, pageSize, tipo, itinerancia]);
 
   // -------- onSearchEnter (nuevo) ----------
-  const onSearchEnter = React.useCallback(async (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key !== 'Enter') return;
-    const v = (e.currentTarget as HTMLInputElement).value ?? '';
-    console.log('[useCeldas] onSearchEnter -> search =', v);
-    await reloadAll(v);
-  }, [reloadAll]);
+  const onSearchEnter = React.useCallback(
+    async (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+  
+      const v = (search ?? '').trim();       // ← usa el estado, no el evento
+      console.log('[useCeldas] onSearchEnter -> search(state) =', v);
+  
+      await reloadAll(v);                     // pasa el término explícito
+    },
+    [reloadAll, search]
+  );
+
 
   // -------- paginación ----------
   const setPageSize = React.useCallback((n: number) => {
@@ -247,6 +254,7 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
     create: handleCreate,
   };
 }
+
 
 
 

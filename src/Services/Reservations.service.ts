@@ -69,7 +69,6 @@ export class ReservationsService {
   // ---------- mapping (Graph -> Modelo) ----------
   private toModel(item: any): Reservations {
     const f = item?.fields ?? {};
-    const spotIdLookup = f.SpotIdLookupId == null ? null : Number.isFinite(Number(f.SpotIdLookupId)) ? Number(f.SpotIdLookupId) : null;
     return {
       ID: String(item?.id ?? ''),
       Title: f.Title ?? '',
@@ -199,6 +198,7 @@ export class ReservationsService {
     });
   }
 }
+
 
 
 

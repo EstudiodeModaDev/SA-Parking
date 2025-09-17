@@ -162,10 +162,12 @@ export class ReservationsService {
     if (opts?.filter)  qs.set('$filter', opts.filter);
     if (opts?.orderby) qs.set('$orderby', opts.orderby);
     if (opts?.top != null) qs.set('$top', String(opts.top));
-
+  
     const res = await this.graph.get<any>(
       `/sites/${this.siteId}/lists/${this.listId}/items?${qs.toString()}`
     );
+
+    console.log('res ', res)
     const arr = Array.isArray(res?.value) ? res.value : [];
     return arr.map((x: any) => this.toModel(x));
   }
@@ -196,4 +198,5 @@ export class ReservationsService {
     });
   }
 }
+
 

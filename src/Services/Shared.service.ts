@@ -34,7 +34,7 @@ export class SharedServices {
 
     try {
       // 1) intenta por Correo (recomendado)
-      const filterCorreo = `tolower(fields/Correo) eq '${emailLower}'`;
+      const filterCorreo = `tolower(fields/Title) eq '${emailLower}'`;
       console.log('-> query por Correo:', { filter: filterCorreo, orderby: 'fields/Title asc', top: 1 });
 
       const porCorreo = await this.usuariosSvc.getAll({
@@ -88,3 +88,4 @@ export class SharedServices {
     }
   }
 }
+

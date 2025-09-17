@@ -26,33 +26,84 @@ const dayLabel = (title: string) => {
 };
 
 // Pequeño switch sin dependencias
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+// --- Toggle con look "gris + knob blanco" ---
+function Toggle({
+  checked,
+  onChange,
+  disabled,
+  title,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+  title?: string;
+}) {
+  // medidas (puedes ajustarlas)
+  const W = 56;        // ancho pista
+  const H = 28;        // alto pista
+  const PAD = 2;       // padding interno de la pista
+  const KNOB = H - PAD * 2; // diámetro del knob
+
+  const offTrack = '#9ca3af';  // gris medio
+  const onTrack  = '#22c55e';  // verde (opcional)
+  const knobBorder = '#d1d5db';
+
   return (
     <button
-      onClick={() => onChange(!checked)}
+      type="button"
       role="switch"
       aria-checked={checked}
+      disabled={!!disabled}
+      onClick={() => !disabled && onChange(!checked)}
+      title={title ?? (checked ? 'Desactivar' : 'Activar')}
       style={{
-        padding: 6,
+        // layout y neutralizaciones
+        display: 'inline-flex',
+        justifyContent: 'flex-start',
+        alignItems: 'center',
+        textAlign: 'left',
+        // base
+        width: W,
+        height: H,
+        padding: PAD,
         borderRadius: 999,
-        width: 56,
-        background: checked ? '#22c55e' : '#cbd5e1',
         border: 'none',
-        cursor: 'pointer',
         position: 'relative',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        background: checked ? onTrack : offTrack,
+        boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.06)',
+        transition: 'background-color 160ms ease-out, box-shadow 160ms ease-out',
+        outline: '2px solid transparent',
       }}
-      title={checked ? 'Desactivar Pico y Placa' : 'Activar Pico y Placa'}
+      onFocus={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.boxShadow =
+          '0 0 0 3px rgba(37,99,235,.25), inset 0 0 0 1px rgba(0,0,0,.06)';
+      }}
+      onBlur={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.boxShadow =
+          'inset 0 0 0 1px rgba(0,0,0,.06)';
+      }}
+      onMouseEnter={(e) => {
+        if (!disabled) (e.currentTarget as HTMLButtonElement).style.filter = 'brightness(.95)';
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.filter = 'none';
+      }}
     >
       <span
+        aria-hidden="true"
         style={{
-          display: 'inline-block',
-          width: 22,
-          height: 22,
-          borderRadius: '999px',
+          position: 'absolute',
+          left: PAD,
+          top: PAD,
+          width: KNOB,
+          height: KNOB,
+          borderRadius: 999,
           background: '#fff',
-          transition: 'transform 150ms',
-          transform: `translateX(${checked ? 28 : 0}px)`,
-          boxShadow: '0 1px 4px rgba(0,0,0,.2)',
+          border: `1px solid ${knobBorder}`,
+          boxShadow: '0 1.5px 4px rgba(0,0,0,.25)',
+          transform: `translateX(${checked ? W - KNOB - PAD * 2 : 0}px)`,
+          transition: 'transform 160ms ease-out',
         }}
       />
     </button>
@@ -339,5 +390,6 @@ const PicoPlacaAdmin: React.FC = () => {
     </section>
   );
 };
+
 
 export default PicoPlacaAdmin;

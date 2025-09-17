@@ -1,4 +1,4 @@
-import React from "react";
+import * as React from "react";
 import styles from "./ToggleSwitch.module.css";
 
 type Props = {
@@ -6,9 +6,6 @@ type Props = {
   onChange: (next: boolean) => void;
   disabled?: boolean;
   id?: string;
-  /** Texto opcional; por defecto ON/OFF */
-  onLabel?: string;
-  offLabel?: string;
 };
 
 const ToggleSwitch: React.FC<Props> = ({
@@ -16,8 +13,6 @@ const ToggleSwitch: React.FC<Props> = ({
   onChange,
   disabled,
   id,
-  onLabel ,
-  offLabel ,
 }) => {
   const toggle = () => !disabled && onChange(!checked);
 
@@ -27,7 +22,6 @@ const ToggleSwitch: React.FC<Props> = ({
       type="button"
       role="switch"
       aria-checked={checked}
-      aria-label={checked ? onLabel : offLabel}
       disabled={disabled}
       className={`${styles.switch} ${checked ? styles.on : ""} ${disabled ? styles.disabled : ""}`}
       onClick={toggle}
@@ -38,7 +32,6 @@ const ToggleSwitch: React.FC<Props> = ({
         }
       }}
     >
-      <span className={styles.trackText}>{checked ? onLabel : offLabel}</span>
       <span className={styles.thumb} />
     </button>
   );

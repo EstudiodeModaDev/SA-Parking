@@ -164,7 +164,7 @@ export function useReservar(
       const slots = await slotsSvc.getAll({
         filter: slotsFilter,
         top: 2000,
-        orderby: 'Title asc',
+        orderby: 'fields/Title asc',
       });
 
       console.log('[DEBUG] slots count:', Array.isArray(slots) ? slots.length : 0);
@@ -257,6 +257,7 @@ export function useReservar(
     reservar,
   };
 }
+
 
 
 

@@ -1,23 +1,22 @@
 export interface Reservations {
-  ID: string;                 
+  ID: string;
   Title: string;
   NombreUsuario?: string;
-  Date?: string;              
+  Date?: string;
   Turn?: string;
-  // Lookup SpotId:
-  SpotIdLookupId?: number | null; 
-  SpotId?: string | null;         
-  VehivleType?: string;
+
+  // Lookup a la celda
+  SpotIdLookupId?: number | null;
+  SpotCode?: string | null; // opcional (texto visible)
+
+  VehicleType?: string;
   Status?: string;
   OData__ColorTag?: string;
 
-  // Sistema / auditoría (solo lectura normalmente)
   Modified?: string;
   Created?: string;
   AuthorLookupId?: number | null;
   EditorLookupId?: number | null;
-
-
 }
 
 export type ReservationUI = {
@@ -75,3 +74,4 @@ export type ReserveArgs = {
 export type ReserveResult =
     |{ ok: true; message: string; reservation: any }
     |{ ok: false; message: string };
+

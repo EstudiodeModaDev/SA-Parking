@@ -39,7 +39,6 @@ export class SharedServices {
 
       const porCorreo = await this.usuariosSvc.getAll({
         filter: filterCorreo,
-        orderby: 'fields/Title asc',
         top: 1,
       }) as any[];
 
@@ -88,4 +87,5 @@ export class SharedServices {
     }
   }
 }
+
 

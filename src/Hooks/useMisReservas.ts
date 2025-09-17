@@ -16,8 +16,7 @@ const mapModelToUI = (m: Reservations): ReservationUI => ({
   Spot: String(m.SpotCode ?? (m.SpotIdLookupId ?? '')),
   VehicleType: String(m.VehicleType ?? ''),
   Status: String(m.Status ?? ''),
-  User: String(m.NombreUsuario ?? "Anonimo" ?? ''),
-  Email?: String(m.Title)
+  User: String(m.Title ?? "Anonimo" ?? ''),
 });
 
 export type FilterMode = 'upcoming-active' | 'history';
@@ -175,5 +174,6 @@ export function useMisReservas(
     reloadAll, // 👈 expuesto
   };
 }
+
 
 

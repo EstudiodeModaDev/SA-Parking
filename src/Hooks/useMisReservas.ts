@@ -16,7 +16,8 @@ const mapModelToUI = (m: Reservations): ReservationUI => ({
   Spot: String(m.SpotCode ?? (m.SpotIdLookupId ?? '')),
   VehicleType: String(m.VehicleType ?? ''),
   Status: String(m.Status ?? ''),
-  User: String(m.NombreUsuario ?? m.Title ?? ''),
+  User: String(m.NombreUsuario ?? "Anonimo" ?? ''),
+  Email?: String(m.Title)
 });
 
 export type FilterMode = 'upcoming-active' | 'history';
@@ -52,23 +53,21 @@ export function useMisReservas(
     const filters: string[] = [];
     if (!isAdmin && userMail?.trim()) {
       const emailSafe = userMail.replace(/'/g, "''");
-      filters.push(`Title eq '${emailSafe}'`);
+      filters.push(`fields/Title eq '${emailSafe}'`);
     }
 
     if (filterMode === 'upcoming-active') {
       // Próximas ACTIVAS (>= hoy)
-      filters.push(`Date ge '${today}'`);
-      filters.push(`Status eq 'Activa'`);
+      filters.push(`fields/Date ge '${today}'`);
+      filters.push(`fields/Status eq 'Activa'`);
     } else {
       // Historial dentro del rango (cualquier estado)
       if (range.from) filters.push(`Date ge '${range.from}'`);
       if (range.to)   filters.push(`Date le '${range.to}'`);
     }
-
-    const orderby = 'Date asc,Turn asc,ID asc';
     const filter = filters.join(' and ');
 
-    return { filter, orderby, top: 2000 };
+    return { filter, top: 2000 };
   }, [isAdmin, userMail, filterMode, range.from, range.to, today]);
 
   // ===== cargar datos =====
@@ -176,4 +175,5 @@ export function useMisReservas(
     reloadAll, // 👈 expuesto
   };
 }
+
 

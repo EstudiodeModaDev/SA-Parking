@@ -128,9 +128,13 @@ export class ParkingSlotsService {
     if (opts?.top != null) qs.set('$top', String(opts.top));
     if (opts?.filter) qs.set('$filter', opts.filter); // ← tal cual
 
-    const url = `/sites/${this.siteId}/lists/${this.listId}/items?${qs.toString()}`;
+    const query = qs.toString().replace(/\+/g, '%20');
+
+    const url = `/sites/${this.siteId}/lists/${this.listId}/items?{$query}}`;
 
     console.groupCollapsed('[ParkingSlots.getAll] URL');
+        console.log("site" , this.SiteId)
+        console.log("list" , this.listId)
     console.log(url);
     console.log('opts (raw):', opts);
     console.groupEnd();
@@ -172,6 +176,7 @@ export class ParkingSlotsService {
     return this.getAll({ filter: 'fields/Disponible eq true', orderby: 'fields/Codigo asc', top });
   }
 }
+
 
 
 

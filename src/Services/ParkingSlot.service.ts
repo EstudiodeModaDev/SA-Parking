@@ -116,41 +116,51 @@ export class ParkingSlotsService {
   }
 
   async getAll(opts?: GetAllOpts) {
-    await this.ensureIds();
-  
-    // Normaliza por si alguien pasó "Title asc" o "ID desc" por accidente.
-    const normalize = (s: string) =>
-      s
-        .replace(/\bID\b/g, 'id')
-        .replace(/(^|[^/])\bTitle\b/g, '$1fields/Title')  // añade fields/ si falta
-  
-    const qs = new URLSearchParams();
-    qs.set('$expand', 'fields');
-    if (opts?.filter)  qs.set('$filter', normalize(opts.filter));
-    if (opts?.orderby) qs.set('$orderby', normalize(opts.orderby));
-    if (opts?.top != null) qs.set('$top', String(opts.top));
-  
-    const url = `/sites/${this.siteId}/lists/${this.listId}/items?${qs.toString()}`;
-    console.groupCollapsed('[ParkingSlots.getAll] URL');
-    console.log(url);
-    console.log('opts (raw):', opts);
+  await this.ensureIds();
+
+  const normalizeOrder = (s: string) =>
+    s
+      .replace(/\bID\b/g, 'id')
+      .replace(/(^|[^/])\bTitle\b/g, '$1fields/Title');
+
+  const qs = new URLSearchParams();
+
+  // Siempre expande fields y selecciona lo que usas
+  qs.set('$expand', 'fields($select=Title,TipoCelda,Itinerancia,Activa)');
+  // (opcional) también puedes añadir $select=id,webUrl si te sirve:
+  qs.set('$select', 'id,webUrl');
+
+  // NO normalices el filter
+  if (opts?.filter) qs.set('$filter', opts.filter);
+
+  // Sí normaliza el orderby
+  if (opts?.orderby) qs.set('$orderby', normalizeOrder(opts.orderby));
+
+  if (opts?.top != null) qs.set('$top', String(opts.top));
+
+  const url = `/sites/${this.siteId}/lists/${this.listId}/items?${qs.toString()}`;
+
+  console.groupCollapsed('[ParkingSlots.getAll] URL');
+  console.log(url);
+  console.log('opts (raw):', opts);
+  console.groupEnd();
+
+  const res = await this.graph.get<any>(url);
+
+  try {
+    console.groupCollapsed('[ParkingSlots.getAll] RAW response');
+    console.log('value length:', Array.isArray(res?.value) ? res.value.length : 0);
+    if (Array.isArray(res?.value) && res.value.length) {
+      console.log('raw item[0]:', res.value[0]);
+      console.log('fields item[0]:', res.value[0].fields);
+    }
+  } finally {
     console.groupEnd();
-  
-    const res = await this.graph.get<any>(url);
-  
-    // Debug útil: ver el primer item crudo y sus fields
-    try {
-      console.groupCollapsed('[ParkingSlots.getAll] RAW response');
-      console.log('value length:', Array.isArray(res?.value) ? res.value.length : 0);
-      if (Array.isArray(res?.value) && res.value.length) {
-        console.log('raw item[0]:', res.value[0]);
-        console.log('fields item[0]:', res.value[0].fields);
-      }
-    } finally { console.groupEnd(); }
-  
-    const arr = Array.isArray(res?.value) ? res.value : [];
-    return arr.map((x: any) => this.toModel(x)); // <- tu mapeo actual
   }
+
+  const arr = Array.isArray(res?.value) ? res.value : [];
+  return arr.map((x: any) => this.toModel(x));
+}
 
   // ---------- helpers de consulta (opcionales) ----------
   async findByCodigo(codigo: string, top = 1) {
@@ -170,4 +180,5 @@ export class ParkingSlotsService {
     return this.getAll({ filter: 'fields/Disponible eq true', orderby: 'fields/Codigo asc', top });
   }
 }
+
 

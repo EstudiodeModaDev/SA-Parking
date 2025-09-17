@@ -408,3 +408,40 @@
 }
 
 .btnGhost:hover { background: #f8fafc; }
+
+woCards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 900px) {
+  .twoCards { grid-template-columns: 1fr; }
+}
+
+.quickCard {
+  background: var(--bg, #fff);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: var(--radius, 16px);
+  box-shadow: var(--shadow, 0 2px 12px rgba(30,41,59,.08));
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.quickHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.quickGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+@media (max-width: 600px) {
+  .quickGrid { grid-template-columns: 1fr; }
+}
+
+.field { display: grid; gap: 6px; }
+.quickActions { display: flex; justify-content: flex-end; gap: 8px; }

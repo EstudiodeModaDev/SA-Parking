@@ -37,6 +37,16 @@ const S = {
     alignItems: 'center',
     justifyContent: 'center',
   },
+  row2: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: 12,
+  } as React.CSSProperties,
+  row3: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr 1fr',
+    gap: 12,
+  } as React.CSSProperties,
   modal: {
     background: '#fff',
     width: 'min(900px, 96vw)',
@@ -107,14 +117,14 @@ const S = {
     cursor: 'pointer',
   },
   input: {
-    width: '90%',
+    width: '100%',
     padding: '8px 10px',
     border: '1px solid #e5e7eb',
     borderRadius: 8,
     fontSize: 14,
   },
   select: {
-    width: '93%',
+    width: '100%',
     padding: '8px 10px',
     border: '1px solid #e5e7eb',
     borderRadius: 8,
@@ -185,7 +195,7 @@ export default function SlotDetailsModal({
   // ===== Reserva puntual =====
   const todayISO = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
   const [rvDate, setRvDate] = React.useState<string>(todayISO);
-  const [rvTurn, setRvTurn] = React.useState<'Manana' | 'Tarde'>('Manana');
+  const [rvTurn, setRvTurn] = React.useState<'Manana' | 'Tarde' | 'Dia completo'>('Manana');
   const [rvSaving, setRvSaving] = React.useState(false);
   const [rvError, setRvError] = React.useState<string | null>(null);
   const [rvName, setRvName] = React.useState('');
@@ -359,7 +369,7 @@ export default function SlotDetailsModal({
 
   // Chequear choque (reserva) con Graph
   const isBusy = React.useCallback(
-    async (spotId: number, dateISO: string, turn: 'Manana' | 'Tarde') => {
+    async (spotId: number, dateISO: string, turn: 'Manana' | 'Tarde' | 'Dia completo') => {
       if (!reservationsSvc) return false;
       const res: any = await reservationsSvc.getAll({
         select: ['ID'] as any,
@@ -395,7 +405,7 @@ export default function SlotDetailsModal({
         }
 
         await reservationsSvc.create({
-          SpotIdLookupId:Number(slot.Id),
+          SpotIdLookupId: Number(slot.Id),
           Date: rvDate,
           Turn: rvTurn,
           Status: 'Activa',
@@ -523,38 +533,44 @@ export default function SlotDetailsModal({
 
               {/* Selector de colaborador SOLO para reserva */}
               <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
-                <label style={{ ...S.labelCol, marginBottom: 6 }}>
-                  <span><strong>Colaborador</strong></span>
-                  <input
-                    style={S.input}
-                    type="text"
-                    placeholder="Buscar por nombre/correo/cargo…"
-                    value={colabTerm}
-                    onChange={(e) => setColabTerm(e.target.value)}
-                    disabled={workersLoading}
-                  />
-                </label>
-                <select
-                  style={S.select}
-                  value={selectedWorkerId}
-                  onChange={(e) => onSelectWorker(e.target.value)}
-                  disabled={workersLoading}
-                >
-                  <option value="">
-                    {workersLoading
-                      ? 'Cargando colaboradores…'
-                      : filteredWorkers.length === 0
-                      ? 'Sin resultados'
-                      : 'Selecciona un colaborador (opcional)'}
-                  </option>
+                <div style={S.row2}>
+                  <label style={{ ...S.labelCol, marginBottom: 0 }}>
+                    <span><strong>Colaborador</strong></span>
+                    <input
+                      style={S.input}
+                      type="text"
+                      placeholder="Buscar por nombre/correo/cargo…"
+                      value={colabTerm}
+                      onChange={(e) => setColabTerm(e.target.value)}
+                      disabled={workersLoading}
+                    />
+                  </label>
 
-                  {filteredWorkers.map((w) => (
-                    <option key={w.key} value={w.key}>
-                      {w.name}{w.job ? ` · ${w.job}` : ''}
-                    </option>
-                  ))}
-                </select>
-                <br />
+                  <label style={{ ...S.labelCol, marginBottom: 0 }}>
+                    <span><strong>&nbsp;</strong></span>
+                    <select
+                      style={S.select}
+                      value={selectedWorkerId}
+                      onChange={(e) => onSelectWorker(e.target.value)}
+                      disabled={workersLoading}
+                    >
+                      <option value="">
+                        {workersLoading
+                          ? 'Cargando colaboradores…'
+                          : filteredWorkers.length === 0
+                          ? 'Sin resultados'
+                          : 'Selecciona un colaborador (opcional)'}
+                      </option>
+
+                      {filteredWorkers.map((w) => (
+                        <option key={w.key} value={w.key}>
+                          {w.name}{w.job ? ` · ${w.job}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
                 <small style={S.muted}>
                   Al seleccionar, se rellenan Nombre y Correo (puedes editarlos).
                 </small>
@@ -563,31 +579,35 @@ export default function SlotDetailsModal({
               {rvError && <div style={{ color: 'crimson' }}>{rvError}</div>}
 
               <div style={{ display: 'grid', gap: 10, marginTop: 8 }}>
-                <label style={S.labelCol}>
-                  <span><strong>Fecha</strong></span>
-                  <input
-                    type="date"
-                    style={S.input}
-                    value={rvDate}
-                    onChange={(e) => setRvDate(e.target.value)}
-                    min={todayISO}
-                  />
-                </label>
+                {/* Fila: Fecha + Turno */}
+                <div style={S.row2}>
+                  <label style={S.labelCol}>
+                    <span><strong>Fecha</strong></span>
+                    <input
+                      type="date"
+                      style={S.input}
+                      value={rvDate}
+                      onChange={(e) => setRvDate(e.target.value)}
+                      min={todayISO}
+                    />
+                  </label>
 
-                <label style={S.labelCol}>
-                  <span><strong>Turno</strong></span>
-                  <select
-                    style={S.select}
-                    value={rvTurn}
-                    onChange={(e) => setRvTurn(e.target.value as 'Manana' | 'Tarde')}
-                  >
-                    <option value="Manana">AM (06:00–12:59)</option>
-                    <option value="Tarde">PM (13:00–19:00)</option>
-                    <option value="Dia completo">Dia completo</option>
-                  </select>
-                </label>
+                  <label style={S.labelCol}>
+                    <span><strong>Turno</strong></span>
+                    <select
+                      style={S.select}
+                      value={rvTurn}
+                      onChange={(e) => setRvTurn(e.target.value as 'Manana' | 'Tarde' | 'Dia completo')}
+                    >
+                      <option value="Manana">AM (06:00–12:59)</option>
+                      <option value="Tarde">PM (13:00–19:00)</option>
+                      <option value="Dia completo">Día completo</option>
+                    </select>
+                  </label>
+                </div>
 
-                <div style={{ display: 'grid', gap: 8 }}>
+                {/* Fila: Nombre + Correo */}
+                <div style={S.row2}>
                   <label style={S.labelCol}>
                     <span><strong>Nombre</strong></span>
                     <input
@@ -632,6 +652,7 @@ export default function SlotDetailsModal({
                   </label>
                 </div>
 
+                {/* Botonera */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
                   <button
                     style={S.btnGhost}
@@ -670,7 +691,3 @@ export default function SlotDetailsModal({
     </div>
   );
 }
-
-
-
-

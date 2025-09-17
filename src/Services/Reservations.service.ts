@@ -82,7 +82,7 @@ export class ReservationsService {
 
 
       // ⚠️ Asegúrate que el internal name sea el mismo en tu lista.
-      VehicleType: f.VehivleType ?? f.VehicleType ?? undefined,
+      VehicleType: f.VehicleType ?? f.VehicleType ?? undefined,
       Status: f.Status ?? undefined,
       OData__ColorTag: f.OData__ColorTag ?? undefined,
 
@@ -103,7 +103,7 @@ export class ReservationsService {
       Date: record.Date,
       Turn: record.Turn,
       SpotIdLookupId: record.SpotIdLookupId ?? undefined,
-      VehivleType: record.VehicleType, // o VehicleType si así se llama tu columna
+      VehicleType: record.VehicleType, // o VehicleType si así se llama tu columna
       Status: record.Status,
       OData__ColorTag: record.OData__ColorTag,
     };
@@ -124,7 +124,7 @@ export class ReservationsService {
     if (changed.Date !== undefined) fieldsPatch.Date = changed.Date;
     if (changed.Turn !== undefined) fieldsPatch.Turn = changed.Turn;
     if (changed.SpotIdLookupId !== undefined) fieldsPatch.SpotIdLookupId = changed.SpotIdLookupId;
-    if (changed.VehivleType !== undefined) fieldsPatch.VehivleType = changed.VehivleType;
+    if (changed.VehicleType !== undefined) fieldsPatch.VehicleType = changed.VehicleType;
     if (changed.Status !== undefined) fieldsPatch.Status = changed.Status;
     if (changed.OData__ColorTag !== undefined) fieldsPatch.OData__ColorTag = changed.OData__ColorTag;
 
@@ -199,6 +199,7 @@ export class ReservationsService {
     });
   }
 }
+
 
 
 

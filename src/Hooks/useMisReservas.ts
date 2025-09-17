@@ -52,20 +52,20 @@ export function useMisReservas(
     const filters: string[] = [];
     if (!isAdmin && userMail?.trim()) {
       const emailSafe = userMail.replace(/'/g, "''");
-      filters.push(`fields/Title eq '${emailSafe}'`);
+      filters.push(`Title eq '${emailSafe}'`);
     }
 
     if (filterMode === 'upcoming-active') {
       // Próximas ACTIVAS (>= hoy)
-      filters.push(`fields/Date ge '${today}'`);
-      filters.push(`fields/Status eq 'Activa'`);
+      filters.push(`Date ge '${today}'`);
+      filters.push(`Status eq 'Activa'`);
     } else {
       // Historial dentro del rango (cualquier estado)
-      if (range.from) filters.push(`fields/Date ge '${range.from}'`);
-      if (range.to)   filters.push(`fields/Date le '${range.to}'`);
+      if (range.from) filters.push(`Date ge '${range.from}'`);
+      if (range.to)   filters.push(`Date le '${range.to}'`);
     }
 
-    const orderby = 'fields/Date asc,fields/Turn asc,fields/ID asc';
+    const orderby = 'Date asc,Turn asc,ID asc';
     const filter = filters.join(' and ');
 
     return { filter, orderby, top: 2000 };
@@ -176,3 +176,4 @@ export function useMisReservas(
     reloadAll, // 👈 expuesto
   };
 }
+

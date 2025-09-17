@@ -364,7 +364,7 @@ export default function SlotDetailsModal({
       const res: any = await reservationsSvc.getAll({
         select: ['ID'] as any,
         top: 1 as any,
-        filter: `SpotId eq ${spotId} and Date eq '${dateISO}' and Turn eq '${turn}' and (Status ne 'Cancelada')`,
+        filter: `fields/SpotId eq ${spotId} and fields/Date eq '${dateISO}' and fields/Turn eq '${turn}' and (fields/Status ne 'Cancelada')`,
       } as any);
       const arr = (res?.data ?? res?.value ?? []) as any[];
       return Array.isArray(arr) && arr.length > 0;
@@ -670,4 +670,5 @@ export default function SlotDetailsModal({
     </div>
   );
 }
+
 

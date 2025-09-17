@@ -77,7 +77,7 @@ export class ReservationsService {
       Turn: f.Turn ?? undefined,
 
       // Lookup SpotId
-      SpotIdLookupId: typeof f.SpotIdLookupId === 'number' ? f.SpotIdLookupId : null,
+      SpotIdLookupId: typeof f.SpotId === 'number' ? f.SpotId : null,
       SpotId: f.SpotId ?? null,
 
       // ⚠️ Asegúrate que el internal name sea el mismo en tu lista.
@@ -123,7 +123,7 @@ export class ReservationsService {
     if (changed.Date !== undefined) fieldsPatch.Date = changed.Date;
     if (changed.Turn !== undefined) fieldsPatch.Turn = changed.Turn;
     if (changed.SpotIdLookupId !== undefined) fieldsPatch.SpotIdLookupId = changed.SpotIdLookupId;
-    if (changed.VehivleType !== undefined) fieldsPatch.VehivleType = changed.VehivleType;
+    if (changed.VehicleType !== undefined) fieldsPatch.VehicleType = changed.VehicleType;
     if (changed.Status !== undefined) fieldsPatch.Status = changed.Status;
     if (changed.OData__ColorTag !== undefined) fieldsPatch.OData__ColorTag = changed.OData__ColorTag;
 
@@ -160,7 +160,7 @@ export class ReservationsService {
     // Selecciona solo lo que usas (puedes agregar más campos)
     const select = [
       'Title','NombreUsuario','Date','Turn',
-      'SpotIdLookupId','SpotId','VehivleType','Status','OData__ColorTag',
+      'SpotIdLookupId','SpotId','VehicleType','Status','OData__ColorTag',
       'Modified','Created','AuthorLookupId','EditorLookupId'
     ].join(',');
 

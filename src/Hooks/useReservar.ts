@@ -91,10 +91,10 @@ export function useReservar(
       // Ajusta si tu internal name no es SpotIdLookupId
       const sid = Number(slotId);
       const filter = [
-        `SpotIdLookupId eq ${sid}`,          // <= si tu columna lookup se llama distinto, cámbiala aquí
-        `Date eq '${dateISO}'`,
-        `Turn eq '${turn}'`,
-        `(Status ne 'Cancelada')`,
+        `fields/SpotIdLookupId eq ${sid}`,          // <= si tu columna lookup se llama distinto, cámbiala aquí
+        `fields/Date eq '${dateISO}'`,
+        `fields/Turn eq '${turn}'`,
+        `(fields/Status ne 'Cancelada')`,
       ].join(' and ');
 
       console.log(dbgLabel('[DEBUG] countReservations filter'), dbgStyle, filter);
@@ -120,10 +120,10 @@ export function useReservar(
       const emailSafe = email.replace(/'/g, "''");
 
       const filter = [
-        `Title eq '${emailSafe}'`,
-        `Date eq '${dateISO}'`,
-        `(Status ne 'Cancelada')`,
-        `Turn eq '${turn}'`,
+        `fields/Title eq '${emailSafe}'`,
+        `fields/Date eq '${dateISO}'`,
+        `(fields/Status ne 'Cancelada')`,
+        `fields/Turn eq '${turn}'`,
       ].join(' and ');
 
       console.log(dbgLabel('[DEBUG] hasActiveReservationSameDay filter'), dbgStyle, filter);
@@ -154,9 +154,9 @@ export function useReservar(
 
       // 1) Traer celdas activas del tipo solicitado (itinerantes)
       const slotsFilter = [
-        `(Activa eq 'Activa')`,
-        `TipoCelda eq '${vehicle}'`,
-        `Itinerancia eq 'Empleado Itinerante'`,
+        `(fields/Activa eq 'Activa')`,
+        `fields/TipoCelda eq '${vehicle}'`,
+        `fields/Itinerancia eq 'Empleado Itinerante'`,
       ].join(' and ');
 
       console.log(dbgLabel('[DEBUG] slots getAll filter'), dbgStyle, slotsFilter);
@@ -257,6 +257,7 @@ export function useReservar(
     reservar,
   };
 }
+
 
 
 

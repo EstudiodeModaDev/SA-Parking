@@ -22,7 +22,7 @@ const SCOPES = [
   // básicos OIDC (recomendado)
   'openid', 'profile', 'email',
   // lo que usa tu app
-  'User.Read', 'Sites.ReadWrite.All',
+  'User.Read', 'Sites.ReadWrite.All', "Directory.Read.All"
 ];
 
 // Garantiza que siempre haya “active account”
@@ -68,3 +68,4 @@ export async function logout() {
   const account = ensureActiveAccount();
   await msal.logoutPopup({ account });
 }
+

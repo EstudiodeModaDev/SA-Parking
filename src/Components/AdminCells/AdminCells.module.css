@@ -409,39 +409,76 @@
 
 .btnGhost:hover { background: #f8fafc; }
 
-woCards {
+.twoCards {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 10px;                 /* antes 12 */
 }
 @media (max-width: 900px) {
   .twoCards { grid-template-columns: 1fr; }
 }
 
+/* Compacta tarjetas */
+.capacityCard,
 .quickCard {
-  background: var(--bg, #fff);
-  border: 1px solid var(--border, #e5e7eb);
-  border-radius: var(--radius, 16px);
-  box-shadow: var(--shadow, 0 2px 12px rgba(30,41,59,.08));
-  padding: 16px;
-  display: grid;
-  gap: 10px;
+  padding: 12px;             /* antes 16-14 */
+  border-radius: 10px;       /* antes 12/16 */
+  box-shadow: 0 1px 6px rgba(30,41,59,.05);
 }
 
-.quickHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+/* Capacidad: más angosto y tipografía menor */
+.capacityCard { max-width: 360px; }
+.capacityItem { width: 130px; padding: 8px 10px; }
+.capacityLabel { font-size: 12px; }
+.capacityValue { font-size: 18px; font-weight: 700; }
+.capacityTotal { font-size: 12px; }
 
+/* Quick card: grid y gaps más apretados */
 .quickGrid {
-  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;                  /* antes 10 */
 }
-@media (max-width: 600px) {
-  .quickGrid { grid-template-columns: 1fr; }
+.quickHeader { margin-bottom: 4px; }
+
+/* Controles más bajos y texto más chico */
+.searchInput,
+.pageSizeSelect,
+.pageBtn,
+.btn,
+.btnGhost,
+.btnLink {
+  font-size: 14px;           /* antes 14–16 */
+  line-height: 1.1;
+  padding: 6px 10px;         /* antes 6–12 */
+  border-radius: 8px;        /* antes var(--radius-sm) */
 }
 
-.field { display: grid; gap: 6px; }
-.quickActions { display: flex; justify-content: flex-end; gap: 8px; }
+/* Inputs date/select altura fija */
+.searchInput[type="date"],
+.pageSizeSelect {
+  height: 36px;              /* bajito y consistente */
+  padding: 0 10px;
+}
+
+/* Botón reservar más discreto */
+.quickActions .btn {
+  padding: 6px 12px;
+}
+
+/* Wrapper y filtros más ceñidos */
+.wrapper { gap: 12px; }      /* antes 16 */
+.filtersBar { padding: 8px; gap: 6px; }
+.pageSizeBox { gap: 4px; }
+.searchBox { flex: 0 1 200px; max-width: 220px; }
+
+/* Cards de celdas más compactas */
+.card { padding: 10px; gap: 6px; }
+.cardHeader { gap: 6px 10px !important; }
+.metaLabel { font-size: 12px; }
+.badge { padding: 2px 8px; font-size: 11px; }
+
+/* Paginación compacta */
+.paginationBar { gap: 8px; margin-top: 8px; }
+.pageBtn { padding: 6px 10px; }
+.pageInfo { font-size: 13px; }
+

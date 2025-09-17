@@ -75,49 +75,44 @@ export class ReservationsService {
       NombreUsuario: f.NombreUsuario ?? undefined,
       Date: f.Date ?? undefined,
       Turn: f.Turn ?? undefined,
-  
-      // Lookup consistente
-      SpotIdLookupId: (typeof f.SpotIdLookupId === 'number') ? f.SpotIdLookupId : null,
-  
-      // opcional si materializas el texto visible
-      SpotCode: f.SpotCode ?? null,
-  
-      VehicleType: f.VehicleType ?? undefined,   // (si en tu lista es 'VehivleType', cámbialo aquí y en create)
+
+      // Lookup SpotId
+      SpotIdLookupId: typeof f.SpotIdLookupId === 'number' ? f.SpotIdLookupId : null,
+      SpotId: f.SpotId ?? null,
+
+      // ⚠️ Asegúrate que el internal name sea el mismo en tu lista.
+      VehivleType: f.VehivleType ?? f.VehicleType ?? undefined,
       Status: f.Status ?? undefined,
       OData__ColorTag: f.OData__ColorTag ?? undefined,
-  
+
       Modified: f.Modified ?? undefined,
       Created: f.Created ?? undefined,
-      AuthorLookupId: (typeof f.AuthorLookupId === 'number') ? f.AuthorLookupId : null,
-      EditorLookupId: (typeof f.EditorLookupId === 'number') ? f.EditorLookupId : null,
+      AuthorLookupId: typeof f.AuthorLookupId === 'number' ? f.AuthorLookupId : null,
+      EditorLookupId: typeof f.EditorLookupId === 'number' ? f.EditorLookupId : null,
     };
   }
 
   // ---------- CRUD ----------
   async create(record: Omit<Reservations, 'ID'>) {
-  await this.ensureIds();
+    await this.ensureIds();
 
-  const fieldsPayload: any = {
-    Title: record.Title,
-    NombreUsuario: record.NombreUsuario,
-    Date: record.Date,
-    Turn: record.Turn,
+    const fieldsPayload: any = {
+      Title: record.Title,
+      NombreUsuario: record.NombreUsuario,
+      Date: record.Date,
+      Turn: record.Turn,
+      SpotIdLookupId: record.SpotIdLookupId ?? undefined,
+      VehivleType: record.VehivleType, // o VehicleType si así se llama tu columna
+      Status: record.Status,
+      OData__ColorTag: record.OData__ColorTag,
+    };
 
-    // lookup correcto
-    SpotIdLookupId: record.SpotIdLookupId ?? undefined,
-
-    SpotCode: record.SpotCode ?? undefined,     // si lo materializas
-    VehicleType: record.VehicleType,
-    Status: record.Status,
-    OData__ColorTag: record.OData__ColorTag,
-  };
-
-  const res = await this.graph.post<any>(
-    `/sites/${this.siteId}/lists/${this.listId}/items`,
-    { fields: fieldsPayload }
-  );
-  return this.toModel(res);
-}
+    const res = await this.graph.post<any>(
+      `/sites/${this.siteId}/lists/${this.listId}/items`,
+      { fields: fieldsPayload }
+    );
+    return this.toModel(res);
+  }
 
   async update(id: string, changed: Partial<Omit<Reservations, 'ID'>>) {
     await this.ensureIds();
@@ -127,11 +122,8 @@ export class ReservationsService {
     if (changed.NombreUsuario !== undefined) fieldsPatch.NombreUsuario = changed.NombreUsuario;
     if (changed.Date !== undefined) fieldsPatch.Date = changed.Date;
     if (changed.Turn !== undefined) fieldsPatch.Turn = changed.Turn;
-
     if (changed.SpotIdLookupId !== undefined) fieldsPatch.SpotIdLookupId = changed.SpotIdLookupId;
-    if (changed.SpotCode !== undefined) fieldsPatch.SpotCode = changed.SpotCode;
-
-    if (changed.VehicleType !== undefined) fieldsPatch.VehicleType = changed.VehicleType;
+    if (changed.VehivleType !== undefined) fieldsPatch.VehivleType = changed.VehivleType;
     if (changed.Status !== undefined) fieldsPatch.Status = changed.Status;
     if (changed.OData__ColorTag !== undefined) fieldsPatch.OData__ColorTag = changed.OData__ColorTag;
 
@@ -161,39 +153,29 @@ export class ReservationsService {
     return this.toModel(res);
   }
 
-  // ---------- LISTAR ----------
+  // ---------- LISTAR (corregido) ----------
   async getAll(opts?: GetAllOpts) {
-  await this.ensureIds();
+    await this.ensureIds();
 
-  const qs = new URLSearchParams();                   // 👈 te faltaba esto
-  qs.set('$expand', 'fields');                        // sin $select para ver todo
-  if (opts?.filter)  qs.set('$filter', opts.filter);
-  if (opts?.orderby) qs.set('$orderby', opts.orderby);
-  if (opts?.top != null) qs.set('$top', String(opts.top));
+    // Selecciona solo lo que usas (puedes agregar más campos)
+    const select = [
+      'Title','NombreUsuario','Date','Turn',
+      'SpotIdLookupId','SpotId','VehivleType','Status','OData__ColorTag',
+      'Modified','Created','AuthorLookupId','EditorLookupId'
+    ].join(',');
 
-  const url = `/sites/${this.siteId}/lists/${this.listId}/items?${qs.toString()}`; // 👈 define url local
+    const qs = new URLSearchParams();
+    qs.set('$expand', `fields($select=${select})`);
+    if (opts?.filter)  qs.set('$filter', opts.filter);
+    if (opts?.orderby) qs.set('$orderby', opts.orderby);
+    if (opts?.top != null) qs.set('$top', String(opts.top));
 
-  const res = await this.graph.get<any>(url);
-
-  try {
-    console.groupCollapsed(
-      `[Reservations.getAll] RAW from Graph (${Array.isArray(res?.value) ? res.value.length : 0} items)`
+    const res = await this.graph.get<any>(
+      `/sites/${this.siteId}/lists/${this.listId}/items?${qs.toString()}`
     );
-    console.log('URL:', url);
-    console.log('opts:', opts);
-    console.log('raw response:', res);
-
-    if (Array.isArray(res?.value) && res.value.length) {
-      console.log('value[0] (item crudo con fields):', res.value[0]);
-      console.table(res.value.map((x: any) => x.fields));
-    }
-  } finally {
-    console.groupEnd();
+    const arr = Array.isArray(res?.value) ? res.value : [];
+    return arr.map((x: any) => this.toModel(x));
   }
-
-  const arr = Array.isArray(res?.value) ? res.value : [];
-  return arr.map((x: any) => this.toModel(x));
-}
 
   // ---------- helpers de consulta ----------
   async findBySpotId(spotItemId: number, top = 100) {
@@ -214,11 +196,10 @@ export class ReservationsService {
 
   async findByUser(emailOrUpn: string, top = 100) {
     return this.getAll({
+      // usa la columna donde guardas el correo/nombre del usuario
       filter: `fields/NombreUsuario eq '${this.esc(emailOrUpn)}'`,
       orderby: 'fields/Date desc',
       top,
     });
   }
 }
-
-

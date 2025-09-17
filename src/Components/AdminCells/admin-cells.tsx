@@ -2,6 +2,11 @@ import * as React from 'react';
 import styles from './AdminCells.module.css';
 import { useAdminCells } from './useAdminCells';
 import SlotDetailsModal from './slotDetailsModal';
+import { toISODate } from '../../utils/date';
+import { useSettingsHours } from '../../Hooks/useSettingHour';
+import { useReservar } from '../../Hooks/useReservar';
+import type { TurnType, VehicleType } from '../../Models/shared';
+import { useGraphServices } from '../../graph/GraphServicesContext';
 
 const AdminCells: React.FC = () => {
   const {
@@ -33,6 +38,34 @@ const AdminCells: React.FC = () => {
     actionsDisabled,
   } = useAdminCells();
 
+  const { reservations, settings, parkingSlots } = useGraphServices();
+  const { minDate, maxDate, reservar, loading: reservarLoading, error: reservarError } = useReservar(reservations, parkingSlots, settings, '', '');
+  const { hours, loading: hoursLoading, error: hoursError } = useSettingsHours();
+  const minISO = React.useMemo(() => toISODate(minDate), [minDate]);
+  const maxISO = React.useMemo(() => toISODate(maxDate), [maxDate]);
+
+  const [qrDate, setQrDate] = React.useState<string>('');
+  const [qrTurn, setQrTurn] = React.useState<TurnType>('Manana');
+  const [qrVehicle, setQrVehicle] = React.useState<VehicleType>('Carro');
+  const [qrUserEmail, setQrUserEmail] = React.useState<string>('');
+  const [qrUserName, setQrUserName] = React.useState<string>('');
+  const [qrSaving, setQrSaving] = React.useState(false);
+  const [qrMsg, setQrMsg] = React.useState<string | null>(null);
+  const [qrErr, setQrErr] = React.useState<string | null>(null);
+
+
+  React.useEffect(() => {
+    if (!minISO || !maxISO) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const clamp = (iso: string, a: string, b: string) => (iso < a ? a : iso > b ? b : iso);
+    setQrDate(prev => prev || clamp(today, minISO, maxISO));
+  }, [minISO, maxISO]);
+
+  const fmt = (n?: number) => {
+    if (n == null || Number.isNaN(n)) return '--:--';
+    const h = Math.max(0, Math.min(23, Math.floor(n)));
+    return `${String(h).padStart(2, '0')}:00`;
+  };
   // Normaliza turnos para comparación robusta
   const turnNow = React.useMemo<'Manana' | 'Tarde' | 'Fuera'>(() => {
     const t = String(currentTurn ?? '').toLowerCase();
@@ -41,6 +74,29 @@ const AdminCells: React.FC = () => {
     return 'Fuera';
   }, [currentTurn]);
 
+
+  async function submitQuickReserve() {
+  try {
+    setQrSaving(true);
+    setQrMsg(null);
+    setQrErr(null);
+    const res = await reservar({
+      vehicle: qrVehicle,
+      turn: qrTurn,
+      dateISO: qrDate,
+      userEmail: qrUserEmail,
+      userName: qrUserName,
+    } as any); // el hook acepta overrides como en Availability
+    if (res.ok) setQrMsg(res.message);
+    else setQrErr(res.message);
+  } catch (e: any) {
+    setQrErr(e?.message ?? 'No se pudo crear la reserva.');
+  } finally {
+    setQrSaving(false);
+  }
+}
+
+  const quickDisabled = !qrDate || !qrUserEmail || reservarLoading || hoursLoading || !!hoursError || !hours;
   const renderTurnBadge = (
     activa: boolean,
     reserved: boolean,
@@ -85,39 +141,131 @@ const AdminCells: React.FC = () => {
       <h3 className={styles.h3}>Listado de celdas</h3>
 
       {/* Capacidad hoy + horarios */}
-      <div className={styles.capacityCard}>
-        <div className={styles.capacityHeader}>
-          <strong>Capacidad hoy</strong>
-          <span className={styles.turnPill}>
-            {turnNow === 'Manana'
-              ? 'Turno actual: AM'
-              : turnNow === 'Tarde'
-              ? 'Turno actual: PM'
-              : 'Fuera de horario'}
-          </span>
-        </div>
+<div className={styles.twoCards}>
+  {/* ---- Tarjeta: Capacidad hoy ---- */}
+  <div className={styles.capacityCard}>
+    <div className={styles.capacityHeader}>
+      <strong>Capacidad hoy</strong>
+      <span className={styles.turnPill}>
+        {turnNow === 'Manana'
+          ? 'Turno actual: AM'
+          : turnNow === 'Tarde'
+          ? 'Turno actual: PM'
+          : 'Fuera de horario'}
+      </span>
+    </div>
 
-        <div className={styles.capacityGrid}>
-          <div className={styles.capacityItem}>
-            <div className={styles.capacityLabel}>Carros disponibles</div>
-            <div className={styles.capacityValue}>
-              {capacidadAhora.libresCarros}
-              <span className={styles.capacityTotal}>/ {capacidadAhora.totalCarros}</span>
-            </div>
-          </div>
-          <div className={styles.capacityItem}>
-            <div className={styles.capacityLabel}>Motos disponibles</div>
-            <div className={styles.capacityValue}>
-              {capacidadAhora.libresMotos}
-              <span className={styles.capacityTotal}>/ {capacidadAhora.totalMotos}</span>
-            </div>
-          </div>
-        </div>
-
-        <div style={{ marginTop: 6 }}>
-          <small>{hoursLabel}</small>
+    <div className={styles.capacityGrid}>
+      <div className={styles.capacityItem}>
+        <div className={styles.capacityLabel}>Carros disponibles</div>
+        <div className={styles.capacityValue}>
+          {capacidadAhora.libresCarros}
+          <span className={styles.capacityTotal}>/ {capacidadAhora.totalCarros}</span>
         </div>
       </div>
+      <div className={styles.capacityItem}>
+        <div className={styles.capacityLabel}>Motos disponibles</div>
+        <div className={styles.capacityValue}>
+          {capacidadAhora.libresMotos}
+          <span className={styles.capacityTotal}>/ {capacidadAhora.totalMotos}</span>
+        </div>
+      </div>
+    </div>
+
+    <div style={{ marginTop: 6 }}>
+      <small>{hoursLabel}</small>
+    </div>
+  </div>
+
+  {/* ---- Tarjeta: Reserva rápida ---- */}
+  <div className={styles.quickCard} aria-busy={qrSaving || reservarLoading || hoursLoading}>
+    <div className={styles.quickHeader}>
+      <strong>Reserva rápida</strong>
+    </div>
+
+    {(reservarError || hoursError) && (
+      <div className={styles.error}>
+        {reservarError || hoursError}
+      </div>
+    )}
+    {qrMsg && <div className={styles.ok}>{qrMsg}</div>}
+    {qrErr && <div className={styles.error}>{qrErr}</div>}
+
+    <div className={styles.quickGrid}>
+      <label className={styles.field}>
+        <span>Fecha</span>
+        <input
+          className={styles.searchInput}
+          type="date"
+          min={minISO || undefined}
+          max={maxISO || undefined}
+          value={qrDate}
+          onChange={(e) => setQrDate(e.target.value)}
+        />
+      </label>
+
+      <label className={styles.field}>
+        <span>Turno</span>
+        <select
+          className={styles.pageSizeSelect}
+          value={qrTurn}
+          onChange={(e) => setQrTurn(e.target.value as TurnType)}
+        >
+          <option value="Manana">Mañana ({fmt(hours?.InicioManana)}–{fmt(hours?.FinalManana)})</option>
+          <option value="Tarde">Tarde ({fmt(hours?.InicioTarde)}–{fmt(hours?.FinalTarde)})</option>
+          <option value="Dia">Día completo</option>
+        </select>
+      </label>
+
+      <label className={styles.field}>
+        <span>Tipo de vehículo</span>
+        <select
+          className={styles.pageSizeSelect}
+          value={qrVehicle}
+          onChange={(e) => setQrVehicle(e.target.value as VehicleType)}
+        >
+          <option value="Carro">Carro</option>
+          <option value="Moto">Moto</option>
+        </select>
+      </label>
+
+      <label className={styles.field}>
+        <span>Colaborador</span>
+        <select
+          className={styles.pageSizeSelect}
+          value={qrUserEmail}
+          onChange={(e) => {
+            const mail = e.target.value;
+            setQrUserEmail(mail);
+            const name = (workers || []).find(w => (w as any).mail === mail)?.displayName || '';
+            setQrUserName(name);
+          }}
+        >
+          <option value="">Selecciona…</option>
+          {workersLoading && <option>Cargando…</option>}
+          {!workersLoading &&
+            (workers || []).map((w: any) => (
+              <option key={w.mail} value={w.mail}>
+                {w.displayName ?? w.mail}
+              </option>
+            ))}
+        </select>
+      </label>
+    </div>
+
+    <div className={styles.quickActions}>
+      <button
+        type="button"
+        className={styles.btn}
+        onClick={submitQuickReserve}
+        disabled={quickDisabled || qrSaving}
+        title={quickDisabled ? 'Completa los campos' : 'Crear reserva'}
+      >
+        {qrSaving ? 'Reservando…' : 'Reservar'}
+      </button>
+    </div>
+  </div>
+</div>
 
       {/* Filtros */}
       <div className={styles.filtersBar}>

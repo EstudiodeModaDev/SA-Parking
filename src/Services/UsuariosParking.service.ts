@@ -114,28 +114,17 @@ export class UsuariosParkingService {
 
   async getAll(opts?: GetAllOpts) {
     await this.ensureIds();
-  
-    const qs = new URLSearchParams();
-    // 👇 SIEMPRE
-    qs.set('$expand', 'fields');
-    if (opts?.filter)  qs.set('$filter', opts.filter);   // ← no toques el texto
+    const qs = new URLSearchParams({ $expand: 'fields' });
+    if (opts?.filter) qs.set('$filter', opts.filter);
     if (opts?.orderby) qs.set('$orderby', opts.orderby);
     if (opts?.top != null) qs.set('$top', String(opts.top));
-  
-    const url = `/sites/${this.siteId}/lists/${this.listId}/items?${qs.toString()}`;
-    const res = await this.graph.get<any>(url);
-  
-    // (opcional) debug
-    console.groupCollapsed('[UsuariosParking.getAll] url');
-    console.log(url);
-    console.log('res:', res);
-    console.groupEnd();
-  
-    const arr = Array.isArray(res?.value) ? res.value : [];
-    // si tienes toModel, úsalo; si no, devuelve fields:
-    return arr.map(x => x.fields ?? x);
-  }
 
+    const res = await this.graph.get<any>(
+      `/sites/${this.siteId}/lists/${this.listId}/items?${qs.toString()}`
+    );
+    const arr = Array.isArray(res?.value) ? res.value : [];
+    return arr.map((x: any) => this.toModel(x));
+  }
 
   // ---------- helpers de consulta (opcionales) ----------
 
@@ -149,4 +138,3 @@ export class UsuariosParkingService {
   }
 
 }
-

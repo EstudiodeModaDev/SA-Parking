@@ -16,7 +16,7 @@ const MisReservas: React.FC<Props> = ({ userMail, isAdmin = false }) => {
     range, setRange, applyRange,
     pageSize, setPageSize, pageIndex, hasNext, nextPage, prevPage,
     cancelReservation,
-    filterMode, setFilterMode,
+    filterMode, setFilterMode, reloadAll
   } = useMisReservas(reservations, userMail, isAdmin);
 
     React.useEffect(() => {
@@ -28,6 +28,10 @@ const MisReservas: React.FC<Props> = ({ userMail, isAdmin = false }) => {
     }
     console.groupEnd();
   }, [rows, userMail]);
+
+  React.useEffect(() => {
+    reloadAll();
+  }, [userMail, filterMode, range.from, range.to, pageIndex, pageSize]);
   
   return (
     <section className={styles.section}>

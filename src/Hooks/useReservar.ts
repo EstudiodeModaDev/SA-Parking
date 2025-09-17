@@ -122,10 +122,10 @@ export function useReservar(
       const emailSafe = email.replace(/'/g, "''");
 
       const filter = [
-        `fields/Title eq '${emailSafe}'`,
-        `fields/Date eq '${dateISO}'`,
-        `(fields/Status ne 'Cancelada')`,
-        `fields/Turn eq '${turn}'`,
+        `Title eq '${emailSafe}'`,
+        `Date eq '${dateISO}'`,
+        `(Status ne 'Cancelada')`,
+        `Turn eq '${turn}'`,
       ].join(' and ');
 
       console.log(dbgLabel('[DEBUG] hasActiveReservationSameDay filter'), dbgStyle, filter);
@@ -259,3 +259,4 @@ export function useReservar(
     reservar,
   };
 }
+

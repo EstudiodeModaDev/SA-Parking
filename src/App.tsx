@@ -202,8 +202,9 @@ function AppInner() {
                   <>
                     <div className="userName">{user.displayName}</div>
                     <div className="userMail">{user.mail}</div>
+                    {user.jobTitle && <div className="userTitle">{user.jobTitle}
                     <div className="userMail">{isAdmin ? 'admin' : 'usuario'}</div>
-                    {user.jobTitle && <div className="userTitle">{user.jobTitle}</div>}
+                    </div>}
                   </>
                 ) : (
                   <div className="errorText">No se pudo cargar el usuario</div>

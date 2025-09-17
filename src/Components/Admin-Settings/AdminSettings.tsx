@@ -43,7 +43,7 @@ const AdminSettings: React.FC<Props> = ({ settingsSvc, settingsItemId = '1' }) =
   const [form, setForm] = React.useState<FormState>({
     VisibleDays: 7,
     TyC: '',
-    InicioManana: 7,
+    InicioHorarioMa_x00f1_ana: 7,
     FinalManana: 12,
     InicioTarde: 12,
     FinalTarde: 18,
@@ -63,7 +63,7 @@ const AdminSettings: React.FC<Props> = ({ settingsSvc, settingsItemId = '1' }) =
         const next: FormState = {
           VisibleDays: Number(row?.VisibleDays ?? 7),
           TyC: String(row?.TerminosyCondiciones ?? row?.TyC ?? ''),
-          InicioManana: fromHH(row?.InicioManana, 7),
+          InicioHorarioMa_x00f1_ana: fromHH(row?.InicioHorarioMa_x00f1_ana, 7),
           FinalManana: fromHH(row?.FinalManana, 12),
           InicioTarde: fromHH(row?.InicioTarde, 12),
           FinalTarde: fromHH(row?.FinalTarde, 18),
@@ -97,7 +97,7 @@ const AdminSettings: React.FC<Props> = ({ settingsSvc, settingsItemId = '1' }) =
 
   // Validaciones simples
   const horariosInvalid =
-    !(form.InicioManana < form.FinalManana) ||
+    !(form.InicioHorarioMa_x00f1_ana < form.FinalManana) ||
     !(form.InicioTarde < form.FinalTarde);
 
   const canSave = !loading && !saving && !horariosInvalid;
@@ -114,7 +114,7 @@ const AdminSettings: React.FC<Props> = ({ settingsSvc, settingsItemId = '1' }) =
         VisibleDays: Number(form.VisibleDays) || 0,
         // En tu lista el campo es 'TerminosyCondiciones'
         TerminosyCondiciones: form.TyC,
-        InicioManana: toHH(form.InicioManana),
+        InicioHorarioMa_x00f1_ana: toHH(form.InicioHorarioMa_x00f1_ana),
         FinalManana: toHH(form.FinalManana),
         InicioTarde: toHH(form.InicioTarde),
         FinalTarde: toHH(form.FinalTarde),
@@ -194,10 +194,10 @@ const AdminSettings: React.FC<Props> = ({ settingsSvc, settingsItemId = '1' }) =
                   className={styles.time}
                   step={3600}            /* de hora en hora */
                   min="01:00" max="12:00"
-                  value={toHH(form.InicioManana)}
+                  value={toHH(form.InicioHorarioMa_x00f1_ana)}
                   onChange={(e) => {
-                    const v = clamp(fromHH(e.target.value, form.InicioManana), 1, 12);
-                    setForm(f => ({ ...f, InicioManana: v }));
+                    const v = clamp(fromHH(e.target.value, form.InicioHorarioMa_x00f1_ana), 1, 12);
+                    setForm(f => ({ ...f, InicioHorarioMa_x00f1_ana: v }));
                   }}
                 />
 
@@ -280,4 +280,5 @@ const AdminSettings: React.FC<Props> = ({ settingsSvc, settingsItemId = '1' }) =
 };
 
 export default AdminSettings;
+
 

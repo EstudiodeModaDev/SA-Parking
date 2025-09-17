@@ -42,7 +42,7 @@ const AdminCells: React.FC = () => {
   // Servicios para reservar (mismo flujo que Availability)
   const { reservations, settings, parkingSlots } = useGraphServices();
   const { minDate, maxDate, reservar, loading: reservarLoading, error: reservarError } =
-    useReservar(reservations, parkingSlots, settings, '', '');
+    useReservar(reservations, parkingSlots, settings, qrUserEmail, qrUserName);
   const { hours, loading: hoursLoading, error: hoursError } = useSettingsHours();
 
   const minISO = React.useMemo(() => toISODate(minDate), [minDate]);
@@ -601,6 +601,7 @@ async function submitQuickReserve() {
 };
 
 export default AdminCells;
+
 
 
 

@@ -108,6 +108,23 @@
   height:100%; display:flex; flex-direction:column; gap:10px;
   min-height:260px;
 }
+
+.capacityHeader{
+  width: 100%;
+  display: flex;
+  flex-direction: column;    /* título arriba, pastilla debajo */
+  align-items: center;       /* centrado horizontal */
+  justify-content: center;   /* por si crece en altura */
+  gap: 8px;
+}
+.capacityCard{
+  /* ya tiene min-height; esto permitirá centrar vertical */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;   /* centra vertical */
+  align-items: center;       /* centra horizontal */
+  text-align: center;        /* centra textos */
+}
 .capacityCard{ max-width:unset; }
 .capacityHeader,.quickHeader{ display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
 .cardTitle{ font-weight:700; color:#0f172a; }
@@ -116,9 +133,13 @@
   font-size:12px; font-weight:700; background:#eef2ff; color:#3730a3;
   padding:4px 10px; border-radius:9999px;
 }
-
+.capacityCard small{
+  display: block;
+  text-align: center;
+  margin-top: 6px;
+}
 /* Capacidad interior (no se toca el comportamiento original) */
-.capacityGrid{ display:flex; justify-content:flex-start; align-items:flex-start; gap:12px; flex-wrap:wrap; }
+.capacityGrid{ display:flex; justify-content:center; align-items:center; gap:12px; flex-wrap:wrap; width 100% }
 .capacityItem{ border:1px solid #e5e7eb; border-radius:10px; padding:8px 10px; background:#f8fafc; width:140px; }
 .capacityLabel{ font-size:12px; color:#475569; margin-bottom:4px; }
 .capacityValue{ font-size:18px; font-weight:800; color:#111827; }
@@ -179,3 +200,4 @@
 /* Mensajes */
 .error{ background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:8px 12px; border-radius:8px; }
 .ok{ background:#dcfce7; color:#14532d; border:1px solid #bbf7d0; padding:8px 12px; border-radius:8px; }
+

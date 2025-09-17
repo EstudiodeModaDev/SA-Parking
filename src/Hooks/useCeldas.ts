@@ -127,7 +127,6 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
     setError(null);
     try {
       const MAX_FETCH = 2000;
-      const term = search.trim().toLowerCase().replace(/'/g, "''");
       console.log('term', term);
 
       const filters: string[] = [];
@@ -247,5 +246,6 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
     create: handleCreate,
   };
 }
+
 
 

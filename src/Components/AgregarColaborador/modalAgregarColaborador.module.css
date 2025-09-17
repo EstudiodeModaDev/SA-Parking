@@ -1,207 +1,104 @@
-/* ===== Overlay & Modal ===== */
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, .45); /* slate-900/45 */
-  display: grid;
-  place-items: center;
-  padding: 16px;
-  z-index: 1000;
-  animation: fadeIn .12s ease-out;
-}
+/* Compact global + evitar desbordes */
+*,
+*::before,
+*::after { box-sizing: border-box; }
 
+/* Modal más compacto */
 .modal {
-  width: 100%;
-  max-width: 720px;
-  background: #fff;
-  border: 1px solid #e2e8f0;  /* slate-200 */
-  border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(2,6,23,.18);
-  overflow: hidden;
-  animation: popIn .12s ease-out;
+  max-width: 640px; /* antes 720 */
 }
 
-/* ===== Header ===== */
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px;
-  border-bottom: 1px solid #e2e8f0;
-  background: #f8fafc; /* slate-50 */
-}
-
-.title {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  color: #2563eb;
-}
-
-.closeBtn {
-  appearance: none;
-  border: 0;
-  background: #fff;
-  color: #0f172a;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  cursor: pointer;
-  line-height: 1;
-  font-size: 18px;
-  display: grid;
-  place-items: center;
-  transition: background .15s ease, box-shadow .15s ease, transform .05s ease, opacity .15s ease;
-  border: 1px solid #e2e8f0;
-}
-.closeBtn:hover:not(:disabled) { background: #f1f5f9; }
-.closeBtn:active:not(:disabled) { transform: scale(.98); }
-.closeBtn:disabled { opacity: .6; cursor: not-allowed; }
-
-/* ===== Body / Form ===== */
+/* Body / Form más denso */
 .body {
-  padding: 16px;
+  padding: 14px;
   display: grid;
-  gap: 14px;
+  gap: 10px;              /* antes 14 */
   grid-template-columns: 1fr;
 }
 
-/* Bloque semántico para el combo de colaborador */
-.fieldset {
-  border: 0;
-  padding: 0;
-  margin: 0 0 4px 0;
-  display: grid;
-  gap: 8px;
-}
+/* Fieldset y labels más ajustados */
+.fieldset { border: 0; padding: 0; margin: 0 0 6px; display: grid; gap: 6px; }
 
-/* Etiquetas e inputs (coherentes con tus estilos previos) */
 .label {
   display: grid;
-  gap: 6px;
-  font-size: 14px;
+  gap: 4px;               /* antes 6 */
+  font-size: 13px;        /* antes 14 */
   font-weight: 600;
-  color: #334155; /* slate-700 */
+  color: #334155;
+  line-height: 1.2;
 }
 
+/* Inputs/select compactos (sin montarse) */
 .input, .select {
-  height: 38px;
-  padding: 6px 10px;
-  border: 1px solid #cbd5e1; /* slate-300 */
-  border-radius: 10px;
+  height: 34px;           /* antes 38 */
+  padding: 4px 10px;      /* antes 6px 10px */
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;     /* antes 10 */
   background: #fff;
-  color: #0f172a;  /* slate-900 */
+  color: #0f172a;
   font: inherit;
+  width: 100%;
+  min-width: 0;           /* 👈 evita overflow en grid */
   transition: border-color .15s ease, box-shadow .15s ease, opacity .15s ease;
 }
-.input:hover, .select:hover { border-color: #94a3b8; }     /* slate-400 */
+.input:hover, .select:hover { border-color: #94a3b8; }
 .input:focus, .select:focus {
   outline: none;
   border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37,99,235,.20);
-}
-.input[aria-invalid="true"], .select[aria-invalid="true"] {
-  border-color: #f87171; /* red-400 */
-  box-shadow: 0 0 0 3px rgba(248,113,113,.15);
+  box-shadow: 0 0 0 2px rgba(37,99,235,.18); /* anillo más fino */
 }
 
-/* Combo buscador + select en una misma fila simétrica */
-.comboColab {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-/* Hint */
-.hint {
-  color: #64748b;  /* slate-500 */
-  font-size: 12px;
-}
-
-/* Fila de 2 columnas (vehículo / placa) */
+/* Grid de dos columnas seguro (sin montarse) */
+.comboColab,
 .row2 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); /* 👈 clave */
+  gap: 8px;                                            /* antes 10 */
 }
 
-/* Mensaje de error genérico / inline */
+/* Mensajes de ayuda y error: compactos */
+.hint {
+  color: #64748b;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* Errores inline (sin “caja gigante”) */
 .error {
+  background: transparent;        /* quita fondo rosado grande */
+  border: 0;                      /* sin borde */
   color: #b91c1c;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 10px;
-  padding: 8px 10px;
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 1.25;
+  margin-top: 4px;
+  padding: 0;                     /* sin padding para que no empuje */
 }
 
-/* ===== Actions ===== */
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 10px;
-  margin-top: 6px;
+/* Marca de inválido sutil en el control (mantiene tus colores) */
+.input[aria-invalid="true"],
+.select[aria-invalid="true"] {
+  border-color: #ef4444;          /* red-500 */
+  box-shadow: 0 0 0 2px rgba(239,68,68,.18);
 }
 
-/* Botón fantasma */
-.btnGhost {
-  appearance: none;
-  border: 1px solid #cbd5e1;
-  background: #fff;
-  color: #111827;
-  border-radius: 10px;
-  height: 38px;
-  padding: 0 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background .15s ease, box-shadow .15s ease, transform .05s ease, opacity .15s ease, border-color .15s ease;
+/* Botones: misma línea visual, más compactos */
+.btnGhost, .btnPrimary {
+  height: 34px;                   /* antes 38 */
+  padding: 0 14px;                /* antes 16/18 */
+  border-radius: 8px;             /* antes 10 */
 }
-.btnGhost:hover:not(:disabled) {
-  background: #f8fafc;
-  box-shadow: 0 4px 14px rgba(15,23,42,.08);
-}
-.btnGhost:active:not(:disabled) { transform: scale(.98); }
-.btnGhost:disabled { opacity: .6; cursor: not-allowed; }
 
-/* Botón primario (mantiene tu hover/active) */
-.btnPrimary {
-  appearance: none;
-  border: 0;
-  border-radius: 10px;
-  background: #2563eb;
-  color: #fff;
-  height: 38px;
-  padding: 0 18px;
-  font-weight: 700;
-  letter-spacing: .2px;
-  cursor: pointer;
-  transition: transform .05s ease, box-shadow .15s ease, opacity .15s ease, background .15s ease;
+/* Close más pequeño para no “empujar” */
+.closeBtn {
+  width: 30px; height: 30px;      /* antes 34 */
+  border-radius: 8px;
 }
-.btnPrimary:hover:not(:disabled) {
-  background: #1d4ed8;
-  box-shadow: 0 4px 18px rgba(37,99,235,.25);
-}
-.btnPrimary:active:not(:disabled) {
-  transform: scale(.98);
-  box-shadow: 0 2px 10px rgba(37,99,235,.18);
-}
-.btnPrimary:disabled { opacity: .6; cursor: not-allowed; }
 
-/* ===== Responsivo ===== */
+/* Header más denso */
+.header { padding: 12px 14px; }
+.title  { font-size: 17px; }      /* antes 18 */
+
+/* Responsivo: colapsar a una columna */
 @media (max-width: 720px) {
-  .modal { max-width: 640px; }
-  .comboColab,
-  .row2 {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* ===== Animaciones ===== */
-@keyframes fadeIn {
-  from { opacity: 0; } to { opacity: 1; }
-}
-@keyframes popIn {
-  from { transform: translateY(6px) scale(.98); opacity: 0.98; }
-  to   { transform: translateY(0) scale(1);    opacity: 1; }
+  .comboColab, .row2 { grid-template-columns: 1fr; }
 }

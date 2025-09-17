@@ -19,6 +19,16 @@ const MisReservas: React.FC<Props> = ({ userMail, isAdmin = false }) => {
     filterMode, setFilterMode,
   } = useMisReservas(reservations, userMail, isAdmin);
 
+    React.useEffect(() => {
+    console.groupCollapsed('[MisReservas] debug');
+    console.log('userMail:', userMail);
+    console.log('rows.length:', rows?.length ?? 0);
+    if (Array.isArray(rows) && rows.length > 0) {
+      console.log('rows[0]:', rows[0]);
+    }
+    console.groupEnd();
+  }, [rows, userMail]);
+  
   return (
     <section className={styles.section}>
       <div className={styles.card}>
@@ -168,3 +178,4 @@ const MisReservas: React.FC<Props> = ({ userMail, isAdmin = false }) => {
 };
 
 export default MisReservas;
+

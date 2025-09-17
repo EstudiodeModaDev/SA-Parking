@@ -122,46 +122,43 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
   };
 
   // -------- carga ----------
-  const reloadAll = React.useCallback(async (termArg?: string) => {
+   const reloadAll = React.useCallback(async (termArg?: string) => {
+    const myId = ++reqIdRef.current;
     setLoading(true);
     setError(null);
     try {
-      const MAX_FETCH = 2000;
       const term = (termArg ?? search).trim().toLowerCase().replace(/'/g, "''");
-      console.log('term', term);
 
       const filters: string[] = [];
-      if (term) filters.push(`contains(tolower(fields/Title),'${term}')`);   // 👈 filtra por fields/Title
+      if (term) filters.push(`startswith(tolower(fields/Title),'${term}')`); // más estable que contains
       if (tipo !== 'all') filters.push(`fields/TipoCelda eq '${tipo}'`);
       if (itinerancia !== 'all') filters.push(`fields/Itinerancia eq '${itinerancia}'`);
 
       const opts = {
         orderby: 'fields/Title asc',
-        top: MAX_FETCH,
+        top: 2000,
         ...(filters.length ? { filter: filters.join(' and ') } : {}),
       } as const;
 
-      console.log('[useCeldas] reloadAll opts:', opts);
+      // DEBUG: ver el filtro que se envía
+      console.log('[useCeldas] opts.filter →', opts.filter);
 
       const items = await svc.getAll(opts);
+      if (myId !== reqIdRef.current) return; // ⛔ hay una llamada más reciente, ignora esta
+
       const ui = items.map(mapSlotToUI);
-
-      console.log('[useCeldas] reloadAll -> items:', items.length, 'ui:', ui.length);
-
       setAllRows(ui);
       setRows(ui.slice(0, pageSize));
       setPageIndex(0);
       setHasNext(ui.length > pageSize);
-    } catch (e: any) {
+    } catch (e:any) {
+      if (myId !== reqIdRef.current) return;
       console.error('[useCeldas] reloadAll error:', e);
-      setAllRows([]); setRows([]);
-      setError(e?.message ?? 'Error al cargar celdas');
-      setHasNext(false);
+      setAllRows([]); setRows([]); setError(e?.message ?? 'Error al cargar celdas'); setHasNext(false);
     } finally {
-      setLoading(false);
+      if (myId === reqIdRef.current) setLoading(false);
     }
   }, [svc, pageSize, tipo, itinerancia, search]);
-
   // -------- onSearchEnter (nuevo) ----------
   const onSearchEnter = React.useCallback(
     async (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -255,6 +252,7 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
     create: handleCreate,
   };
 }
+
 
 
 

@@ -116,7 +116,7 @@ const AdminCells: React.FC = () => {
       setQrSaving(true);
       setQrMsg(null);
       setQrErr(null);
-      console.log(qrUserEmail, " ",qrUserName)
+      console.log("otra", qrUserEmail, " ",qrUserName)
       const res = await reservar({
         vehicle: qrVehicle,
         turn: qrTurn,
@@ -577,5 +577,6 @@ const AdminCells: React.FC = () => {
 };
 
 export default AdminCells;
+
 
 

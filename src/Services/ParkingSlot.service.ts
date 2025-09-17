@@ -117,16 +117,39 @@ export class ParkingSlotsService {
 
   async getAll(opts?: GetAllOpts) {
     await this.ensureIds();
-    const qs = new URLSearchParams({ $expand: 'fields' });
-    if (opts?.filter) qs.set('$filter', opts.filter);
-    if (opts?.orderby) qs.set('$orderby', opts.orderby);
+  
+    // Normaliza por si alguien pasó "Title asc" o "ID desc" por accidente.
+    const normalize = (s: string) =>
+      s
+        .replace(/\bID\b/g, 'id')
+        .replace(/(^|[^/])\bTitle\b/g, '$1fields/Title')  // añade fields/ si falta
+  
+    const qs = new URLSearchParams();
+    qs.set('$expand', 'fields');
+    if (opts?.filter)  qs.set('$filter', normalize(opts.filter));
+    if (opts?.orderby) qs.set('$orderby', normalize(opts.orderby));
     if (opts?.top != null) qs.set('$top', String(opts.top));
-
-    const res = await this.graph.get<any>(
-      `/sites/${this.siteId}/lists/${this.listId}/items?${qs.toString()}`
-    );
+  
+    const url = `/sites/${this.siteId}/lists/${this.listId}/items?${qs.toString()}`;
+    console.groupCollapsed('[ParkingSlots.getAll] URL');
+    console.log(url);
+    console.log('opts (raw):', opts);
+    console.groupEnd();
+  
+    const res = await this.graph.get<any>(url);
+  
+    // Debug útil: ver el primer item crudo y sus fields
+    try {
+      console.groupCollapsed('[ParkingSlots.getAll] RAW response');
+      console.log('value length:', Array.isArray(res?.value) ? res.value.length : 0);
+      if (Array.isArray(res?.value) && res.value.length) {
+        console.log('raw item[0]:', res.value[0]);
+        console.log('fields item[0]:', res.value[0].fields);
+      }
+    } finally { console.groupEnd(); }
+  
     const arr = Array.isArray(res?.value) ? res.value : [];
-    return arr.map((x: any) => this.toModel(x));
+    return arr.map((x: any) => this.toModel(x)); // <- tu mapeo actual
   }
 
   // ---------- helpers de consulta (opcionales) ----------
@@ -147,3 +170,4 @@ export class ParkingSlotsService {
     return this.getAll({ filter: 'fields/Disponible eq true', orderby: 'fields/Codigo asc', top });
   }
 }
+

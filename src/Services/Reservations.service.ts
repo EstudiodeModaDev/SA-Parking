@@ -77,7 +77,7 @@ export class ReservationsService {
       Turn: f.Turn ?? undefined,
 
       // Lookup SpotId
-      SpotIdLookupId: typeof f.SpotIdLookupId === 'number' ? f.SpotIdLookupId : null,
+      SpotIdLookupId: f.SpotIdLookupId ,
 
 
       // ⚠️ Asegúrate que el internal name sea el mismo en tu lista.
@@ -198,6 +198,7 @@ export class ReservationsService {
     });
   }
 }
+
 
 
 

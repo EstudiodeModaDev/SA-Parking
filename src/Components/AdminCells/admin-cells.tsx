@@ -12,7 +12,7 @@ import { useGraphServices } from '../../graph/GraphServicesContext';
 const AdminCells: React.FC = () => {
   const {
     // estado base
-    loading, error,
+     error,
     rows, pageIndex, hasNext,
 
     // filtros y paginación
@@ -197,7 +197,6 @@ async function submitQuickReserve() {
     );
   };
 
-  if (loading) return <section className={styles.wrapper}><div>Cargando…</div></section>;
 
   return (
     <section className={styles.wrapper}>

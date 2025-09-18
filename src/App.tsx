@@ -164,6 +164,7 @@ function AppInner() {
       if (!user?.mail) { setCanChangeRole(false); return; }
       try {
         const ok = await isUserPermitted(user.mail);
+        console.log(ok)
         if (!cancel) setCanChangeRole(ok);
       } catch {
         if (!cancel) setCanChangeRole(false);

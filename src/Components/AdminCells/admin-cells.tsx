@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useTransition, useDeferredValue } from 'react';
 import styles from './AdminCells.module.css';
 import { useAdminCells } from './useAdminCells';
 import SlotDetailsModal from './slotDetailsModal';
@@ -9,14 +10,24 @@ import { useReservar } from '../../Hooks/useReservar';
 import type { TurnType, VehicleType } from '../../Models/shared';
 import { useGraphServices } from '../../graph/GraphServicesContext';
 
+// ---- Debounce hook simple ----
+function useDebounced<T>(value: T, delay = 300) {
+  const [v, setV] = React.useState(value);
+  React.useEffect(() => {
+    const t = setTimeout(() => setV(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return v;
+}
+
 const AdminCells: React.FC = () => {
   const {
     // estado base
     loading, error,
     rows, pageIndex, hasNext,
 
-    // filtros y paginación
-    search, setSearch, onSearchEnter,
+    // filtros y paginación (search es el que dispara fetch en useAdminCells)
+    search, setSearch,
     tipo, setTipo,
     itinerancia, setItinerancia,
     pageSize, setPageSize,
@@ -41,7 +52,6 @@ const AdminCells: React.FC = () => {
 
   // Servicios para reservar (mismo flujo que Availability)
   const { reservations, settings, parkingSlots } = useGraphServices();
-  
   const { hours, loading: hoursLoading, error: hoursError } = useSettingsHours();
 
   // Estado reserva rápida
@@ -59,10 +69,13 @@ const AdminCells: React.FC = () => {
   const [showList, setShowList] = React.useState(false);
   const [activeIdx, setActiveIdx] = React.useState(-1);
 
+  // useReservar hook
   const { minDate, maxDate, reservar, loading: reservarLoading, error: reservarError } =
     useReservar(reservations, parkingSlots, settings, qrUserEmail, qrUserName);
-    const minISO = React.useMemo(() => toISODate(minDate), [minDate]);
+
+  const minISO = React.useMemo(() => toISODate(minDate), [minDate]);
   const maxISO = React.useMemo(() => toISODate(maxDate), [maxDate]);
+
   const workerOptions = React.useMemo(
     () => (workers || []).map((w: any) => ({
       mail: String(w.mail || '').trim(),
@@ -91,8 +104,8 @@ const AdminCells: React.FC = () => {
   React.useEffect(() => {
     if (!minISO || !maxISO) return;
     const today = new Date().toISOString().slice(0, 10);
-    const clamp = (iso: string, a: string, b: string) => (iso < a ? a : iso > b ? b : iso);
-    setQrDate(prev => prev || clamp(today, minISO, maxISO));
+    const clampISO = (iso: string, a: string, b: string) => (iso < a ? a : iso > b ? b : iso);
+    setQrDate(prev => prev || clampISO(today, minISO, maxISO));
   }, [minISO, maxISO]);
 
   // Helper de horas
@@ -110,93 +123,62 @@ const AdminCells: React.FC = () => {
     return 'Fuera';
   }, [currentTurn]);
 
-  // Submit reserva rápida
-async function submitQuickReserve() {
-  // sanity check (evita reservas sin selección)
-  if (!qrUserEmail || !qrUserName) {
-    setQrErr('Selecciona un colaborador válido.');
-    return;
-  }
+  // ---------- Búsqueda en vivo sin bloqueo ----------
+  // 1) Estado del input separado del estado oficial de búsqueda
+  const [searchRaw, setSearchRaw] = React.useState(search);
+  React.useEffect(() => setSearchRaw(search), [search]); // sincroniza externos
 
-  try {
-    setQrSaving(true);
-    setQrMsg(null);
-    setQrErr(null);
+  // 2) Debounce de lo que escribe el usuario
+  const debouncedSearch = useDebounced(searchRaw, 320);
 
-    // mejor logging
-    console.log('submitQuickReserve payload:', {
-      vehicle: qrVehicle,
-      turn: qrTurn,
-      dateISO: qrDate,
-      userEmail: qrUserEmail,
-      userName: qrUserName,
+  // 3) startTransition para que el render pesado no bloquee el input
+  const [isPending, startTransition] = useTransition();
+  React.useEffect(() => {
+    startTransition(() => {
+      setSearch(debouncedSearch); // tu useAdminCells hará el fetch
     });
-    alert(`Reservando para: ${qrUserName} <${qrUserEmail}>`);
+  }, [debouncedSearch, setSearch]);
 
-    const res = await reservar({
-      vehicle: qrVehicle,
-      turn: qrTurn,
-      dateISO: qrDate,
+  // 4) Diferir pintura de la grilla si es grande
+  const deferredRows = useDeferredValue(rows);
 
-      // ⬇⬇ IMPORTANTE: manda ambos
-      userEmail: qrUserEmail,
-      userName: qrUserName,
+  // ---------- Reserva rápida ----------
+  async function submitQuickReserve() {
+    if (!qrUserEmail || !qrUserName) {
+      setQrErr('Selecciona un colaborador válido.');
+      return;
+    }
 
-      // Opcional si tu backend/SharePoint los usa
-      Title: qrUserEmail,
-      NombreUsuario: qrUserName,
-    } as any);
+    try {
+      setQrSaving(true);
+      setQrMsg(null);
+      setQrErr(null);
 
-    console.log('reservar() ->', res);
-    if (res.ok) setQrMsg(res.message);
-    else setQrErr(res.message);
-  } catch (e: any) {
-    console.error('submitQuickReserve error', e);
-    setQrErr(e?.message ?? 'No se pudo crear la reserva.');
-  } finally {
-    setQrSaving(false);
+      const res = await reservar({
+        vehicle: qrVehicle,
+        turn: qrTurn,
+        dateISO: qrDate,
+        userEmail: qrUserEmail,
+        userName: qrUserName,
+        Title: qrUserEmail,
+        NombreUsuario: qrUserName,
+      } as any);
+
+      if (res.ok) setQrMsg(res.message);
+      else setQrErr(res.message);
+    } catch (e: any) {
+      console.error('submitQuickReserve error', e);
+      setQrErr(e?.message ?? 'No se pudo crear la reserva.');
+    } finally {
+      setQrSaving(false);
+    }
   }
-}
 
   const emailOk = /\S+@\S+\.\S+/.test(qrUserEmail);
   const quickDisabled =
     !qrDate || !emailOk || reservarLoading || hoursLoading || !!hoursError || !hours;
 
-  const renderTurnBadge = (
-    activa: boolean,
-    reserved: boolean,
-    turnLabel: 'AM' | 'PM',
-    isCurrentTurn: boolean,
-    who?: string | null
-  ) => {
-    let cls = styles.badge;
-    let text = 'Disponible';
-
-    if (!activa) {
-      cls = `${styles.badge} ${styles.badgeInactive}`;
-      text = 'Inactiva';
-    } else if (reserved) {
-      if (isCurrentTurn) {
-        cls = `${styles.badge} ${styles.badgeInUse}`;
-        text = 'En uso';
-      } else {
-        cls = `${styles.badge} ${styles.badgeReserved}`;
-        text = 'Reservada';
-      }
-    } else {
-      cls = `${styles.badge} ${styles.badgeFree}`;
-      text = 'Disponible';
-    }
-
-    return (
-      <span className={cls} aria-label={`${turnLabel}: ${text}${who ? ` por ${who}` : ''}`}>
-        <span className={styles.badgeLine}>{turnLabel}: {text}</span>
-        <br />
-        {who && <small className={styles.badgeWho}>{who}</small>}
-      </span>
-    );
-  };
-
+  // ---------- Render ----------
   if (loading) return <section className={styles.wrapper}><div>Cargando…</div></section>;
 
   return (
@@ -204,7 +186,7 @@ async function submitQuickReserve() {
       {error && <div className={styles.error} role="alert">Error: {error}</div>}
       <h3 className={styles.h3}>Listado de celdas</h3>
 
-      {/* Capacidad hoy + Reserva rápida (simétricas) */}
+      {/* Capacidad hoy + Reserva rápida */}
       <div className={styles.twoCards}>
         {/* ---- Capacidad hoy ---- */}
         <div className={styles.capacityCard}>
@@ -401,16 +383,23 @@ async function submitQuickReserve() {
           </select>
         </div>
 
+        {/* Búsqueda con debounce en vivo */}
         <div className={styles.searchBox}>
           <input
             className={styles.searchInput}
             type="text"
             placeholder="Buscar por código…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={onSearchEnter}
+            value={searchRaw}
+            onChange={(e) => setSearchRaw(e.target.value)}   // ← NO dispara fetch directo
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                // forzar búsqueda inmediata, saltando el debounce
+                startTransition(() => setSearch(searchRaw));
+              }
+            }}
             aria-label="Buscar celda por código"
           />
+          {isPending && <span className={styles.spinner} aria-hidden>⏳</span>}
         </div>
 
         <div className={styles.pageSizeBox}>
@@ -440,21 +429,56 @@ async function submitQuickReserve() {
       </div>
 
       {/* Grid */}
-      {rows.length === 0 ? (
+      {deferredRows.length === 0 ? (
         <div className={styles.emptyGrid}>Sin resultados.</div>
       ) : (
         <ul className={styles.cardGrid}>
-          {rows.map(r => {
+          {deferredRows.map(r => {
             const activa = r.Activa === 'Activa';
             const occ = r.__occ || {};
             const amReserved = !!occ.Manana;
             const pmReserved = !!occ.Tarde;
 
+            const renderTurnBadge = (
+              activa: boolean,
+              reserved: boolean,
+              turnLabel: 'AM' | 'PM',
+              isCurrentTurn: boolean,
+              who?: string | null
+            ) => {
+              let cls = styles.badge;
+              let text = 'Disponible';
+
+              if (!activa) {
+                cls = `${styles.badge} ${styles.badgeInactive}`;
+                text = 'Inactiva';
+              } else if (reserved) {
+                if (isCurrentTurn) {
+                  cls = `${styles.badge} ${styles.badgeInUse}`;
+                  text = 'En uso';
+                } else {
+                  cls = `${styles.badge} ${styles.badgeReserved}`;
+                  text = 'Reservada';
+                }
+              } else {
+                cls = `${styles.badge} ${styles.badgeFree}`;
+                text = 'Disponible';
+              }
+
+              return (
+                <span className={cls} aria-label={`${turnLabel}: ${text}${who ? ` por ${who}` : ''}`}>
+                  <span className={styles.badgeLine}>{turnLabel}: {text}</span>
+                  <br />
+                  {who && <small className={styles.badgeWho}>{who}</small>}
+                </span>
+              );
+            };
+
             const amBadge = renderTurnBadge(
-              activa, amReserved, 'AM', turnNow === 'Manana' && amReserved, occ.PorManana
+              activa, amReserved, 'AM', (turnNow === 'Manana') && amReserved, occ.PorManana
             );
             const pmBadge = renderTurnBadge(
-              activa, pmReserved, 'PM', turnNow === 'Tarde' && pmReserved, occ.PorTarde
+              activa, pmReserved, 'PM', (turnNow === 'Tarde') && pmReserved, occ.PorTarde
             );
 
             return (
@@ -601,10 +625,3 @@ async function submitQuickReserve() {
 };
 
 export default AdminCells;
-
-
-
-
-
-
-

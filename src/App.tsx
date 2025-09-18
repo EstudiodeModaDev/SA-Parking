@@ -217,7 +217,6 @@ function AppInner() {
                     aria-label="Cambiar rol de usuario"
                     title="Cambiar rol"
                   >
-                    <span className="btn-ico" aria-hidden>👤</span>
                     {changingRole ? 'Actualizando…' : (permLoading ? 'Verificando…' : 'Cambiar rol')}
                   </button>
                 )}

@@ -128,21 +128,21 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
     setLoading(true);
     setError(null);
     try {
+      console.groupCollapsed("[Cargar celdas] Iniciando")
       const term = (termArg ?? search).trim().toLowerCase().replace(/'/g, "''");
-
+      console.log('filter →', term);
       const filters: string[] = [];
       if (term) filters.push(`startswith(tolower(fields/Title),'${term}')`); // más estable que contains
       if (tipo !== 'all') filters.push(`fields/TipoCelda eq '${tipo}'`);
       if (itinerancia !== 'all') filters.push(`fields/Itinerancia eq '${itinerancia}'`);
 
       const opts = {
-        orderby: 'fields/Title asc',
         top: 2000,
         ...(filters.length ? { filter: filters.join(' and ') } : {}),
       } as const;
 
       // DEBUG: ver el filtro que se envía
-      console.log('[useCeldas] opts.filter →', opts.filter);
+      console.log('filter →', opts.filter);
 
       const items = await svc.getAll(opts);
       if (myId !== reqIdRef.current) return; // ⛔ hay una llamada más reciente, ignora esta

@@ -124,8 +124,9 @@ export class UsuariosParkingService {
       `/sites/${this.siteId}/lists/${this.listId}/items?${qs.toString()}`
     );
     const arr = Array.isArray(res?.value) ? res.value : [];
-    console.warn("ALERTAAAAAAAAAAAA: ", arr)
-    return arr.map((x: any) => this.toModel(x));
+    const retorno = arr.map((x: any) => this.toModel(x));
+    console.warn("ALERTAAAAAAAAAAAA: ", retorno)
+    return retorno
   }
 
   // ---------- helpers de consulta (opcionales) ----------

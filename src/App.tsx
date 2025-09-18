@@ -1,5 +1,5 @@
 // src/App.tsx
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import './App.css';
 
 import Availability from './Components/Reservar/Reservar';
@@ -17,6 +17,9 @@ import type { GetAllOpts } from './Models/Commons';
 import { useAuth } from './auth/AuthProvider';
 import { GraphServicesProvider, useGraphServices } from './graph/GraphServicesContext';
 import { UserService } from './Services/User.Service';
+
+// 👇 NUEVO: usamos tu servicio unificado
+import { SharedServices } from './Services/Shared.service';
 
 // ------------------ Constantes UI ------------------
 const NAVS_ADMIN = [
@@ -37,83 +40,75 @@ type User = {
 } | null;
 
 // ------------------ Helpers que usan el contexto ------------------
+// (Dejamos este helper para toggle de rol; ajustado con filter correcto y normalización)
 function useRoleHelpers() {
   const { usuariosParking } = useGraphServices();
 
-  const changeUser = async (userEmail: string) => {
+  const normRows = (res: any): any[] =>
+    (res?.data ?? res?.value ?? (Array.isArray(res) ? res : [])) as any[];
+
+  const changeUser = useCallback(async (userEmail: string) => {
     const email = (userEmail ?? '').trim();
     if (!email) throw new Error('userEmail requerido');
     const emailSafe = email.replace(/'/g, "''");
 
-    const opt: GetAllOpts = { filter: `fields/Title eq '${emailSafe}'`, top: 1 as any };
+    // Graph: debes filtrar por fields/Title
+    const opt: GetAllOpts = { filter: `fields/Title eq '${emailSafe.toLowerCase()}'`, top: 1 as any };
     const res = await usuariosParking.getAll(opt);
-    const rows = Array.isArray(res) ? res : [];
+    const rows = normRows(res);
     const user = rows[0];
     if (!user) throw new Error(`Usuario no encontrado: ${email}`);
 
-    const id = (user as any).ID ?? (user as any).Id ?? (user as any).id;
+    const id = user.ID ?? user.Id ?? user.id;
     if (id == null) throw new Error('El usuario no tiene ID');
 
-    const currentRol = String((user as any).Rol ?? (user as any).rol ?? '').toLowerCase();
+    const currentRol = String(user.Rol ?? user.rol ?? '').toLowerCase();
     const nextRol = currentRol === 'admin' ? 'Usuario' : 'admin';
 
     await usuariosParking.update(String(id), { Rol: nextRol } as any);
     return { ok: true, id, email, before: currentRol, after: nextRol };
-  };
+  }, [usuariosParking]);
 
-  const isUserPermitted = async (userEmail: string): Promise<boolean> => {
-    const email = (userEmail ?? '').trim();
-    if (!email) return false;
-    const emailSafe = email.replace(/'/g, "''");
-
-    const opt: GetAllOpts = { filter: `Title eq '${emailSafe}'`, top: 1 as any };
-    const res = await usuariosParking.getAll(opt);
-    console.log("is user permit", res)
-    const rows = Array.isArray(res) ? res : [];
-    const user = rows[0];
-    if (!user) return false;
-
-    const raw =
-      (user as any).Permitidos ??
-      (user as any).permitidos ??
-      (user as any).Permitido;
-    return raw === true || raw === 1 || String(raw).toLowerCase() === 'true';
-  };
-
-  return { changeUser, isUserPermitted };
+  return { changeUser };
 }
 
 // ------------------ App interna (requiere sesión) ------------------
 function AppInner() {
   const [selected, setSelected] = useState<NavKey>('misreservas');
+
   const [user, setUser] = useState<User>(null);
   const [userLoading, setUserLoading] = useState(true);
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [changingRole, setChangingRole] = useState(false);
+
+  const [userRole, setUserRole] = useState<'admin' | 'usuario'>('usuario');
   const [canChangeRole, setCanChangeRole] = useState(false);
   const [permLoading, setPermLoading] = useState(false);
+  const [changingRole, setChangingRole] = useState(false);
 
-  const { graph, shared } = useGraphServices();
+  const { graph, usuariosParking, settings } = useGraphServices();
   const userSvc = useMemo(() => new UserService(graph), [graph]);
+
+  // 👇 Instanciamos TU SharedServices con el service de usuariosParking del contexto
+  const shared = useMemo(() => new SharedServices(usuariosParking), [usuariosParking]);
+
   const { signOut } = useAuth();
+  const { changeUser } = useRoleHelpers();
 
-  const { changeUser, isUserPermitted } = useRoleHelpers();
-  const {settings} = useGraphServices();
-
-  const onChangeRole = async () => {
+  const onChangeRole = useCallback(async () => {
     if (!user?.mail || changingRole) return;
     try {
       setChangingRole(true);
       const { after } = await changeUser(user.mail);
-      setUserRole(after.toLowerCase());
+      // normaliza
+      const next = String(after).toLowerCase() === 'admin' ? 'admin' : 'usuario';
+      setUserRole(next);
     } catch (e) {
       console.error(e);
     } finally {
       setChangingRole(false);
     }
-  };
+  }, [changeUser, user?.mail, changingRole]);
 
-  // Cargar perfil con Graph
+  // 1) Cargar perfil con Graph (básico)
   useEffect(() => {
     let cancel = false;
     setUserLoading(true);
@@ -123,10 +118,9 @@ function AppInner() {
         if (cancel) return;
         setUser({
           displayName: me.displayName ?? undefined,
-          mail: me.mail ?? me.userPrincipalName ?? undefined,
+          mail: (me.mail ?? me.userPrincipalName ?? '').toLowerCase() || undefined,
           jobTitle: me.jobTitle ?? undefined,
         });
-
       } catch (e) {
         if (!cancel) setUser(null);
         console.error(e);
@@ -137,62 +131,49 @@ function AppInner() {
     return () => { cancel = true; };
   }, [userSvc]);
 
-  // Reset rol si cambia el mail
-  useEffect(() => { setUserRole(null); }, [user?.mail]);
-
-  // Cargar rol (shared.getRole)
+  // 2) Con UNA pasada resolvemos role + permitted usando TU SharedServices
   useEffect(() => {
+    if (userLoading) return;
     const mail = user?.mail;
-    if (!mail) return;
-    let cancel = false;
-    (async () => {
-      try {
-        const role = await shared.getRole(mail); // 'admin' | 'usuario'
-        if (!cancel) {
-          setUserRole(role);
-          if (role === 'admin') setSelected(prev => prev ?? 'misreservas');
-        }
-      } catch (e) {
-        console.error(e);
-        if (!cancel) setUserRole('usuario');
-      }
-    })();
-    return () => { cancel = true; };
-  }, [user?.mail, shared]);
+    if (!mail) { setCanChangeRole(false); setUserRole('usuario'); return; }
 
-  // ¿Puede cambiar su rol?
-  useEffect(() => {
-    if (userLoading) return;         
-    if (!user?.mail) {
-      setCanChangeRole(false);
-      alert("No se puedo obtener el usuario")
-      return;
-    }
-
-    let cancel = false;
+    let alive = true;
     setPermLoading(true);
     (async () => {
       try {
-        const ok = await isUserPermitted(user.mail!);
-        console.log("Obtenido", ok)
-        if (!cancel) setCanChangeRole(ok);
-      } catch {
-        if (!cancel) setCanChangeRole(false);
+        // Llamamos en paralelo a tus métodos
+        const [roleRaw, permitted] = await Promise.all([
+          shared.getRole(mail),
+          shared.getPermitted(mail),
+        ]);
+
+        if (!alive) return;
+
+        const role = String(roleRaw ?? 'usuario').toLowerCase() === 'admin' ? 'admin' : 'usuario';
+        setUserRole(role);
+        setCanChangeRole(Boolean(permitted));
+
+        if (role === 'admin') setSelected(prev => prev ?? 'misreservas');
+      } catch (e) {
+        if (!alive) return;
+        console.error(e);
+        setUserRole('usuario');
+        setCanChangeRole(false);
       } finally {
-        if (!cancel) setPermLoading(false);
+        if (alive) setPermLoading(false);
       }
     })();
 
-  return () => { cancel = true; };
-}, [userLoading, user?.mail, isUserPermitted]);
+    return () => { alive = false; };
+  }, [userLoading, user?.mail, shared]);
 
   const isAdmin = userRole === 'admin';
   const handleNavClick = (key: NavKey) => setSelected(key);
 
-  if (userLoading || userRole === null) {
+  if (userLoading) {
     return (
       <div className="center muted" style={{ padding: 24 }}>
-        Cargando permisos…
+        Cargando usuario…
       </div>
     );
   }
@@ -216,16 +197,25 @@ function AppInner() {
                   <>
                     <div className="userName">{user.displayName}</div>
                     <div className="userMail">{user.mail}</div>
-                    {user.jobTitle && <div className="userTitle">{user.jobTitle}
+                    {user.jobTitle && <div className="userTitle">{user.jobTitle}</div>}
                     <div className="userMail">{isAdmin ? 'admin' : 'usuario'}</div>
-                    </div>}
                   </>
                 ) : (
                   <div className="errorText">No se pudo cargar el usuario</div>
                 )}
               </div>
 
-              <div style={{ marginLeft: 'auto' }}>
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                {canChangeRole && (
+                  <button
+                    onClick={onChangeRole}
+                    disabled={!user?.mail || changingRole || permLoading}
+                    className="btn-change-role"
+                    aria-busy={changingRole || permLoading || undefined}
+                  >
+                    {changingRole ? 'Actualizando…' : (permLoading ? 'Verificando…' : 'Cambiar rol')}
+                  </button>
+                )}
                 <button className="btn-change-role" onClick={signOut}>
                   Cerrar sesión
                 </button>
@@ -275,6 +265,7 @@ function AppInner() {
           {isAdmin && selected === 'admin' && (
             <div className="center">
               <h2>Administración</h2>
+              {/* settings viene del GraphServicesContext */}
               <AdminSettings settingsSvc={settings} />
             </div>
           )}
@@ -292,18 +283,6 @@ function AppInner() {
             <div className="center">
               <PicoPlacaAdmin />
             </div>
-          )}
-
-          <br />
-          {canChangeRole && (
-            <button
-              onClick={onChangeRole}
-              disabled={!user?.mail || changingRole || permLoading}
-              className="btn-change-role"
-              aria-busy={changingRole || permLoading || undefined}
-            >
-              {changingRole ? 'Actualizando…' : (permLoading ? 'Verificando…' : 'Cambiar rol')}
-            </button>
           )}
         </main>
       </div>
@@ -339,13 +318,13 @@ export default function App() {
           <div className="center login-hero">
             <h2>Inicia sesión para continuar</h2>
             <p className="login-subtitle">Bienvenido a la aplicación de parqueaderos EDM</p>
-        
+
             <div className="login-actions">
               <button className="btn-change-role btn-narrow" onClick={signIn}>
                 Iniciar sesión
               </button>
             </div>
-        
+
             <small className="muted">
               Si tu navegador bloquea la ventana emergente, habilítala para este sitio.
             </small>

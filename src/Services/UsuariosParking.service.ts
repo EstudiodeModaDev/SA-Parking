@@ -123,8 +123,8 @@ export class UsuariosParkingService {
     const res = await this.graph.get<any>(
       `/sites/${this.siteId}/lists/${this.listId}/items?${qs.toString()}`
     );
-    console.warn("ALERTA", res)
     const arr = Array.isArray(res?.value) ? res.value : [];
+    console.warn("ALERTAAAAAAAAAAAA: ", arr)
     return arr.map((x: any) => this.toModel(x));
   }
 

@@ -162,7 +162,6 @@ function AppInner() {
 
   // ¿Puede cambiar su rol?
   useEffect(() => {
-    alert("Iniciando rol")
     if (userLoading) return;         
     if (!user?.mail) {
       setCanChangeRole(false);
@@ -174,8 +173,8 @@ function AppInner() {
     setPermLoading(true);
     (async () => {
       try {
-        alert("Funciono")
         const ok = await isUserPermitted(user.mail!);
+        console.log("Obtenido", ok)
         if (!cancel) setCanChangeRole(ok);
       } catch {
         if (!cancel) setCanChangeRole(false);

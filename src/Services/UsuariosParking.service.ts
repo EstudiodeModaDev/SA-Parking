@@ -74,6 +74,7 @@ export class UsuariosParkingService {
       ID: Number(item?.id ?? ''),
       Title: f.Title,
       Rol: f.Rol,
+      Permitidos: item.permitidos
     };
   }
 

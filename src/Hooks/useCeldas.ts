@@ -1,8 +1,15 @@
-// src/hooks/useCeldas.ts (Graph + onSearchEnter + debug)
+// src/hooks/useCeldas.ts
 import * as React from 'react';
 import { mapSlotToUI, type CreateForm, type SlotUI } from '../Models/Celdas';
 import type { ParkingSlot } from '../Models/Parkingslot';
 import { ParkingSlotsService } from '../Services/ParkingSlot.service';
+
+// Item mínimo que necesitamos para poder leer Title venga de Graph (fields.Title) o REST (Title)
+type ListItemMin = {
+  fields?: { Title?: string };
+  Title?: string;
+};
+const getTitle = (it: ListItemMin) => String(it?.fields?.Title ?? it?.Title ?? '');
 
 export type UseParkingSlotsReturn = {
   rows: SlotUI[];
@@ -11,7 +18,7 @@ export type UseParkingSlotsReturn = {
 
   search: string;
   setSearch: (s: string) => void;
-  onSearchEnter: (e: React.KeyboardEvent<HTMLInputElement>) => void; // 👈 nuevo
+  onSearchEnter: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 
   tipo: 'all' | 'Carro' | 'Moto';
   setTipo: (t: 'all' | 'Carro' | 'Moto') => void;
@@ -26,7 +33,7 @@ export type UseParkingSlotsReturn = {
   nextPage: () => void;
   prevPage: () => void;
 
-  reloadAll: () => Promise<void>;
+  reloadAll: (termArg?: string) => Promise<void>;
   toggleEstado: (slotId: string | number, currentStatus: 'Activa' | 'No Activa' | string) => Promise<void>;
 
   createOpen: boolean;
@@ -70,7 +77,11 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
     (createForm.Activa === 'Activa' || createForm.Activa === 'Inactiva') &&
     (createForm.Itinerancia === 'Empleado Itinerante' || createForm.Itinerancia === 'Directivo' || createForm.Itinerancia === 'Empleado Fijo');
 
-  const openCreate = () => { setCreateForm({ Title: '', TipoCelda: 'Carro', Activa: 'Activa', Itinerancia: 'Empleado Fijo' }); setCreateError(null); setCreateOpen(true); };
+  const openCreate = () => {
+    setCreateForm({ Title: '', TipoCelda: 'Carro', Activa: 'Activa', Itinerancia: 'Empleado Fijo' });
+    setCreateError(null);
+    setCreateOpen(true);
+  };
   const closeCreate = () => { setCreateOpen(false); setCreateError(null); };
 
   // -------- acciones ----------
@@ -122,57 +133,85 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
   };
 
   // -------- carga ----------
-    const reqIdRef = React.useRef(0);
-   const reloadAll = React.useCallback(async (termArg?: string) => {
+  const reqIdRef = React.useRef(0);
+
+  const reloadAll = React.useCallback(async (termArg?: string) => {
     const myId = ++reqIdRef.current;
     setLoading(true);
     setError(null);
+
     try {
-      console.groupCollapsed("[Cargar celdas] Iniciando")
-      const term = (termArg ?? search).trim().toLowerCase().replace(/'/g, "''");
-      console.log('filter →', term);
+      console.groupCollapsed('[Cargar celdas] Iniciando');
+
+      // --- helpers ---
+      const esc = (s: string) => s.replace(/'/g, "''"); // OData: duplica comillas
+      const norm = (s: string) => String(s ?? '').trim();
+
+      // término buscado
+      const raw = norm(termArg ?? search);
+      const term = raw.toLowerCase();
+
+      // 1) Filtros server-side (Graph) para acotar con startswith
       const filters: string[] = [];
-      if (term) filters.push(`(contains(fields/Title,'${term}') or contains(fields/Title,'${term}'))`); // más estable que contains
-      if (tipo !== 'all') filters.push(`fields/TipoCelda eq '${tipo}'`);
-      if (itinerancia !== 'all') filters.push(`fields/Itinerancia eq '${itinerancia}'`);
+
+      if (term.length >= 1) {
+        const k = Math.min(3, term.length);        // prefijo 1..3
+        const px = term.slice(0, k);
+        // por si tu tenant es case-sensitive en startswith
+        filters.push(
+          `(startswith(fields/Title,'${esc(px)}') or startswith(fields/Title,'${esc(px.toUpperCase())}'))`
+        );
+      }
+
+      if (tipo !== 'all') {
+        filters.push(`fields/TipoCelda eq '${esc(tipo)}'`);
+      }
+      if (itinerancia !== 'all') {
+        filters.push(`fields/Itinerancia eq '${esc(itinerancia)}'`);
+      }
 
       const opts = {
         top: 2000,
         ...(filters.length ? { filter: filters.join(' and ') } : {}),
       } as const;
 
-      // DEBUG: ver el filtro que se envía
-      console.log('filter →', opts.filter);
+      console.log('server $filter →', opts.filter);
 
-      const items = await svc.getAll(opts);
-      if (myId !== reqIdRef.current) return; // ⛔ hay una llamada más reciente, ignora esta
+      // 2) Fetch
+      // Si tu service es genérico, usa: await svc.getAll<ListItemMin>(opts)
+      const items = (await svc.getAll(opts)) as unknown as ListItemMin[];
+      if (myId !== reqIdRef.current) return; // hay una llamada más reciente
 
-      const ui = items.map(mapSlotToUI);
+      // 3) CONTAINS real en cliente (soporta varias palabras)
+      const parts = term.split(/\s+/).filter(Boolean);
+      const itemsFiltered: ListItemMin[] = parts.length
+        ? items.filter((it: ListItemMin) => {
+            const title = getTitle(it).toLowerCase();
+            return parts.every(p => title.includes(p));
+          })
+        : items;
+
+      console.log(`items: ${items.length} → tras contains: ${itemsFiltered.length}`);
+
+      // 4) Mapear a UI + paginar
+      const ui = itemsFiltered.map(mapSlotToUI);
       setAllRows(ui);
       setRows(ui.slice(0, pageSize));
       setPageIndex(0);
       setHasNext(ui.length > pageSize);
-    } catch (e:any) {
+
+      console.groupEnd();
+    } catch (e: any) {
       if (myId !== reqIdRef.current) return;
       console.error('[useCeldas] reloadAll error:', e);
-      setAllRows([]); setRows([]); setError(e?.message ?? 'Error al cargar celdas'); setHasNext(false);
+      setAllRows([]);
+      setRows([]);
+      setError(e?.message ?? 'Error al cargar celdas');
+      setHasNext(false);
     } finally {
       if (myId === reqIdRef.current) setLoading(false);
     }
   }, [svc, pageSize, tipo, itinerancia, search]);
-  // -------- onSearchEnter (nuevo) ----------
-  const onSearchEnter = React.useCallback(
-    async (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key !== 'Enter') return;
-      e.preventDefault();
-  
-      const v = (search ?? '').trim();       // ← usa el estado, no el evento
-  
-      await reloadAll(v);                     // pasa el término explícito
-    },
-    [reloadAll, search]
-  );
-
 
   // -------- paginación ----------
   const setPageSize = React.useCallback((n: number) => {
@@ -205,6 +244,14 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
     setHasNext(allRows.length > end);
   }, [loading, pageIndex, pageSize, allRows]);
 
+  // -------- búsqueda por Enter (sin bloquear) ----------
+  const onSearchEnter = React.useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter') return;
+    const value = (e.currentTarget?.value ?? '').trim();
+    setSearch(value);           // sincroniza el estado visible
+    reloadAll(value);           // fuerza nueva carga con ese término
+  }, [reloadAll]);
+
   // -------- efectos ----------
   React.useEffect(() => {
     let cancel = false;
@@ -223,7 +270,7 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
 
     search,
     setSearch,
-    onSearchEnter,     // 👈 exportado
+    onSearchEnter,
 
     tipo,
     setTipo,
@@ -252,11 +299,3 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
     create: handleCreate,
   };
 }
-
-
-
-
-
-
-
-

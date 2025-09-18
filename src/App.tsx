@@ -45,7 +45,7 @@ function useRoleHelpers() {
     if (!email) throw new Error('userEmail requerido');
     const emailSafe = email.replace(/'/g, "''");
 
-    const opt: GetAllOpts = { filter: `Title eq '${emailSafe}'`, top: 1 as any };
+    const opt: GetAllOpts = { filter: `fields/Title eq '${emailSafe}'`, top: 1 as any };
     const res = await usuariosParking.getAll(opt);
     const rows = Array.isArray(res) ? res : [];
     const user = rows[0];

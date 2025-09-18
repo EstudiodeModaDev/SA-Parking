@@ -161,7 +161,7 @@ function AppInner() {
   useEffect(() => {
     let cancel = false;
     (async () => {
-      if (!user?.mail) { setCanChangeRole(false); return; }
+      if (!user?.mail) { setCanChangeRole(true); return; }
       try {
         const ok = await isUserPermitted(user.mail);
         console.log(ok)

@@ -139,7 +139,7 @@ export function useCollaborators(
       if (term) {
         // Graph OData v4: contains + tolower
         filters.push(
-          `(contains(tolower(fields/Title),'${term}') or contains(tolower(fields/Correo),'${term}'))`
+          `(fields/Title,'${term}')`
         );
       }
 

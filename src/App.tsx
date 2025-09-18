@@ -131,7 +131,7 @@ function AppInner() {
     return () => { cancel = true; };
   }, [userSvc]);
 
-  // 2) Con UNA pasada resolvemos role + permitted usando TU SharedServices
+  // 2) Con UNA pasada resolvemos role + permitted
   useEffect(() => {
     if (userLoading) return;
     const mail = user?.mail;

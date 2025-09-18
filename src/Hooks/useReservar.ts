@@ -44,13 +44,9 @@ export function useReservar(
   React.useEffect(() => {
     (async () => {
       try {
-        console.log(dbgLabel('[DEBUG] Reservations: getAll (no filter, top 2000)'), dbgStyle);
         const all = await reservationsSvc.getAll({
           top: 2000,
         });
-        // Esto es el modelo mapeado por tu service (no el raw de Graph).
-        console.log('[DEBUG] Reservations getAll (mapped) length:', Array.isArray(all) ? all.length : 0);
-        console.table(all);
 
         if (Array.isArray(all) && all.length > 0) {
           console.log('[DEBUG] First reservation (mapped):', all[0]);
@@ -68,15 +64,11 @@ export function useReservar(
     (async () => {
       try {
         setLoading(true);
-        console.log(dbgLabel('[DEBUG] Settings.get("1")'), dbgStyle);
         const settings = await settingsSvc.get('1');
-        console.log('[DEBUG] Settings.get ->', settings);
         const days: number = (settings as any)?.VisibleDays ?? 3;
         setMaxDate(addDays(hoy, days));
         setMinDate(hoy);
-        console.log('[DEBUG] minDate:', hoy.toISOString(), 'maxDate:', addDays(hoy, days).toISOString());
       } catch (err: any) {
-        console.error('[DEBUG] Settings error:', err);
         setError(err?.message ?? 'Error cargando configuración');
       } finally {
         setLoading(false);
@@ -97,17 +89,12 @@ export function useReservar(
         `(fields/Status ne 'Cancelada')`,
       ].join(' and ');
 
-      console.log(dbgLabel('[DEBUG] countReservations filter'), dbgStyle, filter);
 
       const items = await reservationsSvc.getAll({
         filter,
         top: 1000
       });
 
-      console.log('[DEBUG] countReservations -> items length:', Array.isArray(items) ? items.length : 0);
-      if (Array.isArray(items)) {
-        console.table(items);
-      }
       return Array.isArray(items) ? items.length : 0;
     },
     [reservationsSvc]
@@ -126,7 +113,6 @@ export function useReservar(
         `fields/Turn eq '${turn}'`,
       ].join(' and ');
 
-      console.log(dbgLabel('[DEBUG] hasActiveReservationSameDay filter'), dbgStyle, filter);
 
       const items = await reservationsSvc.getAll({
         filter,
@@ -135,7 +121,6 @@ export function useReservar(
       });
 
       const exists = Array.isArray(items) && items.length > 0;
-      console.log('[DEBUG] hasActiveReservationSameDay ->', exists, items);
       return exists;
     },
     [reservationsSvc]
@@ -143,12 +128,10 @@ export function useReservar(
 
   const reservar = React.useCallback(
     async ({ vehicle, turn, dateISO }: ReserveArgs): Promise<ReserveResult> => {
-      console.log(dbgLabel('[DEBUG] reservar() args'), dbgStyle, { vehicle, turn, dateISO, userMail, userName });
 
       // 0) Validación: ¿ya tiene reserva ese día?
       if (await hasActiveReservationSameDay(userMail, dateISO, turn)) {
         const msg = `No puedes reservar: ya tienes una reserva activa para el ${dateISO} en el turno de la ${turn}.`;
-        console.warn('[DEBUG] bloquear por reserva existente:', msg);
         return { ok: false, message: msg };
       }
 
@@ -200,7 +183,6 @@ export function useReservar(
 
         // 4) Crear la(s) reserva(s)
         const turnsToCreate = (turn === 'Dia' ? (['Manana', 'Tarde'] as const) : [turn]) as readonly Exclude<TurnType, 'Dia'>[];
-        console.log('[DEBUG] turnsToCreate:', turnsToCreate);
 
         try {
           let lastCreated: any = null;
@@ -216,9 +198,7 @@ export function useReservar(
               NombreUsuario: userName,
             };
 
-            console.log(dbgLabel('[DEBUG] create payload'), dbgStyle, payload);
             lastCreated = await reservationsSvc.create(payload);
-            console.log('[DEBUG] create OK ->', lastCreated);
           }
 
           // 5) Refrescar listas/estado externo
@@ -229,7 +209,6 @@ export function useReservar(
               ? `Reserva de día completo creada en celda ${code} para ${dateISO}.`
               : `Reserva creada en celda ${code} para ${dateISO} (${turn}).`;
 
-          console.log('[DEBUG] SUCCESS:', successMsg);
           return { ok: true, message: successMsg, reservation: lastCreated };
         } catch (e: any) {
           console.error('[DEBUG] create FAILED para slot', slotId, e?.message ?? e, e);
@@ -241,7 +220,6 @@ export function useReservar(
       // 6) Si ninguna celda tuvo cupo
       const turnoTexto = turn === 'Dia' ? 'día completo' : String(turn).toLowerCase();
       const msg = `No hay parqueaderos disponibles para ${vehicle} el ${dateISO} en ${turnoTexto}.`;
-      console.warn('[DEBUG] sin cupo en todos los slots:', msg);
       return { ok: false, message: msg };
     },
     [reservationsSvc, slotsSvc, hasActiveReservationSameDay, countReservations, userMail, userName, opts]

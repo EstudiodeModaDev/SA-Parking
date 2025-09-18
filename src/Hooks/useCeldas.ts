@@ -4,35 +4,12 @@ import { mapSlotToUI, type CreateForm, type SlotUI } from '../Models/Celdas';
 import type { ParkingSlot } from '../Models/Parkingslot';
 import { ParkingSlotsService } from '../Services/ParkingSlot.service';
 
-// --- Normalización: sin acentos + minúsculas
-const normalize = (s: unknown) =>
-  String(s ?? '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, ''); // si tu TS no soporta \p{…}: usa .replace(/[\u0300-\u036f]/g, '')
-
-// Item mínimo compatible Graph/REST para leer Title
-type ListItemMin = { fields?: { Title?: string; TipoCelda?: string; Itinerancia?: string; Activa?: string }; Title?: string; TipoCelda?: string; Itinerancia?: string; Activa?: string; Id?: number | string; ID?: number | string; id?: number | string };
+// Item mínimo para leer Title venga de Graph (fields.Title) o REST (Title)
+type ListItemMin = {
+  fields?: { Title?: string };
+  Title?: string;
+};
 const getTitle = (it: ListItemMin) => String(it?.fields?.Title ?? it?.Title ?? '');
-const getTipo  = (it: ListItemMin) => String(it?.fields?.TipoCelda ?? it?.TipoCelda ?? '');
-const getItin  = (it: ListItemMin) => String(it?.fields?.Itinerancia ?? it?.Itinerancia ?? '');
-
-// ---- Filtro local (contains real) por Title + filtros de tipo/itinerancia
-function filterLocal(items: ListItemMin[], term: string, tipo: 'all'|'Carro'|'Moto', itinerancia: 'all'|'Empleado Fijo'|'Empleado Itinerante'|'Directivo') {
-  const q = normalize(term).trim();
-  const parts = q ? q.split(/\s+/).filter(Boolean) : [];
-
-  return items.filter((it) => {
-    // filtros por choice
-    if (tipo !== 'all' && getTipo(it) !== tipo) return false;
-    if (itinerancia !== 'all' && getItin(it) !== itinerancia) return false;
-
-    // texto (Title)
-    if (!parts.length) return true;
-    const haystack = normalize(getTitle(it));
-    return parts.every((p) => haystack.includes(p));
-  });
-}
 
 export type UseParkingSlotsReturn = {
   rows: SlotUI[];
@@ -94,9 +71,6 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
     Itinerancia: 'Empleado Fijo',
   });
 
-  // Maestro en memoria (items crudos) para filtrar en cliente
-  const masterRef = React.useRef<ListItemMin[]>([]);
-
   const canCreate =
     createForm.Title.trim().length > 0 &&
     (createForm.TipoCelda === 'Carro' || createForm.TipoCelda === 'Moto') &&
@@ -117,10 +91,8 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
       setLoading(true);
       const nuevo: 'Activa' | 'No Activa' = currentStatus === 'Activa' ? 'No Activa' : 'Activa';
       await svc.update(String(slotId), { Activa: nuevo } as any);
-      // refleja en memoria + UI
-      const apply = (arr: SlotUI[]) => arr.map(r => r.Id === Number(slotId) ? { ...r, Activa: nuevo } : r);
-      setAllRows(prev => apply(prev));
-      setRows(prev => apply(prev));
+      setAllRows(prev => prev.map(r => r.Id === Number(slotId) ? { ...r, Activa: nuevo } : r));
+      setRows(prev => prev.map(r => r.Id === Number(slotId) ? { ...r, Activa: nuevo } : r));
     } catch (e: any) {
       console.error('[useCeldas] toggleEstado error:', e);
       alert(e?.message ?? 'No se pudo actualizar el estado');
@@ -160,38 +132,59 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
     }
   };
 
-  // -------- carga (sin $filter; todo se filtra localmente) ----------
+  // -------- carga ----------
+  const reqIdRef = React.useRef(0);
+
   const reloadAll = React.useCallback(async (termArg?: string) => {
+    const myId = ++reqIdRef.current;
     setLoading(true);
     setError(null);
+
     try {
-      const MAX_FETCH = 2000;
-      const items = await svc.getAll({
-        top: MAX_FETCH,
-        orderby: 'fields/Title asc', // opcional
-        // sin $filter: reducimos acoplamiento con Graph
-      });
+      // helpers
+      const esc = (s: string) => s.replace(/'/g, "''");
+      const norm = (s: string) => String(s ?? '').trim();
 
-      masterRef.current = items as unknown as ListItemMin[];
+      const raw = norm(termArg ?? '');
+      const term = raw.toLowerCase();
 
-      // aplica filtro local + mapeo
-      const term = typeof termArg === 'string' ? termArg : search;
-      const filtered = filterLocal(masterRef.current, term, tipo, itinerancia);
-      const ui = filtered.map(mapSlotToUI);
+      // filtros server-side (solo tipo/itinerancia; el contains va en cliente)
+      const filters: string[] = [];
+      if (tipo !== 'all') filters.push(`fields/TipoCelda eq '${esc(tipo)}'`);
+      if (itinerancia !== 'all') filters.push(`fields/Itinerancia eq '${esc(itinerancia)}'`);
 
+      const opts = {
+        top: 2000,
+        ...(filters.length ? { filter: filters.join(' and ') } : {}),
+      } as const;
+
+      const items = (await svc.getAll(opts)) as unknown as ListItemMin[];
+      if (myId !== reqIdRef.current) return;
+
+      // CONTAINS real en cliente (múltiples palabras)
+      const parts = term.split(/\s+/).filter(Boolean);
+      const itemsFiltered: ListItemMin[] = parts.length
+        ? items.filter((it: ListItemMin) => {
+            const title = getTitle(it).toLowerCase();
+            return parts.every(p => title.includes(p));
+          })
+        : items;
+
+      const ui = itemsFiltered.map(mapSlotToUI);
       setAllRows(ui);
       setRows(ui.slice(0, pageSize));
       setPageIndex(0);
       setHasNext(ui.length > pageSize);
     } catch (e: any) {
+      if (myId !== reqIdRef.current) return;
       console.error('[useCeldas] reloadAll error:', e);
       setAllRows([]); setRows([]);
       setError(e?.message ?? 'Error al cargar celdas');
       setHasNext(false);
     } finally {
-      setLoading(false);
+      if (myId === reqIdRef.current) setLoading(false);
     }
-  }, [svc, pageSize, search, tipo, itinerancia]);
+  }, [svc, pageSize, tipo, itinerancia]);
 
   // -------- paginación ----------
   const setPageSize = React.useCallback((n: number) => {
@@ -225,38 +218,30 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
   }, [loading, pageIndex, pageSize, allRows]);
 
   // -------- búsqueda ----------
-  // Enter explícito (opcional)
+  // 1) Enter para buscar ya (opcional)
   const onSearchEnter = React.useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter') return;
     const value = (e.currentTarget?.value ?? '').trim();
     setSearch(value);
-    // re-filtra localmente (sin pedir a Graph)
-    const filtered = filterLocal(masterRef.current, value, tipo, itinerancia);
-    const ui = filtered.map(mapSlotToUI);
-    setAllRows(ui);
-    setRows(ui.slice(0, pageSize));
-    setPageIndex(0);
-    setHasNext(ui.length > pageSize);
-  }, [pageSize, tipo, itinerancia]);
+    reloadAll(value);
+  }, [reloadAll]);
 
-  // Debounce mientras escribes → no bloquea la UI
+  // 2) Debounce mientras escribes (300ms) → no bloquea UI
   const debounceRef = React.useRef<number | null>(null);
   React.useEffect(() => {
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
     debounceRef.current = window.setTimeout(() => {
-      const filtered = filterLocal(masterRef.current, search, tipo, itinerancia);
-      const ui = filtered.map(mapSlotToUI);
-      setAllRows(ui);
-      setRows(ui.slice(0, pageSize));
-      setPageIndex(0);
-      setHasNext(ui.length > pageSize);
-    }, 250) as unknown as number;
-
-    return () => { if (debounceRef.current) window.clearTimeout(debounceRef.current); };
-  }, [search, tipo, itinerancia, pageSize]);
+      reloadAll(search);
+    }, 300) as unknown as number;
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+  }, [search, tipo, itinerancia, reloadAll]);
 
   // Carga inicial
-  React.useEffect(() => { reloadAll(''); }, [reloadAll]);
+  React.useEffect(() => {
+    reloadAll('');
+  }, [reloadAll]);
 
   return {
     rows,

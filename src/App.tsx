@@ -1,5 +1,5 @@
 // src/App.tsx
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import './App.css';
 
 import Availability from './Components/Reservar/Reservar';
@@ -11,11 +11,14 @@ import { ToastProvider } from './Components/Toast/ToastProvider';
 import Reportes from './Components/Reportes/reportes';
 import PicoPlacaAdmin from './Components/PicoPlaca/PicoPlaca';
 
+import type { GetAllOpts } from './Models/Commons';
+
+// Auth + Graph context + UserService
 import { useAuth } from './auth/AuthProvider';
 import { GraphServicesProvider, useGraphServices } from './graph/GraphServicesContext';
 import { UserService } from './Services/User.Service';
-import type { Role } from './Services/Shared.service';
 
+// ------------------ Constantes UI ------------------
 const NAVS_ADMIN = [
   { key: 'misreservas', label: 'Reservas' },
   { key: 'celdas', label: 'Celdas' },
@@ -33,34 +36,97 @@ type User = {
   jobTitle?: string;
 } | null;
 
+// ------------------ Helpers que usan el contexto ------------------
+function useRoleHelpers() {
+  const { usuariosParking } = useGraphServices();
+
+  const changeUser = async (userEmail: string) => {
+    const email = (userEmail ?? '').trim();
+    if (!email) throw new Error('userEmail requerido');
+    const emailSafe = email.replace(/'/g, "''");
+
+    const opt: GetAllOpts = { filter: `fields/Title eq '${emailSafe}'`, top: 1 as any };
+    const res = await usuariosParking.getAll(opt);
+    const rows = Array.isArray(res) ? res : [];
+    const user = rows[0];
+    if (!user) throw new Error(`Usuario no encontrado: ${email}`);
+
+    const id = (user as any).ID ?? (user as any).Id ?? (user as any).id;
+    if (id == null) throw new Error('El usuario no tiene ID');
+
+    const currentRol = String((user as any).Rol ?? (user as any).rol ?? '').toLowerCase();
+    const nextRol = currentRol === 'admin' ? 'Usuario' : 'admin';
+
+    await usuariosParking.update(String(id), { Rol: nextRol } as any);
+    return { ok: true, id, email, before: currentRol, after: nextRol };
+  };
+
+  const isUserPermitted = async (userEmail: string): Promise<boolean> => {
+    const email = (userEmail ?? '').trim();
+    if (!email) return false;
+    const emailSafe = email.replace(/'/g, "''");
+
+    const opt: GetAllOpts = { filter: `Title eq '${emailSafe}'`, top: 1 as any };
+    const res = await usuariosParking.getAll(opt);
+    console.log("is user permit", res)
+    const rows = Array.isArray(res) ? res : [];
+    const user = rows[0];
+    if (!user) return false;
+
+    const raw =
+      (user as any).Permitidos ??
+      (user as any).permitidos ??
+      (user as any).Permitido;
+    return raw === true || raw === 1 || String(raw).toLowerCase() === 'true';
+  };
+
+  return { changeUser, isUserPermitted };
+}
+
+// ------------------ App interna (requiere sesión) ------------------
 function AppInner() {
   const [selected, setSelected] = useState<NavKey>('misreservas');
-
   const [user, setUser] = useState<User>(null);
   const [userLoading, setUserLoading] = useState(true);
-
-  const [userRole, setUserRole] = useState<Role>('usuario');
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [changingRole, setChangingRole] = useState(false);
   const [canChangeRole, setCanChangeRole] = useState(false);
   const [permLoading, setPermLoading] = useState(false);
-  const [changingRole, setChangingRole] = useState(false);
 
-  const { graph, shared, settings } = useGraphServices();
+  const { graph, shared } = useGraphServices();
   const userSvc = useMemo(() => new UserService(graph), [graph]);
   const { signOut } = useAuth();
 
-  // 1) Cargar perfil con Graph (básico)
+  const { changeUser, isUserPermitted } = useRoleHelpers();
+  const {settings} = useGraphServices();
+
+  const onChangeRole = async () => {
+    if (!user?.mail || changingRole) return;
+    try {
+      setChangingRole(true);
+      const { after } = await changeUser(user.mail);
+      setUserRole(after.toLowerCase());
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setChangingRole(false);
+    }
+  };
+
+  // Cargar perfil con Graph
   useEffect(() => {
     let cancel = false;
     setUserLoading(true);
     (async () => {
       try {
-        const me = await userSvc.getMeBasic(); // { displayName, mail, userPrincipalName, jobTitle }
+        const me = await userSvc.getMeBasic();
         if (cancel) return;
         setUser({
           displayName: me.displayName ?? undefined,
           mail: me.mail ?? me.userPrincipalName ?? undefined,
           jobTitle: me.jobTitle ?? undefined,
         });
+
       } catch (e) {
         if (!cancel) setUser(null);
         console.error(e);
@@ -71,53 +137,64 @@ function AppInner() {
     return () => { cancel = true; };
   }, [userSvc]);
 
-  // 2) Con UNA sola llamada trae permitted + role y setea ambos estados
-  useEffect(() => {
-    if (userLoading) return;
-    const mail = user?.mail;
-    if (!mail) { setCanChangeRole(false); setUserRole('usuario'); return; }
+  // Reset rol si cambia el mail
+  useEffect(() => { setUserRole(null); }, [user?.mail]);
 
-    let alive = true;
+  // Cargar rol (shared.getRole)
+  useEffect(() => {
+    const mail = user?.mail;
+    if (!mail) return;
+    let cancel = false;
+    (async () => {
+      try {
+        const role = await shared.getRole(mail); // 'admin' | 'usuario'
+        if (!cancel) {
+          setUserRole(role);
+          if (role === 'admin') setSelected(prev => prev ?? 'misreservas');
+        }
+      } catch (e) {
+        console.error(e);
+        if (!cancel) setUserRole('usuario');
+      }
+    })();
+    return () => { cancel = true; };
+  }, [user?.mail, shared]);
+
+  // ¿Puede cambiar su rol?
+  useEffect(() => {
+    if (userLoading) return;         
+    if (!user?.mail) {
+      setCanChangeRole(false);
+      alert("No se puedo obtener el usuario")
+      return;
+    }
+
+    let cancel = false;
     setPermLoading(true);
     (async () => {
       try {
-        const { permitted, role } = await shared.getUserAccess(mail);
-        if (!alive) return;
-        setCanChangeRole(permitted);
-        setUserRole(role);
-        if (role === 'admin') setSelected(prev => prev ?? 'misreservas');
-      } catch (e) {
-        if (!alive) return;
-        console.error(e);
-        setCanChangeRole(false);
-        setUserRole('usuario');
+        const ok = await isUserPermitted(user.mail!);
+        console.log("Obtenido", ok)
+        if (!cancel) setCanChangeRole(ok);
+      } catch {
+        if (!cancel) setCanChangeRole(false);
       } finally {
-        if (alive) setPermLoading(false);
+        if (!cancel) setPermLoading(false);
       }
     })();
 
-    return () => { alive = false; };
-  }, [userLoading, user?.mail, shared]);
-
-  // 3) Toggle rol (usa shared.toggleRole)
-  const onChangeRole = useCallback(async () => {
-    if (!user?.mail || changingRole) return;
-    try {
-      setChangingRole(true);
-      const { after } = await shared.toggleRole(user.mail);
-      setUserRole(after);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setChangingRole(false);
-    }
-  }, [shared, user?.mail, changingRole]);
+  return () => { cancel = true; };
+}, [userLoading, user?.mail, isUserPermitted]);
 
   const isAdmin = userRole === 'admin';
   const handleNavClick = (key: NavKey) => setSelected(key);
 
-  if (userLoading) {
-    return <div className="center muted" style={{ padding: 24 }}>Cargando usuario…</div>;
+  if (userLoading || userRole === null) {
+    return (
+      <div className="center muted" style={{ padding: 24 }}>
+        Cargando permisos…
+      </div>
+    );
   }
 
   return (
@@ -126,7 +203,9 @@ function AppInner() {
         {/* HEADER */}
         <div className="section userCard">
           <div className="userRow">
-            <div className="brand"><h1>PARKING EDM</h1></div>
+            <div className="brand">
+              <h1>PARKING EDM</h1>
+            </div>
 
             <div className="userCluster">
               <div className="avatar">
@@ -137,25 +216,16 @@ function AppInner() {
                   <>
                     <div className="userName">{user.displayName}</div>
                     <div className="userMail">{user.mail}</div>
-                    {user.jobTitle && <div className="userTitle">{user.jobTitle}</div>}
+                    {user.jobTitle && <div className="userTitle">{user.jobTitle}
                     <div className="userMail">{isAdmin ? 'admin' : 'usuario'}</div>
+                    </div>}
                   </>
                 ) : (
                   <div className="errorText">No se pudo cargar el usuario</div>
                 )}
               </div>
 
-              <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-                {canChangeRole && (
-                  <button
-                    onClick={onChangeRole}
-                    disabled={!user?.mail || changingRole || permLoading}
-                    className="btn-change-role"
-                    aria-busy={changingRole || permLoading || undefined}
-                  >
-                    {changingRole ? 'Actualizando…' : (permLoading ? 'Verificando…' : 'Cambiar rol')}
-                  </button>
-                )}
+              <div style={{ marginLeft: 'auto' }}>
                 <button className="btn-change-role" onClick={signOut}>
                   Cerrar sesión
                 </button>
@@ -223,6 +293,18 @@ function AppInner() {
               <PicoPlacaAdmin />
             </div>
           )}
+
+          <br />
+          {canChangeRole && (
+            <button
+              onClick={onChangeRole}
+              disabled={!user?.mail || changingRole || permLoading}
+              className="btn-change-role"
+              aria-busy={changingRole || permLoading || undefined}
+            >
+              {changingRole ? 'Actualizando…' : (permLoading ? 'Verificando…' : 'Cambiar rol')}
+            </button>
+          )}
         </main>
       </div>
     </ToastProvider>
@@ -230,11 +312,16 @@ function AppInner() {
 }
 
 // ------------------ App raíz ------------------
+// Si NO hay sesión lista, muestra pantalla con botón de login (popup).
 export default function App() {
   const { ready, account, signIn } = useAuth();
 
   if (!ready) {
-    return <div className="center muted" style={{ padding: 24 }}>Conectando…</div>;
+    return (
+      <div className="center muted" style={{ padding: 24 }}>
+        Conectando…
+      </div>
+    );
   }
 
   if (!account) {
@@ -242,7 +329,9 @@ export default function App() {
       <div className="page">
         <div className="section userCard">
           <div className="userRow">
-            <div className="brand"><h1>PARKING EDM</h1></div>
+            <div className="brand">
+              <h1>PARKING EDM</h1>
+            </div>
           </div>
         </div>
 
@@ -250,11 +339,13 @@ export default function App() {
           <div className="center login-hero">
             <h2>Inicia sesión para continuar</h2>
             <p className="login-subtitle">Bienvenido a la aplicación de parqueaderos EDM</p>
+        
             <div className="login-actions">
               <button className="btn-change-role btn-narrow" onClick={signIn}>
                 Iniciar sesión
               </button>
             </div>
+        
             <small className="muted">
               Si tu navegador bloquea la ventana emergente, habilítala para este sitio.
             </small>
@@ -264,6 +355,7 @@ export default function App() {
     );
   }
 
+  // Con sesión: monta GraphServicesProvider + AppInner
   return (
     <GraphServicesProvider>
       <AppInner />

@@ -2,6 +2,7 @@ export interface UsuariosParking {
   ID?: number;
   Title: string;
   Rol?: string;
+  Permitidos?: string;
   OData__ColorTag?: string;
   ComplianceAssetId?: string;
   Modified?: string;

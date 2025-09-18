@@ -141,12 +141,14 @@ function AppInner() {
     setPermLoading(true);
     (async () => {
       try {
-        // Llamamos en paralelo a tus métodos
-        const [roleRaw, permitted] = await Promise.all([
-          shared.getRole(mail),
-          shared.getPermitted(mail),
-        ]);
+         let roleRaw
+         let permitted
 
+        const object = await shared.getRole(user.mail!);
+        if(object){
+          roleRaw = object.Rol ?? "usuario";
+          permitted = object.Permitidos ?? false
+        }
         if (!alive) return;
 
         const role = String(roleRaw ?? 'usuario').toLowerCase() === 'admin' ? 'admin' : 'usuario';

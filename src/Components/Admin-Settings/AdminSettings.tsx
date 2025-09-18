@@ -192,8 +192,7 @@ const AdminSettings: React.FC<Props> = ({ settingsSvc, settingsItemId = '1' }) =
                   id="InicioManana"
                   type="time"
                   className={styles.time}
-                  step={3600}            /* de hora en hora */
-                  min="01:00" max="12:00"
+                  step={3600}  
                   value={toHH(form.InicioHorarioMa_x00f1_ana)}
                   onChange={(e) => {
                     const v = clamp(fromHH(e.target.value, form.InicioHorarioMa_x00f1_ana), 1, 12);
@@ -208,7 +207,6 @@ const AdminSettings: React.FC<Props> = ({ settingsSvc, settingsItemId = '1' }) =
                   type="time"
                   className={styles.time}
                   step={3600}
-                  min="01:00" max="12:00"
                   value={toHH(form.FinalMa_x00f1_ana)}
                   onChange={(e) => {
                     const v = clamp(fromHH(e.target.value, form.FinalMa_x00f1_ana), 1, 12);

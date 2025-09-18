@@ -653,6 +653,7 @@ export default function SlotDetailsModal({
                 </div>
 
                 {/* Botonera */}
+                <br />
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
                   <button
                     style={S.btnGhost}

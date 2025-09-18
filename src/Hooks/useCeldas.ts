@@ -132,7 +132,7 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
       const term = (termArg ?? search).trim().toLowerCase().replace(/'/g, "''");
       console.log('filter →', term);
       const filters: string[] = [];
-      if (term) filters.push(`startswith(tolower(fields/Title),'${term}')`); // más estable que contains
+      if (term) filters.push(`startswith(fields/Title,'${term}')`); // más estable que contains
       if (tipo !== 'all') filters.push(`fields/TipoCelda eq '${tipo}'`);
       if (itinerancia !== 'all') filters.push(`fields/Itinerancia eq '${itinerancia}'`);
 

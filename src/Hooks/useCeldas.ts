@@ -151,17 +151,7 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
       const raw = norm(termArg ?? search);
       const term = raw.toLowerCase();
 
-      // 1) Filtros server-side (Graph) para acotar con startswith
       const filters: string[] = [];
-
-      if (term.length >= 1) {
-        const k = Math.min(3, term.length);        // prefijo 1..3
-        const px = term.slice(0, k);
-        // por si tu tenant es case-sensitive en startswith
-        filters.push(
-          `(startswith(fields/Title,'${esc(px)}') or startswith(fields/Title,'${esc(px.toUpperCase())}'))`
-        );
-      }
 
       if (tipo !== 'all') {
         filters.push(`fields/TipoCelda eq '${esc(tipo)}'`);

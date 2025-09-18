@@ -2,9 +2,9 @@
 import * as React from 'react';
 import type { Collaborator, NewCollaborator } from '../Models/colaboradores';
 import type { Colaboradoresfijos } from '../Models/Colaboradoresfijos';
-import { ColaboradoresFijosService } from '../Services/Colaboradoresfijos.service'; // 100% Graph
+import { ColaboradoresFijosService } from '../Services/Colaboradoresfijos.service';
 
-// Mapeo simple desde el item (mapeado por tu servicio) hacia el UI
+// ---- Mapeo de item del servicio a UI ----
 const mapToCollaborator = (r: any): Collaborator => ({
   id: Number(r.ID ?? r.Id ?? r.id ?? 0),
   nombre: String(r.Title ?? r.title ?? ''),
@@ -29,16 +29,36 @@ export type UseCollaboratorsReturn = {
   nextPage: () => void;
   prevPage: () => void;
 
-  reloadAll: () => Promise<void>;
+  reloadAll: (termArg?: string) => Promise<void>;
   addCollaborator: (c: NewCollaborator) => Promise<void>;
   deleteCollaborator: (id: string | number) => Promise<void>;
 };
 
-/**
- * Hook adaptado a Microsoft Graph.
- * Recomendado: pasar una instancia de ColaboradoresFijosService (Graph) ya configurada.
- * Si prefieres, puedes crearla adentro, pero inyectarla facilita test y reutilización.
- */
+// ---- Normalización de texto: case-insensitive + sin acentos ----
+const normalize = (s: unknown) =>
+  String(s ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, ''); // requiere engine moderno, si no usar /[\u0300-\u036f]/g
+
+// ---- Filtro contains multi-campo en cliente ----
+function filterLocal(items: Collaborator[], term: string): Collaborator[] {
+  const q = normalize(term).trim();
+  if (!q) return items;
+  const parts = q.split(/\s+/).filter(Boolean);
+  if (!parts.length) return items;
+
+  return items.filter((it) => {
+    const haystack = [
+      normalize(it.nombre),
+      normalize(it.correo),
+      normalize(it.placa),
+      normalize(it.CodigoCelda),
+    ].join(' ');
+    return parts.every((p) => haystack.includes(p));
+  });
+}
+
 export function useCollaborators(
   svc: ColaboradoresFijosService
 ): UseCollaboratorsReturn {
@@ -52,119 +72,146 @@ export function useCollaborators(
   const [pageIndex, setPageIndex] = React.useState(0);
   const [hasNext, setHasNext] = React.useState(false);
 
-  const deleteCollaborator = React.useCallback(async (id: string | number) => {
-    if (!id) return;
-    try {
-      setLoading(true);
-      setError(null);
+  // Cache maestro para filtrar en cliente sin reconsultar
+  const masterRef = React.useRef<Collaborator[]>([]);
 
-      await svc.delete(String(id));
+  // ---------------- CRUD ----------------
+  const deleteCollaborator = React.useCallback(
+    async (id: string | number) => {
+      if (!id) return;
+      try {
+        setLoading(true);
+        setError(null);
 
-      setAllRows(prevAll => {
-        const nextAll = prevAll.filter(r => String(r.id) !== String(id));
-        // recalcular la página actual de forma segura
-        const start = Math.min(pageIndex * pageSize, Math.max(0, nextAll.length - 1));
+        await svc.delete(String(id));
+
+        // Quita del master
+        masterRef.current = masterRef.current.filter(
+          (r) => String(r.id) !== String(id)
+        );
+
+        // Reaplicar filtro actual y paginar
+        const filtered = filterLocal(masterRef.current, search);
+        setAllRows(filtered);
+        const start = Math.min(pageIndex * pageSize, Math.max(0, filtered.length - 1));
         const clampedStart = Math.floor(start / pageSize) * pageSize;
-        setRows(nextAll.slice(clampedStart, clampedStart + pageSize));
+        setRows(filtered.slice(clampedStart, clampedStart + pageSize));
         setPageIndex(clampedStart / pageSize);
-        setHasNext(clampedStart + pageSize < nextAll.length);
-        return nextAll;
-      });
-    } catch (e: any) {
-      console.error('[useCollaborators] deleteCollaborator error:', e);
-      setError(e?.message ?? 'Error al eliminar colaborador');
-      throw e;
-    } finally {
-      setLoading(false);
-    }
-  }, [svc, pageIndex, pageSize]);
+        setHasNext(clampedStart + pageSize < filtered.length);
+      } catch (e: any) {
+        console.error('[useCollaborators] deleteCollaborator error:', e);
+        setError(e?.message ?? 'Error al eliminar colaborador');
+        throw e;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [svc, pageIndex, pageSize, search]
+  );
 
-  const addCollaborator = React.useCallback(async (c: NewCollaborator) => {
-    try {
+  const addCollaborator = React.useCallback(
+    async (c: NewCollaborator) => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const newCollab: Partial<Colaboradoresfijos> = {
+          Title: c.nombre,
+          Correo: c.correo,
+          Tipodevehiculo: c.tipoVehiculo,
+          Placa: c.placa,
+          CodigoCelda: c.codigoCelda,
+        };
+
+        const created = await svc.create(newCollab as any);
+
+        const ui: Collaborator = created
+          ? {
+              id: Number((created as any).ID ?? Date.now()),
+              nombre: String((created as any).Title ?? c.nombre),
+              correo: String((created as any).Correo ?? c.correo),
+              tipoVehiculo: ((created as any).Tipodevehiculo ?? c.tipoVehiculo) as any,
+              placa: String((created as any).Placa ?? c.placa),
+              CodigoCelda: String((created as any).CodigoCelda ?? c.codigoCelda ?? ''),
+            }
+          : {
+              id: Date.now(),
+              nombre: c.nombre,
+              correo: c.correo,
+              tipoVehiculo: c.tipoVehiculo as any,
+              placa: c.placa,
+              CodigoCelda: String(c.codigoCelda ?? ''),
+            };
+
+        // Agrega al master
+        masterRef.current = [ui, ...masterRef.current];
+
+        // Reaplicar filtro actual y paginar desde la primera página
+        const filtered = filterLocal(masterRef.current, search);
+        setAllRows(filtered);
+        setRows(filtered.slice(0, pageSize));
+        setHasNext(filtered.length > pageSize);
+        setPageIndex(0);
+      } catch (e: any) {
+        console.error('[useCollaborators] addCollaborator error:', e);
+        setError(e?.message ?? 'No se pudo agregar el colaborador');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [svc, pageSize, search]
+  );
+
+  // ---------------- Carga (sin $filter; sólo order/top) ----------------
+  const reloadAll = React.useCallback(
+    async (termArg?: string) => {
       setLoading(true);
       setError(null);
+      try {
+        const MAX_FETCH = 2000;
+        const items = await svc.getAll({
+          top: MAX_FETCH,
+          orderby: 'fields/Title asc', // opcional
+        });
 
-      const newCollab: Partial<Colaboradoresfijos> = {
-        Title: c.nombre,
-        Correo: c.correo,
-        Tipodevehiculo: c.tipoVehiculo,
-        Placa: c.placa,
-        CodigoCelda: c.codigoCelda,
-        // SpotAsignado: c.IdSpot, // si aplica
-      };
+        // Mapea a UI y guarda en master
+        const master = items.map(mapToCollaborator);
+        masterRef.current = master;
 
-      const created = await svc.create(newCollab as any);
+        // Aplica filtro local con el término (si viene) o con el estado actual
+        const term = typeof termArg === 'string' ? termArg : search;
+        const filtered = filterLocal(master, term);
 
-      const ui: Collaborator = created
-        ? {
-            id: Number((created as any).ID ?? Date.now()),
-            nombre: String((created as any).Title ?? c.nombre),
-            correo: String((created as any).Correo ?? c.correo),
-            tipoVehiculo: ((created as any).Tipodevehiculo ?? c.tipoVehiculo) as any,
-            placa: String((created as any).Placa ?? c.placa),
-            CodigoCelda: String((created as any).CodigoCelda ?? c.codigoCelda ?? ''),
-          }
-        : {
-            id: Date.now(),
-            nombre: c.nombre,
-            correo: c.correo,
-            tipoVehiculo: c.tipoVehiculo as any,
-            placa: c.placa,
-            CodigoCelda: String(c.codigoCelda ?? ''),
-          };
-
-      setAllRows(prev => {
-        const nextAll = [ui, ...prev];
-        setRows(nextAll.slice(0, pageSize));
-        setHasNext(nextAll.length > pageSize);
+        // pagina
+        setAllRows(filtered);
+        setRows(filtered.slice(0, pageSize));
         setPageIndex(0);
-        return nextAll;
-      });
-    } catch (e: any) {
-      console.error('[useCollaborators] addCollaborator error:', e);
-      setError(e?.message ?? 'No se pudo agregar el colaborador');
-    } finally {
-      setLoading(false);
-    }
-  }, [svc, pageSize]);
+        setHasNext(filtered.length > pageSize);
+      } catch (e: any) {
+        console.error('[useCollaborators] reloadAll error:', e);
+        setAllRows([]);
+        setRows([]);
+        setError(e?.message ?? 'Error al cargar colaboradores');
+        setHasNext(false);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [svc, pageSize, search]
+  );
 
-  const reloadAll = React.useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const MAX_FETCH = 2000;
-      const filters: string[] = [];
-
-      const items = await svc.getAll({
-        top: MAX_FETCH,
-        orderby: 'fields/Title asc',
-        ...(filters.length ? { filter: filters.join(' and ') } : {}),
-      });
-
-      const ui = items.map(mapToCollaborator);
-      setAllRows(ui);
-      setRows(ui.slice(0, pageSize));
+  // ---------------- Paginación ----------------
+  const setPageSize = React.useCallback(
+    (n: number) => {
+      const size = Number.isFinite(n) && n > 0 ? Math.floor(n) : 20;
+      _setPageSize(size);
+      const slice = allRows.slice(0, size);
+      setRows(slice);
       setPageIndex(0);
-      setHasNext(ui.length > pageSize);
-    } catch (e: any) {
-      console.error('[useCollaborators] reloadAll error:', e);
-      setAllRows([]);
-      setRows([]);
-      setError(e?.message ?? 'Error al cargar colaboradores');
-      setHasNext(false);
-    } finally {
-      setLoading(false);
-    }
-  }, [svc, search, pageSize]);
-
-  const setPageSize = React.useCallback((n: number) => {
-    const size = Number.isFinite(n) && n > 0 ? Math.floor(n) : 20;
-    _setPageSize(size);
-    const slice = allRows.slice(0, size);
-    setRows(slice);
-    setPageIndex(0);
-    setHasNext(allRows.length > size);
-  }, [allRows]);
+      setHasNext(allRows.length > size);
+    },
+    [allRows]
+  );
 
   const nextPage = React.useCallback(() => {
     if (loading) return;
@@ -187,10 +234,31 @@ export function useCollaborators(
     setHasNext(allRows.length > end);
   }, [loading, pageIndex, pageSize, allRows]);
 
+  // ---------------- Búsqueda con debounce (300ms) ----------------
+  const debounceRef = React.useRef<number | null>(null);
+  React.useEffect(() => {
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(() => {
+      const filtered = filterLocal(masterRef.current, search);
+      setAllRows(filtered);
+      setRows(filtered.slice(0, pageSize));
+      setPageIndex(0);
+      setHasNext(filtered.length > pageSize);
+    }, 300) as unknown as number;
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+  }, [search, pageSize]);
+
+  // ---------------- Carga inicial ----------------
   React.useEffect(() => {
     let cancel = false;
-    (async () => { if (!cancel) await reloadAll(); })();
-    return () => { cancel = true; };
+    (async () => {
+      if (!cancel) await reloadAll('');
+    })();
+    return () => {
+      cancel = true;
+    };
   }, [reloadAll]);
 
   return {

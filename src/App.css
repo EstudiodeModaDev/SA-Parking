@@ -493,3 +493,22 @@ body {
     animation: none;
   }
 }
+
+/* Centrar verticalmente el título cuando no hay sesión */
+.userCard.hero{
+  display: grid;               /* habilita grid en el contenedor */
+  place-items: center;         /* centra horizontal + vertical */
+  min-height: 200px;           /* un poco más de alto para que luzca */
+  padding-block: 48px;         /* respiración extra */
+}
+
+.userCard.hero .userRow{
+  width: 100%;
+  justify-content: center;     /* por si hay flex en .userRow */
+}
+
+.userCard.hero .brand{
+  grid-column: 1 / -1;         /* ocupa todo el ancho */
+  text-align: center;
+}
+

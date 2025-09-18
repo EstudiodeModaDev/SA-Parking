@@ -310,12 +310,10 @@ export default function App() {
   if (!account) {
     return (
       <div className="page">
-        <div className="section userCard">
           <div className="userRow">
             <div className="brand">
               <h1>PARKING EDM</h1>
             </div>
-          </div>
         </div>
 
         <main className="main">

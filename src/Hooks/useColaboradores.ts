@@ -193,7 +193,7 @@ export function useCollaborators(
         setLoading(false);
       }
     },
-    [svc, pageSize, search]
+    [svc, pageSize]
   );
 
   // ---------- Paginación ----------

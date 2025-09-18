@@ -116,31 +116,48 @@ export class ParkingSlotsService {
   }
 
   async getAll(opts?: GetAllOpts) {
-    await this.ensureIds(); // debe fijar this.siteId y this.listId
+    await this.ensureIds(); // fija this.siteId y this.listId
 
-    const normalizeOrder = (s: string) =>
-      s.replace(/\bID\b/g, 'id').replace(/(^|[^/])\bTitle\b/g, '$1fields/Title');
+    // ID -> id, Title -> fields/Title (cuando NO está prefijado con '/')
+    const normalizeFieldTokens = (s: string) =>
+      s
+        .replace(/\bID\b/g, 'id')
+        .replace(/(^|[^/])\bTitle\b/g, '$1fields/Title');
+
+    const escapeODataLiteral = (v: string) => v.replace(/'/g, "''");
+
+    // Normaliza expresiones del $filter (minimiza 404 por sintaxis)
+    const normalizeFilter = (raw: string) => {
+      let out = normalizeFieldTokens(raw.trim());
+      // escapa todo literal '...'
+      out = out.replace(/'(.*?)'/g, (_m, p1) => `'${escapeODataLiteral(p1)}'`);
+      return out;
+    };
+
+    const normalizeOrderby = (raw: string) => normalizeFieldTokens(raw.trim());
 
     const qs = new URLSearchParams();
-    qs.set('$expand', 'fields'); // si quieres: fields($select=Title,TipoCelda,Itinerancia,Activa)
-    qs.set('$select', 'id,webUrl'); // opcional
-    if (opts?.orderby) qs.set('$orderby', normalizeOrder(opts.orderby));
+    qs.set('$expand', 'fields');        // necesario si filtras por fields/*
+    qs.set('$select', 'id,webUrl');     // opcional; añade fields(...) si quieres
+    if (opts?.orderby) qs.set('$orderby', normalizeOrderby(opts.orderby));
     if (opts?.top != null) qs.set('$top', String(opts.top));
-    if (opts?.filter) qs.set('$filter', opts.filter); // ← tal cual
+    if (opts?.filter) qs.set('$filter', normalizeFilter(String(opts.filter)));
 
+    // Evita '+' por espacios (algunos proxies se quejan)
     const query = qs.toString().replace(/\+/g, '%20');
 
-    const url = `/sites/${this.siteId}/lists/${this.listId}/items?${query}`;
+    const url = `/sites/${encodeURIComponent(this.siteId!)}/lists/${encodeURIComponent(this.listId!)}/items?${query}`;
 
     try {
-      return (await this.graph.get<any>(url)).value.map((x: any) => this.toModel(x));
+      const res = await this.graph.get<any>(url);
+      return (res.value ?? []).map((x: any) => this.toModel(x));
     } catch (e: any) {
-      // Diagnóstico: si es itemNotFound, prueba sin filtro para ver si el problema es ruta o $filter
+      // Si la ruta es válida pero el $filter rompe, reintenta sin $filter para diagnóstico
       const code = e?.error?.code ?? e?.code;
       if (code === 'itemNotFound' && opts?.filter) {
         const qs2 = new URLSearchParams(qs);
         qs2.delete('$filter');
-        const url2 = `/sites/${this.siteId}/lists/${this.listId}/items?${qs2.toString()}`;
+        const url2 = `/sites/${encodeURIComponent(this.siteId!)}/lists/${encodeURIComponent(this.listId!)}/items?${qs2.toString()}`;
         const res2 = await this.graph.get<any>(url2);
         return (res2.value ?? []).map((x: any) => this.toModel(x));
       }

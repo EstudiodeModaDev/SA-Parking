@@ -68,6 +68,7 @@ function useRoleHelpers() {
 
     const opt: GetAllOpts = { filter: `Title eq '${emailSafe}'`, top: 1 as any };
     const res = await usuariosParking.getAll(opt);
+    console.log("is user permit", res)
     const rows = Array.isArray(res) ? res : [];
     const user = rows[0];
     if (!user) return false;

@@ -132,15 +132,7 @@ export class ParkingSlotsService {
 
     const url = `/sites/${this.siteId}/lists/${this.listId}/items?${query}`;
 
-    console.groupCollapsed('[ParkingSlots.getAll] URL');
-        console.log("site" , this.siteId)
-        console.log("list" , this.listId)
-    console.log(url);
-    console.log('opts (raw):', opts);
-    console.groupEnd();
-
     try {
-      console.warn("Iniciando filtro")
       return (await this.graph.get<any>(url)).value.map((x: any) => this.toModel(x));
     } catch (e: any) {
       // Diagnóstico: si es itemNotFound, prueba sin filtro para ver si el problema es ruta o $filter
@@ -149,9 +141,7 @@ export class ParkingSlotsService {
         const qs2 = new URLSearchParams(qs);
         qs2.delete('$filter');
         const url2 = `/sites/${this.siteId}/lists/${this.listId}/items?${qs2.toString()}`;
-        console.warn('[ParkingSlots.getAll] 404 con filtro → reintento sin filtro:', url2);
         const res2 = await this.graph.get<any>(url2);
-        console.warn("Iniciando no filtro")
         return (res2.value ?? []).map((x: any) => this.toModel(x));
       }
       throw e;

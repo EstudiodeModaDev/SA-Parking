@@ -2,9 +2,6 @@ import { GraphRest } from '../graph/GraphRest';
 import type { Colaboradoresfijos } from '../Models/Colaboradoresfijos';
 import type { GetAllOpts } from '../Models/Commons';
 
-
-
-
 export class ColaboradoresFijosService {
   private graph!: GraphRest;
   private hostname!: string;

@@ -166,8 +166,6 @@ export class ReservationsService {
     const res = await this.graph.get<any>(
       `/sites/${this.siteId}/lists/${this.listId}/items?${qs.toString()}`
     );
-
-    console.log('res ', res)
     const arr = Array.isArray(res?.value) ? res.value : [];
     return arr.map((x: any) => this.toModel(x));
   }

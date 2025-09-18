@@ -210,9 +210,8 @@ export function useReservar(
               Title: userMail,
               Date: dateISO,
               Turn: t,
-              SpotIdLookupId: Number(slotId),   // <= revisar nombre de lookup interno
-              // OJO: tu lista tiene 'VehivleType' (typo) o 'VehicleType'? Ajusta el internal name real:
-              VehivleType: vehicle,             // si el internal correcto es VehicleType, cámbialo
+              SpotIdLookupId: Number(slotId),  
+              VehicleType: vehicle,             
               Status: 'Activa',
               NombreUsuario: userName,
             };

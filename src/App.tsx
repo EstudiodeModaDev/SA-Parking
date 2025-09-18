@@ -212,14 +212,17 @@ function AppInner() {
                   <button
                     onClick={onChangeRole}
                     disabled={!user?.mail || changingRole || permLoading}
-                    className="btn-change-role"
+                    className="btn-change-user"
                     aria-busy={changingRole || permLoading || undefined}
+                    aria-label="Cambiar rol de usuario"
+                    title="Cambiar rol"
                   >
+                    <span className="btn-ico" aria-hidden>👤</span>
                     {changingRole ? 'Actualizando…' : (permLoading ? 'Verificando…' : 'Cambiar rol')}
                   </button>
                 )}
-                <button className="btn-change-role" onClick={signOut}>
-                  Cerrar sesión
+                <button className="btn-logout" onClick={signOut} aria-label="Cerrar sesión" title="Cerrar sesión">
+                  <span aria-hidden>⎋</span> Cerrar sesión
                 </button>
               </div>
             </div>

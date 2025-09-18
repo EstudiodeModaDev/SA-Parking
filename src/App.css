@@ -9,7 +9,8 @@
   --brand-bg: #eaeff5;          /* fondo general */
   --brand-text: #0f172a;        /* texto principal */
   --ring-strong: 0 0 0 4px rgba(56,189,248,.35); /* focus ring */
-  --danger: #e11d48;     
+
+  --danger: #e11d48;            /* rojo */
   --danger-600: #be123c;
 }
 
@@ -124,7 +125,7 @@ body {
 .userTitle { font-size: 13px; color: #e5e7eb; }
 .errorText { color: #fecaca; }
 
-/* (Opcional) compat: clase existente sin layout */
+/* Compat: clase existente sin layout */
 .userRow {
   display: flex;
   align-items: center;
@@ -179,7 +180,7 @@ body {
   }
 
   .brand {
-    grid-column: 1 / -1;     /* ocupa ambas columnas */
+    grid-column: 1 / -1;
     justify-self: center;
     text-align: center;
   }
@@ -194,52 +195,6 @@ body {
 .userCard, .nav, .main, .section {
   width: min(1100px, 92vw);
   margin-inline: auto;
-}
-
-/* ==============================
-   Botón: Cambiar rol (primario)
-   ============================== */
-.btn-change-role{
-  --bg1: color-mix(in oklab, var(--brand-primary) 88%, #fff);
-  --bg2: color-mix(in oklab, var(--brand-accent) 32%, var(--brand-primary));
-  --ring: 0 0 0 4px rgba(56,189,248,.28);
-
-  display:inline-flex; align-items:center; gap:.6rem;
-  padding:.65rem 1.1rem;
-  border:0; border-radius:999px;
-  background: linear-gradient(90deg, var(--bg1), var(--bg2));
-  color:#fff; font-weight:800; letter-spacing:.2px;
-  box-shadow: 0 6px 20px rgba(37,99,235,.20);
-  cursor:pointer;
-  position:relative; isolation:isolate;
-  transition: transform .06s ease, box-shadow .15s ease, opacity .15s;
-}
-.btn-change-role:hover{ box-shadow: 0 10px 26px rgba(37,99,235,.28); }
-.btn-change-role:active{ transform: translateY(1px); }
-.btn-change-role:focus-visible{ outline:none; box-shadow: var(--ring); }
-.btn-change-role[disabled]{ opacity:.6; cursor:not-allowed; transform:none; }
-.btn-change-user::before{
-  content:"";
-  position:absolute; inset:0;
-  background: linear-gradient(120deg, transparent 0 40%, rgba(255,255,255,.22) 50%, transparent 60% 100%);
-  transform: translateX(-40%);
-  transition: transform .5s ease;
-  border-radius: inherit;
-  pointer-events:none;
-  z-index:0;
-}
-.btn-change-user:hover::before{ transform: translateX(0); }
-/* Variante ghost (por si la usas sobre fondos claros dentro de cards) */
-.btn-change-role.ghost{
-  background: transparent;
-  color: var(--brand-primary);
-  box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--brand-primary) 25%, transparent);
-}
-.btn-change-role.ghost:hover{
-  background: color-mix(in oklab, var(--brand-primary) 8%, transparent);
-}
-.btn-change-role.ghost:focus-visible{
-  box-shadow: var(--ring-strong);
 }
 
 /* ==========================================
@@ -269,7 +224,6 @@ body {
 /* ==========================================
    (Opcional) estilos base para un switch propio
    ========================================== */
-/* Variables por defecto del switch (coinciden con tu UI) */
 :root{
   --switch-width: 78px;
   --switch-height: 34px;
@@ -344,10 +298,101 @@ body {
   font: 700 10px/1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 }
 
-/* Botón principal: Iniciar sesión / Cambiar rol */
+/* ==============================
+   Botón: Cambiar usuario (PRO)
+   ============================== */
+.btn-change-user{
+  --bg1: color-mix(in oklab, var(--brand-primary) 88%, #fff);
+  --bg2: color-mix(in oklab, var(--brand-accent) 32%, var(--brand-primary));
+  --ring: 0 0 0 4px rgba(56,189,248,.28);
+
+  display:inline-flex; align-items:center; gap:.6rem;
+  padding:.65rem 1.1rem;
+  border:0; border-radius:999px;
+  background: linear-gradient(90deg, var(--bg1), var(--bg2));
+  color:#fff; font-weight:800; letter-spacing:.2px;
+  box-shadow: 0 6px 20px rgba(37,99,235,.20);
+  cursor:pointer;
+  position:relative; isolation:isolate;
+  transition: transform .06s ease, box-shadow .15s ease, opacity .15s;
+}
+.btn-change-user:hover{ box-shadow: 0 10px 26px rgba(37,99,235,.28); }
+.btn-change-user:active{ transform: translateY(1px); }
+.btn-change-user:focus-visible{ outline:none; box-shadow: var(--ring); }
+.btn-change-user[disabled]{ opacity:.6; cursor:not-allowed; }
+
+/* Stripe animada */
+.btn-change-user::before{
+  content:"";
+  position:absolute; inset:0;
+  background: linear-gradient(120deg, transparent 0 40%, rgba(255,255,255,.22) 50%, transparent 60% 100%);
+  transform: translateX(-40%);
+  transition: transform .5s ease;
+  border-radius: inherit;
+  pointer-events:none;
+  z-index:0;
+}
+.btn-change-user:hover::before{ transform: translateX(0); }
+
+/* Icono circular opcional */
+.btn-change-user .btn-ico{
+  width:24px; height:24px; border-radius:999px;
+  background: rgba(255,255,255,.18);
+  display:inline-grid; place-items:center;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.25);
+}
+
+/* Spinner (aria-busy="true") */
+.btn-change-user[aria-busy="true"]{ pointer-events:none; }
+.btn-change-user[aria-busy="true"]::after{
+  content:''; width:16px; height:16px;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,.55);
+  border-top-color:#fff;
+  display:inline-block; margin-left:4px;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin{ to{ transform: rotate(360deg);} }
+
+/* Variante glass para header con foto */
+.btn-change-user.glass{
+  background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,.10));
+  color:#fff;
+  border:1px solid rgba(255,255,255,.35);
+  backdrop-filter: blur(6px) saturate(120%);
+  box-shadow: 0 4px 20px rgba(0,0,0,.25);
+}
+.btn-change-user.glass:hover{
+  background: linear-gradient(180deg, rgba(255,255,255,.30), rgba(255,255,255,.12));
+  box-shadow: 0 8px 28px rgba(0,0,0,.35);
+}
+
+/* ==============================
+   Botón: Cerrar sesión (ROJO)
+   ============================== */
+.btn-logout{
+  display:inline-flex; align-items:center; gap:.5rem;
+  padding:.55rem .9rem;
+  border-radius: 10px;
+  border:1px solid color-mix(in oklab, var(--danger) 30%, #e5e7eb);
+  background: color-mix(in oklab, var(--danger) 8%, #fff);
+  color: var(--danger); font-weight:700;
+  box-shadow: 0 1px 6px rgba(225,29,72,.08);
+  transition: background .15s ease, color .15s ease, transform .06s ease;
+}
+.btn-logout:hover{
+  background: color-mix(in oklab, var(--danger) 16%, #fff);
+}
+.btn-logout:active{ transform: translateY(1px); }
+.btn-logout:focus-visible{ outline:none; box-shadow: 0 0 0 4px rgba(225,29,72,.18); }
+.btn-logout[disabled]{ opacity:.6; cursor:not-allowed; }
+
+/* ==========================================
+   Botón genérico (login / CTAs secundarios)
+   ========================================== */
 .btn-change-role{
-  --btn-bg: var(--primary);
-  --btn-bg-hover: var(--primary-600);
+  --btn-bg: var(--brand-primary);
+  --btn-bg-hover: var(--brand-primary-700);
   --btn-fg: #fff;
   --btn-ring: 0 0 0 4px rgba(37,99,235,.18);
 
@@ -358,7 +403,7 @@ body {
 
   min-height:44px;
   padding:10px 18px;
-  border-radius: var(--radius-sm, 8px);
+  border-radius: 8px;
   border:1px solid transparent;
 
   background: var(--btn-bg);
@@ -367,56 +412,62 @@ body {
   letter-spacing:.2px;
   line-height:1;
   cursor:pointer;
-  box-shadow: var(--shadow, 0 2px 12px rgba(30,41,59,.08));
+  box-shadow: 0 2px 12px rgba(30,41,59,.08);
   transition:
     background .15s ease,
     transform .06s ease,
     box-shadow .15s ease,
     opacity .15s ease;
 }
-
 .btn-change-role:hover{
   background: var(--btn-bg-hover);
   box-shadow: 0 4px 18px rgba(37,99,235,.20);
 }
-
-.btn-change-role:active{
-  transform: translateY(1px);
-}
-
-/* Focus visible accesible */
-.btn-change-role:focus{
-  outline: none;
-}
-.btn-change-role:focus-visible{
-  box-shadow: var(--btn-ring);
-}
-
-/* Estado disabled */
+.btn-change-role:active{ transform: translateY(1px); }
+.btn-change-role:focus{ outline: none; }
+.btn-change-role:focus-visible{ box-shadow: var(--btn-ring); }
 .btn-change-role:disabled,
-.btn-change-role[disabled]{
-  opacity:.6;
-  cursor:not-allowed;
-  box-shadow:none;
-}
+.btn-change-role[disabled]{ opacity:.6; cursor:not-allowed; box-shadow:none; }
 
-/* Spinner en estado de carga: usa aria-busy="true" sin tocar el TSX */
+/* Spinner del genérico */
 .btn-change-role[aria-busy="true"]{
-  position:relative;
-  pointer-events:none;
+  position:relative; pointer-events:none;
 }
 .btn-change-role[aria-busy="true"]::after{
-  content:'';
-  width:16px; height:16px;
+  content:''; width:16px; height:16px;
   border-radius:50%;
   border:2px solid rgba(255,255,255,.6);
   border-top-color:#fff;
-  display:inline-block;
-  margin-left:6px;
+  display:inline-block; margin-left:6px;
   animation: btn-spin .8s linear infinite;
 }
-@keyframes btn-spin{
-  to{ transform: rotate(360deg); }
+@keyframes btn-spin{ to{ transform: rotate(360deg); } }
+
+/* Variante angosta para login */
+.btn-narrow{
+  min-height: 40px;
+  padding: 8px 16px;
+  font-size: 14px;
+  border-radius: 8px;
+  min-width: 180px;   /* ancho mínimo bonito */
+  width: auto !important; /* evita 100% en móviles si antes lo forzaste */
+}
+
+/* ---- Login: layout y textos ---- */
+.login-hero{
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+.login-subtitle{
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted, #64748b);
+}
+.login-actions{
+  display: flex;
+  justify-content: center;
+  width: 100%;
 }
 
 /* Versión full-width en pantallas pequeñas (para la pantalla de login) */
@@ -428,50 +479,12 @@ body {
 
 /* Respeta usuarios con reducción de movimiento */
 @media (prefers-reduced-motion: reduce){
+  .btn-change-user,
   .btn-change-role{
     transition: none;
   }
+  .btn-change-user[aria-busy="true"]::after,
   .btn-change-role[aria-busy="true"]::after{
     animation: none;
   }
 }
-
-/* ---- Login: layout y textos ---- */
-.login-hero{
-  display: grid;
-  justify-items: center;
-  gap: 10px;
-}
-
-.login-subtitle{
-  margin: 0;
-  font-size: 14px;
-  color: var(--muted, #64748b);
-}
-
-/* Contenedor del botón para que no se expanda a 100% */
-.login-actions{
-  display: flex;
-  justify-content: center;
-  width: 100%;
-}
-
-/* Variante angosta del botón (no full-width) */
-.btn-narrow{
-  min-height: 40px;
-  padding: 8px 16px;
-  font-size: 14px;
-  border-radius: 8px;
-  min-width: 180px;   /* ancho mínimo bonito */
-  width: auto !important; /* evita 100% en móviles si tuviste esa regla */
-}
-
-/* Si en móviles quieres que vuelva a crecer un poco, quita el !important de arriba
-   y usa este ajuste opcional: */
-/*
-@media (max-width: 520px){
-  .btn-narrow{ width: 80%; }
-}
-*/
-
-

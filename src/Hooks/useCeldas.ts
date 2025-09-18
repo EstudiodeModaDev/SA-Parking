@@ -167,7 +167,6 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
       e.preventDefault();
   
       const v = (search ?? '').trim();       // ← usa el estado, no el evento
-      console.log('[useCeldas] onSearchEnter -> search(state) =', v);
   
       await reloadAll(v);                     // pasa el término explícito
     },

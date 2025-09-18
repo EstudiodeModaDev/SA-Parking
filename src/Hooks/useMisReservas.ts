@@ -16,7 +16,7 @@ const mapModelToUI = (m: Reservations): ReservationUI => ({
   Spot: String(m.SpotCode ?? (m.SpotIdLookupId ?? '')),
   VehicleType: String(m.VehicleType ?? ''),
   Status: String(m.Status ?? ''),
-  User: String(m.Title ?? "Anonimo" ?? ''),
+  User: String(m.Title),
 });
 
 export type FilterMode = 'upcoming-active' | 'history';
@@ -75,9 +75,6 @@ export function useMisReservas(
     setError(null);
     try {
       const opts = buildFilter();
-      // DEBUG opcional
-      // console.log('[MisReservas] getAll opts ->', opts);
-
       const list = await reservationsSvc.getAll(opts);
       const mapped = (Array.isArray(list) ? list : []).map(mapModelToUI);
 
@@ -138,13 +135,6 @@ export function useMisReservas(
       setLoading(false);
     }
   }, [reservationsSvc, fetchRows]);
-
-  // ===== depuración opcional =====
-  React.useEffect(() => {
-    console.log('[MisReservas] debug');
-    console.log('userMail:', userMail);
-    console.log('rows.length:', rows.length);
-  }, [rows, userMail]);
 
   return {
     // datos

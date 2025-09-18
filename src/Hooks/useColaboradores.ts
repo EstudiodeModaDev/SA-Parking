@@ -19,10 +19,10 @@ const normalize = (s: unknown) =>
   String(s ?? '')
     .toLowerCase()
     .normalize('NFD')
-    // Si tu TS/target no soporta \p{Diacritic}, usa /[\u0300-\u036f]/g
+    // Si tu TS/target no soporta \p{Diacritic}, cambia por /[\u0300-\u036f]/g
     .replace(/\p{Diacritic}/gu, '');
 
-// ---- Filtro contains multi-campo (CLIENTE) ----
+// ---- Filtro CLIENTE: SOLO nombre y correo ----
 function filterLocal(items: Collaborator[], term: string): Collaborator[] {
   const q = normalize(term).trim();
   if (!q) return items;
@@ -30,14 +30,10 @@ function filterLocal(items: Collaborator[], term: string): Collaborator[] {
   if (!parts.length) return items;
 
   return items.filter((it: Collaborator) => {
-    const haystack = [
-      normalize(it.nombre),
-      normalize(it.correo),
-      normalize(it.placa),
-      normalize(it.CodigoCelda),
-      normalize(it.tipoVehiculo),
-    ].join(' ');
-    return parts.every((p) => haystack.includes(p));
+    const name = normalize(it.nombre);
+    const mail = normalize(it.correo);
+    // todas las palabras del término deben aparecer en nombre O correo
+    return parts.every((p) => name.includes(p) || mail.includes(p));
   });
 }
 
@@ -135,12 +131,9 @@ export function useCollaborators(
               id: Number((created as any).ID ?? Date.now()),
               nombre: String((created as any).Title ?? c.nombre),
               correo: String((created as any).Correo ?? c.correo),
-              tipoVehiculo: ((created as any).Tipodevehiculo ??
-                c.tipoVehiculo) as any,
+              tipoVehiculo: ((created as any).Tipodevehiculo ?? c.tipoVehiculo) as any,
               placa: String((created as any).Placa ?? c.placa),
-              CodigoCelda: String(
-                (created as any).CodigoCelda ?? c.codigoCelda ?? ''
-              ),
+              CodigoCelda: String((created as any).CodigoCelda ?? c.codigoCelda ?? ''),
             }
           : {
               id: Date.now(),
@@ -178,10 +171,8 @@ export function useCollaborators(
         const items = await svc.getAll({
           top: MAX_FETCH,
           orderby: 'fields/Title asc', // opcional
-          // sin $filter
         });
 
-        // items suele venir como any[]; tipamos el resultado del map
         const master: Collaborator[] = (items as any[]).map(mapToCollaborator);
         masterRef.current = master;
 
@@ -259,12 +250,8 @@ export function useCollaborators(
   // ---------- Carga inicial ----------
   React.useEffect(() => {
     let cancel = false;
-    (async () => {
-      if (!cancel) await reloadAll('');
-    })();
-    return () => {
-      cancel = true;
-    };
+    (async () => { if (!cancel) await reloadAll(''); })();
+    return () => { cancel = true; };
   }, [reloadAll]);
 
   return {

@@ -133,15 +133,7 @@ export function useCollaborators(
     setError(null);
     try {
       const MAX_FETCH = 2000;
-      const term = search.trim().toLowerCase().replace(/'/g, "''");
-
       const filters: string[] = [];
-      if (term) {
-        // Graph OData v4: contains + tolower
-        filters.push(
-          `(fields/Title,'${term}')`
-        );
-      }
 
       const items = await svc.getAll({
         top: MAX_FETCH,

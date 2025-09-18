@@ -201,7 +201,7 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
     } finally {
       if (myId === reqIdRef.current) setLoading(false);
     }
-  }, [svc, pageSize, tipo, itinerancia, search]);
+  }, [svc, pageSize, tipo, itinerancia]);
 
   // -------- paginación ----------
   const setPageSize = React.useCallback((n: number) => {

@@ -19,7 +19,8 @@ const normalize = (s: unknown) =>
   String(s ?? '')
     .toLowerCase()
     .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, ''); // si compila, si no usa /[\u0300-\u036f]/g
+    // Si tu TS/target no soporta \p{Diacritic}, usa /[\u0300-\u036f]/g
+    .replace(/\p{Diacritic}/gu, '');
 
 // ---- Filtro contains multi-campo (CLIENTE) ----
 function filterLocal(items: Collaborator[], term: string): Collaborator[] {
@@ -28,7 +29,7 @@ function filterLocal(items: Collaborator[], term: string): Collaborator[] {
   const parts = q.split(/\s+/).filter(Boolean);
   if (!parts.length) return items;
 
-  return items.filter((it) => {
+  return items.filter((it: Collaborator) => {
     const haystack = [
       normalize(it.nombre),
       normalize(it.correo),
@@ -77,123 +78,145 @@ export function useCollaborators(
   const masterRef = React.useRef<Collaborator[]>([]);
 
   // ---------- CRUD ----------
-  const deleteCollaborator = React.useCallback(async (id: string | number) => {
-    if (!id) return;
-    try {
+  const deleteCollaborator = React.useCallback(
+    async (id: string | number) => {
+      if (!id) return;
+      try {
+        setLoading(true);
+        setError(null);
+
+        await svc.delete(String(id));
+
+        masterRef.current = masterRef.current.filter(
+          (r) => String(r.id) !== String(id)
+        );
+
+        const filtered = filterLocal(masterRef.current, search);
+        setAllRows(filtered);
+
+        const start = Math.min(
+          pageIndex * pageSize,
+          Math.max(0, filtered.length - 1)
+        );
+        const clampedStart = Math.floor(start / pageSize) * pageSize;
+
+        setRows(filtered.slice(clampedStart, clampedStart + pageSize));
+        setPageIndex(clampedStart / pageSize);
+        setHasNext(clampedStart + pageSize < filtered.length);
+      } catch (e: any) {
+        console.error('[useCollaborators] deleteCollaborator error:', e);
+        setError(e?.message ?? 'Error al eliminar colaborador');
+        throw e;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [svc, pageIndex, pageSize, search]
+  );
+
+  const addCollaborator = React.useCallback(
+    async (c: NewCollaborator) => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const newCollab: Partial<Colaboradoresfijos> = {
+          Title: c.nombre,
+          Correo: c.correo,
+          Tipodevehiculo: c.tipoVehiculo,
+          Placa: c.placa,
+          CodigoCelda: c.codigoCelda,
+        };
+
+        const created = await svc.create(newCollab as any);
+
+        const ui: Collaborator = created
+          ? {
+              id: Number((created as any).ID ?? Date.now()),
+              nombre: String((created as any).Title ?? c.nombre),
+              correo: String((created as any).Correo ?? c.correo),
+              tipoVehiculo: ((created as any).Tipodevehiculo ??
+                c.tipoVehiculo) as any,
+              placa: String((created as any).Placa ?? c.placa),
+              CodigoCelda: String(
+                (created as any).CodigoCelda ?? c.codigoCelda ?? ''
+              ),
+            }
+          : {
+              id: Date.now(),
+              nombre: c.nombre,
+              correo: c.correo,
+              tipoVehiculo: c.tipoVehiculo as any,
+              placa: c.placa,
+              CodigoCelda: String(c.codigoCelda ?? ''),
+            };
+
+        masterRef.current = [ui, ...masterRef.current];
+
+        const filtered = filterLocal(masterRef.current, search);
+        setAllRows(filtered);
+        setRows(filtered.slice(0, pageSize));
+        setHasNext(filtered.length > pageSize);
+        setPageIndex(0);
+      } catch (e: any) {
+        console.error('[useCollaborators] addCollaborator error:', e);
+        setError(e?.message ?? 'No se pudo agregar el colaborador');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [svc, pageSize, search]
+  );
+
+  // ---------- Carga (SIN $filter; todo el filtro en cliente) ----------
+  const reloadAll = React.useCallback(
+    async (termArg?: string) => {
       setLoading(true);
       setError(null);
+      try {
+        const MAX_FETCH = 2000;
+        const items = await svc.getAll({
+          top: MAX_FETCH,
+          orderby: 'fields/Title asc', // opcional
+          // sin $filter
+        });
 
-      await svc.delete(String(id));
+        // items suele venir como any[]; tipamos el resultado del map
+        const master: Collaborator[] = (items as any[]).map(mapToCollaborator);
+        masterRef.current = master;
 
-      masterRef.current = masterRef.current.filter(r => String(r.id) !== String(id));
+        const term = typeof termArg === 'string' ? termArg : search;
+        const filtered = filterLocal(master, term);
 
-      const filtered = filterLocal(masterRef.current, search);
-      setAllRows(filtered);
-
-      const start = Math.min(pageIndex * pageSize, Math.max(0, filtered.length - 1));
-      const clampedStart = Math.floor(start / pageSize) * pageSize;
-
-      setRows(filtered.slice(clampedStart, clampedStart + pageSize));
-      setPageIndex(clampedStart / pageSize);
-      setHasNext(clampedStart + pageSize < filtered.length);
-    } catch (e: any) {
-      console.error('[useCollaborators] deleteCollaborator error:', e);
-      setError(e?.message ?? 'Error al eliminar colaborador');
-      throw e;
-    } finally {
-      setLoading(false);
-    }
-  }, [svc, pageIndex, pageSize, search]);
-
-  const addCollaborator = React.useCallback(async (c: NewCollaborator) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const newCollab: Partial<Colaboradoresfijos> = {
-        Title: c.nombre,
-        Correo: c.correo,
-        Tipodevehiculo: c.tipoVehiculo,
-        Placa: c.placa,
-        CodigoCelda: c.codigoCelda,
-      };
-
-      const created = await svc.create(newCollab as any);
-
-      const ui: Collaborator = created
-        ? {
-            id: Number((created as any).ID ?? Date.now()),
-            nombre: String((created as any).Title ?? c.nombre),
-            correo: String((created as any).Correo ?? c.correo),
-            tipoVehiculo: ((created as any).Tipodevehiculo ?? c.tipoVehiculo) as any,
-            placa: String((created as any).Placa ?? c.placa),
-            CodigoCelda: String((created as any).CodigoCelda ?? c.codigoCelda ?? ''),
-          }
-        : {
-            id: Date.now(),
-            nombre: c.nombre,
-            correo: c.correo,
-            tipoVehiculo: c.tipoVehiculo as any,
-            placa: c.placa,
-            CodigoCelda: String(c.codigoCelda ?? ''),
-          };
-
-      masterRef.current = [ui, ...masterRef.current];
-
-      const filtered = filterLocal(masterRef.current, search);
-      setAllRows(filtered);
-      setRows(filtered.slice(0, pageSize));
-      setHasNext(filtered.length > pageSize);
-      setPageIndex(0);
-    } catch (e: any) {
-      console.error('[useCollaborators] addCollaborator error:', e);
-      setError(e?.message ?? 'No se pudo agregar el colaborador');
-    } finally {
-      setLoading(false);
-    }
-  }, [svc, pageSize, search]);
-
-  // ---------- Carga (SIN $filter; sólo top/orderby) ----------
-  const reloadAll = React.useCallback(async (termArg?: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const MAX_FETCH = 2000;
-      const items = await svc.getAll({
-        top: MAX_FETCH,
-        orderby: 'fields/Title asc', // opcional
-        // ⚠️ sin filter: todo el filtrado ocurre en cliente
-      });
-
-      const master = items.map(mapToCollaborator);
-      masterRef.current = master;
-
-      const term = typeof termArg === 'string' ? termArg : search;
-      const filtered = filterLocal(master, term);
-
-      setAllRows(filtered);
-      setRows(filtered.slice(0, pageSize));
-      setPageIndex(0);
-      setHasNext(filtered.length > pageSize);
-    } catch (e: any) {
-      console.error('[useCollaborators] reloadAll error:', e);
-      setAllRows([]); setRows([]);
-      setError(e?.message ?? 'Error al cargar colaboradores');
-      setHasNext(false);
-    } finally {
-      setLoading(false);
-    }
-  }, [svc, pageSize, search]);
+        setAllRows(filtered);
+        setRows(filtered.slice(0, pageSize));
+        setPageIndex(0);
+        setHasNext(filtered.length > pageSize);
+      } catch (e: any) {
+        console.error('[useCollaborators] reloadAll error:', e);
+        setAllRows([]);
+        setRows([]);
+        setError(e?.message ?? 'Error al cargar colaboradores');
+        setHasNext(false);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [svc, pageSize, search]
+  );
 
   // ---------- Paginación ----------
-  const setPageSize = React.useCallback((n: number) => {
-    const size = Number.isFinite(n) && n > 0 ? Math.floor(n) : 20;
-    _setPageSize(size);
-    const slice = allRows.slice(0, size);
-    setRows(slice);
-    setPageIndex(0);
-    setHasNext(allRows.length > size);
-  }, [allRows]);
+  const setPageSize = React.useCallback(
+    (n: number) => {
+      const size = Number.isFinite(n) && n > 0 ? Math.floor(n) : 20;
+      _setPageSize(size);
+      const slice = allRows.slice(0, size);
+      setRows(slice);
+      setPageIndex(0);
+      setHasNext(allRows.length > size);
+    },
+    [allRows]
+  );
 
   const nextPage = React.useCallback(() => {
     if (loading) return;
@@ -236,8 +259,12 @@ export function useCollaborators(
   // ---------- Carga inicial ----------
   React.useEffect(() => {
     let cancel = false;
-    (async () => { if (!cancel) await reloadAll(''); })();
-    return () => { cancel = true; };
+    (async () => {
+      if (!cancel) await reloadAll('');
+    })();
+    return () => {
+      cancel = true;
+    };
   }, [reloadAll]);
 
   return {

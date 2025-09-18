@@ -13,12 +13,9 @@ import PicoPlacaAdmin from './Components/PicoPlaca/PicoPlaca';
 
 import type { GetAllOpts } from './Models/Commons';
 
-// Auth + Graph context + UserService
 import { useAuth } from './auth/AuthProvider';
 import { GraphServicesProvider, useGraphServices } from './graph/GraphServicesContext';
 import { UserService } from './Services/User.Service';
-
-// 👇 NUEVO: usamos tu servicio unificado
 import { SharedServices } from './Services/Shared.service';
 
 // ------------------ Constantes UI ------------------
@@ -39,8 +36,78 @@ type User = {
   jobTitle?: string;
 } | null;
 
+// ------------------ Header reutilizable ------------------
+function HeaderBar(props: {
+  user: User;
+  role: 'admin' | 'usuario';
+  canChangeRole?: boolean;
+  changingRole?: boolean;
+  permLoading?: boolean;
+  onChangeRole?: () => void;
+  onPrimaryAction?: { label: string; onClick: () => void } | null; // e.g. Sign In / Sign Out
+}) {
+  const { user, role, canChangeRole, changingRole, permLoading, onChangeRole, onPrimaryAction } = props;
+  const isLogged = Boolean(user);
+
+  return (
+    <div className="section userCard">
+      <div className="userRow">
+        <div className="brand">
+          <h1>PARKING EDM</h1>
+        </div>
+
+        <div className="userCluster">
+          <div className="avatar">
+            {/* Si hay usuario, primera letra; si no, '?' */}
+            {user?.displayName ? user.displayName[0] : <span>?</span>}
+          </div>
+
+          <div className="userInfo">
+            {isLogged ? (
+              <>
+                <div className="userName">{user?.displayName}</div>
+                <div className="userMail">{user?.mail}</div>
+                {user?.jobTitle && <div className="userTitle">{user.jobTitle}</div>}
+                <div className="userMail">{role}</div>
+              </>
+            ) : (
+              // Mismo bloque para mantener layout, sin info sensible
+              <>
+                <div className="userName">Invitado</div>
+                <div className="userMail">–</div>
+              </>
+            )}
+          </div>
+
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+            {/* Botón cambiar rol solo si hay sesión y está permitido */}
+            {isLogged && canChangeRole && (
+              <button
+                onClick={onChangeRole}
+                disabled={changingRole || permLoading}
+                className="btn-change-user"
+                aria-busy={changingRole || permLoading || undefined}
+                aria-label="Cambiar rol de usuario"
+                title="Cambiar rol"
+              >
+                {changingRole ? 'Actualizando…' : (permLoading ? 'Verificando…' : 'Cambiar rol')}
+              </button>
+            )}
+
+            {/* Acción primaria a la derecha: Sign In (sin sesión) o Sign Out (con sesión) */}
+            {onPrimaryAction && (
+              <button className="btn-logout" onClick={onPrimaryAction.onClick} aria-label={onPrimaryAction.label} title={onPrimaryAction.label}>
+                <span aria-hidden>⎋</span> {onPrimaryAction.label}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ------------------ Helpers que usan el contexto ------------------
-// (Dejamos este helper para toggle de rol; ajustado con filter correcto y normalización)
 function useRoleHelpers() {
   const { usuariosParking } = useGraphServices();
 
@@ -52,7 +119,6 @@ function useRoleHelpers() {
     if (!email) throw new Error('userEmail requerido');
     const emailSafe = email.replace(/'/g, "''");
 
-    // Graph: debes filtrar por fields/Title
     const opt: GetAllOpts = { filter: `fields/Title eq '${emailSafe.toLowerCase()}'`, top: 1 as any };
     const res = await usuariosParking.getAll(opt);
     const rows = normRows(res);
@@ -86,8 +152,6 @@ function AppInner() {
 
   const { graph, usuariosParking, settings } = useGraphServices();
   const userSvc = useMemo(() => new UserService(graph), [graph]);
-
-  // 👇 Instanciamos TU SharedServices con el service de usuariosParking del contexto
   const shared = useMemo(() => new SharedServices(usuariosParking), [usuariosParking]);
 
   const { signOut } = useAuth();
@@ -98,7 +162,6 @@ function AppInner() {
     try {
       setChangingRole(true);
       const { after } = await changeUser(user.mail);
-      // normaliza
       const next = String(after).toLowerCase() === 'admin' ? 'admin' : 'usuario';
       setUserRole(next);
     } catch (e) {
@@ -108,7 +171,7 @@ function AppInner() {
     }
   }, [changeUser, user?.mail, changingRole]);
 
-  // 1) Cargar perfil con Graph (básico)
+  // 1) Perfil
   useEffect(() => {
     let cancel = false;
     setUserLoading(true);
@@ -131,7 +194,7 @@ function AppInner() {
     return () => { cancel = true; };
   }, [userSvc]);
 
-  // 2) Con UNA pasada resolvemos role + permitted
+  // 2) Role + permisos
   useEffect(() => {
     if (userLoading) return;
     const mail = user?.mail;
@@ -141,13 +204,12 @@ function AppInner() {
     setPermLoading(true);
     (async () => {
       try {
-         let roleRaw
-         let permitted
-
-        const object = await shared.getRole(user.mail!);
-        if(object){
-          roleRaw = object.Rol ?? "usuario";
-          permitted = object.Permitidos ?? false
+        let roleRaw;
+        let permitted;
+        const object = await shared.getRole(user!.mail!);
+        if (object) {
+          roleRaw = object.Rol ?? 'usuario';
+          permitted = object.Permitidos ?? false;
         }
         if (!alive) return;
 
@@ -174,8 +236,15 @@ function AppInner() {
 
   if (userLoading) {
     return (
-      <div className="center muted" style={{ padding: 24 }}>
-        Cargando usuario…
+      <div className="page">
+        <HeaderBar
+          user={null}
+          role="usuario"
+          onPrimaryAction={null}
+        />
+        <div className="center muted" style={{ padding: 24 }}>
+          Cargando usuario…
+        </div>
       </div>
     );
   }
@@ -183,50 +252,16 @@ function AppInner() {
   return (
     <ToastProvider>
       <div className="page">
-        {/* HEADER */}
-        <div className="section userCard">
-          <div className="userRow">
-            <div className="brand">
-              <h1>PARKING EDM</h1>
-            </div>
-
-            <div className="userCluster">
-              <div className="avatar">
-                {user?.displayName ? user.displayName[0] : <span>?</span>}
-              </div>
-              <div className="userInfo">
-                {user ? (
-                  <>
-                    <div className="userName">{user.displayName}</div>
-                    <div className="userMail">{user.mail}</div>
-                    {user.jobTitle && <div className="userTitle">{user.jobTitle}</div>}
-                    <div className="userMail">{isAdmin ? 'admin' : 'usuario'}</div>
-                  </>
-                ) : (
-                  <div className="errorText">No se pudo cargar el usuario</div>
-                )}
-              </div>
-
-              <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-                {canChangeRole && (
-                  <button
-                    onClick={onChangeRole}
-                    disabled={!user?.mail || changingRole || permLoading}
-                    className="btn-change-user"
-                    aria-busy={changingRole || permLoading || undefined}
-                    aria-label="Cambiar rol de usuario"
-                    title="Cambiar rol"
-                  >
-                    {changingRole ? 'Actualizando…' : (permLoading ? 'Verificando…' : 'Cambiar rol')}
-                  </button>
-                )}
-                <button className="btn-logout" onClick={signOut} aria-label="Cerrar sesión" title="Cerrar sesión">
-                  <span aria-hidden>⎋</span> Cerrar sesión
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* HEADER (mismo layout) */}
+        <HeaderBar
+          user={user}
+          role={isAdmin ? 'admin' : 'usuario'}
+          canChangeRole={canChangeRole}
+          changingRole={changingRole}
+          permLoading={permLoading}
+          onChangeRole={onChangeRole}
+          onPrimaryAction={{ label: 'Cerrar sesión', onClick: () => signOut() }}
+        />
 
         {/* NAV solo admin */}
         {isAdmin && (
@@ -269,7 +304,6 @@ function AppInner() {
           {isAdmin && selected === 'admin' && (
             <div className="center">
               <h2>Administración</h2>
-              {/* settings viene del GraphServicesContext */}
               <AdminSettings settingsSvc={settings} />
             </div>
           )}
@@ -295,26 +329,29 @@ function AppInner() {
 }
 
 // ------------------ App raíz ------------------
-// Si NO hay sesión lista, muestra pantalla con botón de login (popup).
 export default function App() {
   const { ready, account, signIn } = useAuth();
 
   if (!ready) {
     return (
-      <div className="center muted" style={{ padding: 24 }}>
-        Conectando…
+      <div className="page">
+        <HeaderBar user={null} role="usuario" onPrimaryAction={null} />
+        <div className="center muted" style={{ padding: 24 }}>
+          Conectando…
+        </div>
       </div>
     );
   }
 
   if (!account) {
+    // MISMO HEADER, sin datos y con botón “Iniciar sesión” a la derecha
     return (
       <div className="page">
-          <div className="userRow">
-            <div className="brand">
-              <h1>PARKING EDM</h1>
-            </div>
-        </div>
+        <HeaderBar
+          user={null}
+          role="usuario"
+          onPrimaryAction={{ label: 'Iniciar sesión', onClick: () => signIn() }}
+        />
 
         <main className="main">
           <div className="center login-hero">
@@ -336,7 +373,7 @@ export default function App() {
     );
   }
 
-  // Con sesión: monta GraphServicesProvider + AppInner
+  // Con sesión
   return (
     <GraphServicesProvider>
       <AppInner />

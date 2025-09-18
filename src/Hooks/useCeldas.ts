@@ -4,7 +4,7 @@ import { mapSlotToUI, type CreateForm, type SlotUI } from '../Models/Celdas';
 import type { ParkingSlot } from '../Models/Parkingslot';
 import { ParkingSlotsService } from '../Services/ParkingSlot.service';
 
-// Item mínimo que necesitamos para poder leer Title venga de Graph (fields.Title) o REST (Title)
+// Item mínimo para leer Title venga de Graph (fields.Title) o REST (Title)
 type ListItemMin = {
   fields?: { Title?: string };
   Title?: string;
@@ -141,38 +141,27 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
     setError(null);
 
     try {
-      console.groupCollapsed('[Cargar celdas] Iniciando');
-
-      // --- helpers ---
-      const esc = (s: string) => s.replace(/'/g, "''"); // OData: duplica comillas
+      // helpers
+      const esc = (s: string) => s.replace(/'/g, "''");
       const norm = (s: string) => String(s ?? '').trim();
 
-      // término buscado
-      const raw = norm(termArg ?? search);
+      const raw = norm(termArg ?? '');
       const term = raw.toLowerCase();
 
+      // filtros server-side (solo tipo/itinerancia; el contains va en cliente)
       const filters: string[] = [];
-
-      if (tipo !== 'all') {
-        filters.push(`fields/TipoCelda eq '${esc(tipo)}'`);
-      }
-      if (itinerancia !== 'all') {
-        filters.push(`fields/Itinerancia eq '${esc(itinerancia)}'`);
-      }
+      if (tipo !== 'all') filters.push(`fields/TipoCelda eq '${esc(tipo)}'`);
+      if (itinerancia !== 'all') filters.push(`fields/Itinerancia eq '${esc(itinerancia)}'`);
 
       const opts = {
         top: 2000,
         ...(filters.length ? { filter: filters.join(' and ') } : {}),
       } as const;
 
-      console.log('server $filter →', opts.filter);
-
-      // 2) Fetch
-      // Si tu service es genérico, usa: await svc.getAll<ListItemMin>(opts)
       const items = (await svc.getAll(opts)) as unknown as ListItemMin[];
-      if (myId !== reqIdRef.current) return; // hay una llamada más reciente
+      if (myId !== reqIdRef.current) return;
 
-      // 3) CONTAINS real en cliente (soporta varias palabras)
+      // CONTAINS real en cliente (múltiples palabras)
       const parts = term.split(/\s+/).filter(Boolean);
       const itemsFiltered: ListItemMin[] = parts.length
         ? items.filter((it: ListItemMin) => {
@@ -181,21 +170,15 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
           })
         : items;
 
-      console.log(`items: ${items.length} → tras contains: ${itemsFiltered.length}`);
-
-      // 4) Mapear a UI + paginar
       const ui = itemsFiltered.map(mapSlotToUI);
       setAllRows(ui);
       setRows(ui.slice(0, pageSize));
       setPageIndex(0);
       setHasNext(ui.length > pageSize);
-
-      console.groupEnd();
     } catch (e: any) {
       if (myId !== reqIdRef.current) return;
       console.error('[useCeldas] reloadAll error:', e);
-      setAllRows([]);
-      setRows([]);
+      setAllRows([]); setRows([]);
       setError(e?.message ?? 'Error al cargar celdas');
       setHasNext(false);
     } finally {
@@ -234,24 +217,31 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
     setHasNext(allRows.length > end);
   }, [loading, pageIndex, pageSize, allRows]);
 
-  // -------- búsqueda por Enter (sin bloquear) ----------
+  // -------- búsqueda ----------
+  // 1) Enter para buscar ya (opcional)
   const onSearchEnter = React.useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter') return;
     const value = (e.currentTarget?.value ?? '').trim();
-    setSearch(value);           // sincroniza el estado visible
-    reloadAll(value);           // fuerza nueva carga con ese término
+    setSearch(value);
+    reloadAll(value);
   }, [reloadAll]);
 
-  // -------- efectos ----------
+  // 2) Debounce mientras escribes (300ms) → no bloquea UI
+  const debounceRef = React.useRef<number | null>(null);
   React.useEffect(() => {
-    let cancel = false;
-    (async () => { if (!cancel) await reloadAll(); })();
-    return () => { cancel = true; };
-  }, [reloadAll]);
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(() => {
+      reloadAll(search);
+    }, 300) as unknown as number;
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+  }, [search, tipo, itinerancia, reloadAll]);
 
+  // Carga inicial
   React.useEffect(() => {
-    reloadAll();
-  }, [tipo, itinerancia]); // eslint-disable-line react-hooks/exhaustive-deps
+    reloadAll('');
+  }, [reloadAll]);
 
   return {
     rows,

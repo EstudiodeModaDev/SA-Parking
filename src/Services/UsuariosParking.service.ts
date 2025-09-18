@@ -70,6 +70,7 @@ export class UsuariosParkingService {
   // ---------- mapping (Graph -> Modelo) ----------
   private toModel(item: any): UsuariosParking {
     const f = item?.fields ?? {};
+    console.error(f)
     return {
       ID: Number(item?.id ?? ''),
       Title: f.Title,

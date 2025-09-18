@@ -70,7 +70,6 @@ export class UsuariosParkingService {
   // ---------- mapping (Graph -> Modelo) ----------
   private toModel(item: any): UsuariosParking {
     const f = item?.fields ?? {};
-    console.error(f)
     return {
       ID: Number(item?.id ?? ''),
       Title: f.Title,
@@ -126,7 +125,6 @@ export class UsuariosParkingService {
     );
     const arr = Array.isArray(res?.value) ? res.value : [];
     const retorno = arr.map((x: any) => this.toModel(x));
-    console.warn("ALERTAAAAAAAAAAAA: ", retorno)
     return retorno
   }
 

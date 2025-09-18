@@ -27,7 +27,7 @@ const ColaboradoresInscritos: React.FC = () => {
     search, setSearch,
     pageSize, setPageSize,
     pageIndex, hasNext, nextPage, prevPage,
-    reloadAll, addCollaborator, deleteCollaborator,
+     addCollaborator, deleteCollaborator,
   } = useCollaborators(colaboradoresSvc);
 
   // ====== hook de workers (Graph users)
@@ -67,12 +67,6 @@ const ColaboradoresInscritos: React.FC = () => {
     [rows, vehicleFilter]
   );
 
-  const onSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      reloadAll();
-    }
-  };
 
   const onDelete = async (c: Collaborator) => {
     if (!c?.id) return;
@@ -129,7 +123,6 @@ const ColaboradoresInscritos: React.FC = () => {
                 placeholder="Buscar por nombre, correo o placa…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={onSearchKeyDown}
               />
               {search && (
                 <button

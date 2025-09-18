@@ -31,7 +31,6 @@ const norm = (s: string) =>
 
 const isEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s).trim());
 // Ejemplo simple de placa: 3 letras + 3 números (ajústalo a tu realidad)
-const isPlate = (s: string) => /^[A-Z]{3}\d{3}$/i.test(String(s).trim());
 
 const ModalAgregarColaborador: React.FC<Props> = ({
   isOpen,
@@ -116,7 +115,6 @@ const ModalAgregarColaborador: React.FC<Props> = ({
     const e: Partial<Record<keyof NewCollaborator, string>> = {};
     if (!form.nombre.trim()) e.nombre = 'El nombre es obligatorio.';
     if (!isEmail(form.correo)) e.correo = 'Correo inválido.';
-    if (!isPlate(form.placa)) e.placa = 'Formato de placa inválido (ej: ABC123).';
     return e;
   }, [form]);
 

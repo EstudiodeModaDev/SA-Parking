@@ -21,12 +21,6 @@ type UseReservarOptions = {
 
 const MOTO_CAPACITY = 4 as const;
 
-// Helpers de debug
-function dbgLabel(label: string) {
-  return `%c${label}`;
-}
-const dbgStyle = 'background:#111;color:#7CFC00;padding:2px 4px;border-radius:3px;';
-
 export function useReservar(
   reservationsSvc: ReservationsService,
   slotsSvc: ParkingSlotsService,
@@ -142,26 +136,21 @@ export function useReservar(
         `fields/Itinerancia eq 'Empleado Itinerante'`,
       ].join(' and ');
 
-      console.log(dbgLabel('[DEBUG] slots getAll filter'), dbgStyle, slotsFilter);
-
       const slots = await slotsSvc.getAll({
         filter: slotsFilter,
         top: 2000
       });
 
-      console.log('[DEBUG] slots count:', Array.isArray(slots) ? slots.length : 0);
       if (!Array.isArray(slots) || slots.length === 0) {
         return { ok: false, message: `No existen celdas activas para ${vehicle}.` };
       }
 
       // 2) Turnos a validar
       const turnsToCheck: Exclude<TurnType, 'Dia'>[] = turn === 'Dia' ? ['Manana', 'Tarde'] : [turn as Exclude<TurnType, 'Dia'>];
-      console.log('[DEBUG] turnsToCheck:', turnsToCheck);
 
       for (const slot of slots) {
         const slotId = (slot as any).ID ?? (slot as any).Id ?? (slot as any).id;
         const code = (slot as any).Title ?? (slot as any).Code ?? (slot as any).Name ?? slotId;
-        console.log('[DEBUG] Evaluando slot:', { slotId, code, slot });
 
         if (slotId == null) continue;
 
@@ -169,7 +158,6 @@ export function useReservar(
         let available = true;
         for (const t of turnsToCheck) {
           const count = await countReservations(slotId, dateISO, t);
-          console.log('[DEBUG] cupo', { t, count, vehicle });
           if (vehicle === 'Carro') {
             if (count >= 1) { available = false; break; }
           } else {
@@ -177,7 +165,6 @@ export function useReservar(
           }
         }
         if (!available) {
-          console.log('[DEBUG] slot sin cupo, sigo con el siguiente ->', code);
           continue;
         }
 
@@ -211,7 +198,6 @@ export function useReservar(
 
           return { ok: true, message: successMsg, reservation: lastCreated };
         } catch (e: any) {
-          console.error('[DEBUG] create FAILED para slot', slotId, e?.message ?? e, e);
           // Si falla con esta celda, intenta con la siguiente
           continue;
         }

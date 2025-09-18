@@ -209,7 +209,6 @@ async function submitQuickReserve() {
         {/* ---- Capacidad hoy ---- */}
         <div className={styles.capacityCard}>
           <div className={styles.capacityHeader}>
-            <span className={styles.cardTitle}>Capacidad hoy</span>
             <span className={styles.turnPill}>
               {turnNow === 'Manana'
                 ? 'Turno actual: AM'
@@ -217,6 +216,7 @@ async function submitQuickReserve() {
                 ? 'Turno actual: PM'
                 : 'Fuera de horario'}
             </span>
+            <span className={styles.cardTitle}>Capacidad hoy</span>
           </div>
 
           <div className={styles.capacityGrid}>

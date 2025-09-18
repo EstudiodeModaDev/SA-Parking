@@ -1,0 +1,26 @@
+# Node
+node_modules/
+**/node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Vite/TypeScript
+dist/
+build/
+.vite/
+*.tsbuildinfo
+
+# Tests
+coverage/
+
+# Env files
+.env
+.env.*.local
+
+# SO/IDE
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json

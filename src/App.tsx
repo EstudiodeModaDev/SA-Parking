@@ -91,6 +91,7 @@ function AppInner() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [changingRole, setChangingRole] = useState(false);
   const [canChangeRole, setCanChangeRole] = useState(false);
+  const [permLoading, setPermLoading] = useState(false);
 
   const { graph, shared } = useGraphServices();
   const userSvc = useMemo(() => new UserService(graph), [graph]);
@@ -125,6 +126,7 @@ function AppInner() {
           mail: me.mail ?? me.userPrincipalName ?? undefined,
           jobTitle: me.jobTitle ?? undefined,
         });
+
       } catch (e) {
         if (!cancel) setUser(null);
         console.error(e);
@@ -160,19 +162,30 @@ function AppInner() {
 
   // ¿Puede cambiar su rol?
   useEffect(() => {
+    alert("Iniciando rol")
+    if (userLoading) return;         
+    if (!user?.mail) {
+      setCanChangeRole(false);
+      alert("No se puedo obtener el usuario")
+      return;
+    }
+
     let cancel = false;
+    setPermLoading(true);
     (async () => {
-      if (!user?.mail) { setCanChangeRole(false); alert("no se obtuvo email"); return; }
       try {
-        const ok = await isUserPermitted(user.mail);
-        console.log(ok)
+        alert("Funciono")
+        const ok = await isUserPermitted(user.mail!);
         if (!cancel) setCanChangeRole(ok);
       } catch {
         if (!cancel) setCanChangeRole(false);
+      } finally {
+        if (!cancel) setPermLoading(false);
       }
     })();
-    return () => { cancel = true; };
-  }, [user?.mail, isUserPermitted]);
+
+  return () => { cancel = true; };
+}, [userLoading, user?.mail, isUserPermitted]);
 
   const isAdmin = userRole === 'admin';
   const handleNavClick = (key: NavKey) => setSelected(key);
@@ -286,11 +299,11 @@ function AppInner() {
           {canChangeRole && (
             <button
               onClick={onChangeRole}
-              disabled={!user?.mail || changingRole}
+              disabled={!user?.mail || changingRole || permLoading}
               className="btn-change-role"
-              aria-busy={changingRole || undefined}
+              aria-busy={changingRole || permLoading || undefined}
             >
-              {changingRole ? 'Actualizando…' : 'Cambiar rol'}
+              {changingRole ? 'Actualizando…' : (permLoading ? 'Verificando…' : 'Cambiar rol')}
             </button>
           )}
         </main>

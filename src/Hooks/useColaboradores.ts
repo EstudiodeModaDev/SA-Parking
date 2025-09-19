@@ -82,23 +82,7 @@ export function useCollaborators(
         setError(null);
 
         await svc.delete(String(id));
-
-        masterRef.current = masterRef.current.filter(
-          (r) => String(r.id) !== String(id)
-        );
-
-        const filtered = filterLocal(masterRef.current, search);
-        setAllRows(filtered);
-
-        const start = Math.min(
-          pageIndex * pageSize,
-          Math.max(0, filtered.length - 1)
-        );
-        const clampedStart = Math.floor(start / pageSize) * pageSize;
-
-        setRows(filtered.slice(clampedStart, clampedStart + pageSize));
-        setPageIndex(clampedStart / pageSize);
-        setHasNext(clampedStart + pageSize < filtered.length);
+        reloadAll()
       } catch (e: any) {
         console.error('[useCollaborators] deleteCollaborator error:', e);
         setError(e?.message ?? 'Error al eliminar colaborador');

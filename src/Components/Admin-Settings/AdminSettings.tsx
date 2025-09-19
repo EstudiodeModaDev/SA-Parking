@@ -26,12 +26,36 @@ const clampHour = (n: number) => clamp(Math.floor(n), 0, 23);
 
 const toHH = (n: number) => String(clampHour(n)).padStart(2, '0') + ':00';
 
-const fromHH = (s: string | number | null | undefined, fallback = 0) => {
+const fromHH = (
+  s: string | number | null | undefined,
+  fallback = 0
+) => {
   if (typeof s === 'number') return clampHour(s);
-  const str = String(s ?? '').trim();
-  const [hh] = str.split(':');
-  const n = Number(hh);
-  return Number.isFinite(n) ? clampHour(n) : clampHour(fallback);
+
+  const raw = String(s ?? '').trim();
+  if (!raw) return clampHour(fallback);
+
+  // normaliza espacios y puntos de "a. m." / "p. m."
+  const txt = raw
+    .toLowerCase()
+    .replace(/\u00a0/g, ' ')        // NBSP -> espacio normal
+    .replace(/\s+/g, ' ')           // colapsa espacios
+    .replace(/\.\s*/g, '.');        // "a.  m." -> "a.m."
+
+  const isAM = /\b(a\.?m\.?|a m)\b/.test(txt);
+  const isPM = /\b(p\.?m\.?|p m)\b/.test(txt);
+
+  // extrae horas (acepta "07:00", "07:00:00", "7", etc.)
+  const m = txt.match(/(\d{1,2})(?::\d{2})?(?::\d{2})?/);
+  const hh = m ? Number(m[1]) : NaN;
+  if (!Number.isFinite(hh)) return clampHour(fallback);
+
+  // reglas 12h
+  if (isAM) return hh % 12;             // 12 am -> 0
+  if (isPM) return (hh % 12) + 12;      // 12 pm -> 12
+
+  // si no hay AM/PM, asume 24h
+  return clampHour(hh);
 };
 
 const AdminSettings: React.FC<Props> = ({ settingsSvc, settingsItemId = '1' }) => {

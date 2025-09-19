@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import type { Assignee, SlotUI } from '../../Models/Celdas';
 import {
   fetchAssignee,
@@ -6,8 +7,8 @@ import {
   assignSlotToCollaborator,
   unassignSlotFromCollaborator,
 } from '../../Hooks/useAsignarCeldas';
-import type { Worker } from '../../Models/shared'
-import { nameProve } from '../../Services/Name.Service'
+import type { Worker } from '../../Models/shared';
+import { nameProve } from '../../Services/Name.Service';
 
 // Auth + Graph + Services (Graph)
 import { useAuth } from '../../auth/AuthProvider';
@@ -26,7 +27,7 @@ type Props = {
   workersLoading?: boolean;
 };
 
-// ===== estilos inline coherentes con tus variables CSS =====
+// ===== estilos inline (coherentes con tus variables globales) =====
 const S = {
   backdrop: {
     position: 'fixed' as const,
@@ -168,7 +169,7 @@ const S = {
     borderTop: '1px solid #f3f4f6',
   },
   labelCol: { display: 'grid', gap: 6 },
-  // Helpers de focus ring (aplícalos vía spread cuando corresponda)
+  // Helpers visuales
   focusPrimary: {
     boxShadow: '0 0 0 2px rgba(37,99,235,.15)',
     borderColor: 'var(--primary)',
@@ -183,8 +184,12 @@ const norm = (s: string) =>
   s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
 
 export default function SlotDetailsModal({
-  open, slot, workers = [], workersLoading = false,
-  onClose, onChanged,
+  open,
+  slot,
+  workers = [],
+  workersLoading = false,
+  onClose,
+  onChanged,
 }: Props) {
   // ====== construir services Graph con MSAL ======
   const { ready, getToken } = useAuth();
@@ -293,7 +298,7 @@ export default function SlotDetailsModal({
     [selectableWorkers]
   );
 
-  // Derivar modo de la celda
+  // Derivar modo de la celda (seguro con slot null)
   const mode: 'fijar' | 'reserva' = React.useMemo(() => {
     const iti = String(slot?.Itinerancia ?? '').toLowerCase();
     return iti.includes('itinerante') ? 'reserva' : 'fijar';
@@ -301,7 +306,7 @@ export default function SlotDetailsModal({
 
   // Cargar asignado actual (fijo) al abrir
   React.useEffect(() => {
-    if (!open || !slot || !colaboradoresSvc) return;
+    if (!open || !slot?.Id || !colaboradoresSvc) return; // requiere ID real
     let cancel = false;
     (async () => {
       try {
@@ -315,7 +320,9 @@ export default function SlotDetailsModal({
         if (!cancel) setLoading(false);
       }
     })();
-    return () => { cancel = true; };
+    return () => {
+      cancel = true;
+    };
   }, [open, slot?.Id, colaboradoresSvc]);
 
   // Reset de campos de reserva al abrir (y cuando cambia el asignado)
@@ -352,10 +359,10 @@ export default function SlotDetailsModal({
     }
   }, [term, colaboradoresSvc]);
 
-  // Asignar fijo
+  // Asignar fijo (solo si hay slot.Id)
   const onAssign = React.useCallback(
     async (candidate: Assignee) => {
-      if (!candidate || !slot || !colaboradoresSvc) return;
+      if (!candidate || !slot?.Id || !colaboradoresSvc) return;
       setLoading(true);
       setError(null);
       try {
@@ -371,7 +378,7 @@ export default function SlotDetailsModal({
         setLoading(false);
       }
     },
-    [slot, onChanged, colaboradoresSvc]
+    [slot?.Id, slot?.Title, onChanged, colaboradoresSvc]
   );
 
   // Desasignar fijo
@@ -412,77 +419,99 @@ export default function SlotDetailsModal({
   );
 
   // Crear reserva puntual (usa rvName/rvMail — obligatorios)
-  const onCreateReservation = React.useCallback(
-    async () => {
-      if (!slot || !reservationsSvc) return;
+  const onCreateReservation = React.useCallback(async () => {
+    if (!slot?.Id || !reservationsSvc) return; // requiere celda real
+    // Validación hard-stop
+    setRvTouched({ name: true, mail: true });
+    if (nameError || mailError) {
+      setRvError(nameError || mailError);
+      return;
+    }
 
-      // Validación hard-stop
-      setRvTouched({ name: true, mail: true });
-      if (nameError || mailError) {
-        setRvError(nameError || mailError);
+    setRvSaving(true);
+    setRvError(null);
+    try {
+      const busy = await isBusy(slot.Id, rvDate, rvTurn);
+      if (busy) {
+        setRvError('Ya existe una reserva para esa fecha y turno en esta celda.');
+        setRvSaving(false);
         return;
       }
 
-      setRvSaving(true);
-      setRvError(null);
-      try {
-        const busy = await isBusy(slot.Id, rvDate, rvTurn);
-        if (busy) {
-          setRvError('Ya existe una reserva para esa fecha y turno en esta celda.');
-          setRvSaving(false);
-          return;
-        }
+      await reservationsSvc.create({
+        SpotIdLookupId: Number(slot.Id),
+        Date: rvDate,
+        Turn: rvTurn,
+        Status: 'Activa',
+        NombreUsuario: rvName,
+        Title: rvMail,
+        VehicleType: slot.TipoCelda,
+      } as any);
 
-        await reservationsSvc.create({
-          SpotIdLookupId: Number(slot.Id),
-          Date: rvDate,
-          Turn: rvTurn,
-          Status: 'Activa',
-          NombreUsuario: rvName,
-          Title: rvMail,
-          VehicleType: slot.TipoCelda,
-        } as any);
+      await onChanged?.(); // refresca la lista
+      alert('Reserva creada correctamente.');
+      onClose(); // cerrar modal
+    } catch (e: any) {
+      setRvError(e?.message ?? 'No fue posible crear la reserva.');
+    } finally {
+      setRvSaving(false);
+    }
+  }, [
+    slot?.Id,
+    slot?.TipoCelda,
+    rvDate,
+    rvTurn,
+    rvName,
+    rvMail,
+    isBusy,
+    onChanged,
+    onClose,
+    nameError,
+    mailError,
+    reservationsSvc,
+  ]);
 
-        await onChanged?.(); // refresca la lista
-        alert('Reserva creada correctamente.');
-        onClose(); // cerrar modal
-      } catch (e: any) {
-        setRvError(e?.message ?? 'No fue posible crear la reserva.');
-      } finally {
-        setRvSaving(false);
-      }
-    },
-    [slot, rvDate, rvTurn, rvName, rvMail, isBusy, onChanged, onClose, nameError, mailError, reservationsSvc]
-  );
-
-  // ===== Render =====
-  if (!open || !slot) return null;
+  // ===== Render (usa portal). Si no está abierto, no renderices. =====
+  if (!open) return null;
 
   const onBackdrop = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) onClose();
   };
 
-  return (
-    <div style={S.backdrop} onMouseDown={onBackdrop}>
-      <div style={S.modal}>
+  const content = (
+    <div
+      style={S.backdrop}
+      onMouseDown={onBackdrop}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Detalle de celda"
+    >
+      <div style={S.modal} onMouseDown={(e) => e.stopPropagation()}>
         <header style={S.header}>
-          <h3 style={S.title}>Celda {slot.Title}</h3>
+          <h3 style={S.title}>{slot ? `Celda ${slot.Title}` : 'Detalle de celda'}</h3>
           <button
             style={S.closeBtn}
             onClick={onClose}
             aria-label="Cerrar"
             onFocus={(e) => Object.assign(e.currentTarget.style, S.focusPrimary)}
-            onBlur={(e) => { e.currentTarget.style.boxShadow = ''; e.currentTarget.style.borderColor = ''; }}
+            onBlur={(e) => {
+              e.currentTarget.style.boxShadow = '';
+              e.currentTarget.style.borderColor = '';
+            }}
           >
             ×
           </button>
         </header>
 
         <div style={S.body}>
-          <div><strong>Tipo:</strong> {slot.TipoCelda}</div>
-          <div><strong>Estado:</strong> {slot.Activa}</div>
+          <div>
+            <strong>Tipo:</strong> {slot?.TipoCelda ?? '—'}
+          </div>
+          <div>
+            <strong>Estado:</strong> {slot?.Activa ?? '—'}
+          </div>
           <div style={S.muted as React.CSSProperties}>
-            <strong>Itinerancia:</strong> {slot.Itinerancia ?? '—'} &nbsp;→&nbsp;
+            <strong>Itinerancia:</strong> {slot?.Itinerancia ?? '—'} &nbsp;→&nbsp;
             <strong>{mode === 'reserva' ? 'Modo Reserva (turno)' : 'Modo Asignación fija'}</strong>
           </div>
 
@@ -490,81 +519,107 @@ export default function SlotDetailsModal({
           {mode === 'fijar' && (
             <div style={S.card}>
               <h4 style={{ margin: 0 }}>Asignación fija</h4>
-              {loading && <div style={S.muted}>Cargando…</div>}
-              {error && <div style={{ color: 'crimson' }}>{error}</div>}
 
-              {!loading && (
+              {!slot?.Id && (
+                <div style={S.muted as React.CSSProperties}>
+                  Guarda primero la celda para habilitar la asignación fija.
+                </div>
+              )}
+
+              {slot?.Id && (
                 <>
-                  {assignee ? (
-                    <div style={S.rowBetween}>
-                      <div>
-                        <div><strong>Asignado a:</strong> {assignee.name}</div>
-                        {assignee.email && <div style={S.muted}>{assignee.email}</div>}
+                  {loading && <div style={S.muted}>Cargando…</div>}
+                  {error && <div style={{ color: 'crimson' }}>{error}</div>}
+
+                  {!loading && (
+                    <>
+                      {assignee ? (
+                        <div style={S.rowBetween}>
+                          <div>
+                            <div>
+                              <strong>Asignado a:</strong> {assignee.name}
+                            </div>
+                            {assignee.email && <div style={S.muted}>{assignee.email}</div>}
+                          </div>
+                          <button type="button" style={S.btnDanger} onClick={() => onUnassign()}>
+                            Desasignar
+                          </button>
+                        </div>
+                      ) : (
+                        <div style={S.rowBetween}>
+                          <div style={S.muted}>Sin asignación</div>
+                          <button
+                            style={{ ...S.btnBase, ...S.btnPrimary }}
+                            onClick={() => setPickerOpen(true)}
+                          >
+                            Asignar
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {pickerOpen && (
+                    <div style={S.pickerPanel}>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <input
+                          style={S.input}
+                          placeholder="Buscar colaborador (nombre o correo)…"
+                          value={term}
+                          onChange={(e) => setTerm(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && doSearch()}
+                          onFocus={(e) => Object.assign(e.currentTarget.style, S.focusPrimary)}
+                          onBlur={(e) => {
+                            e.currentTarget.style.boxShadow = '';
+                            e.currentTarget.style.borderColor = 'var(--border)';
+                          }}
+                        />
+                        <button
+                          style={{ ...S.btnBase, ...S.btnPrimary }}
+                          onClick={doSearch}
+                          disabled={searching || !colaboradoresSvc}
+                        >
+                          {searching ? 'Buscando…' : 'Buscar'}
+                        </button>
+                        <button
+                          style={{ ...S.btnBase, ...S.btnGhost }}
+                          onClick={() => {
+                            setPickerOpen(false);
+                            setTerm('');
+                            setResults([]);
+                          }}
+                        >
+                          Cerrar
+                        </button>
                       </div>
-                      <button type="button" style={S.btnDanger} onClick={() => onUnassign()}>
-                        Desasignar
-                      </button>
-                    </div>
-                  ) : (
-                    <div style={S.rowBetween}>
-                      <div style={S.muted}>Sin asignación</div>
-                      <button style={{ ...S.btnBase, ...S.btnPrimary }} onClick={() => setPickerOpen(true)}>
-                        Asignar
-                      </button>
+
+                      <ul style={S.list}>
+                        {results.length === 0 && !searching && (
+                          <li style={S.muted}>Sin resultados</li>
+                        )}
+                        {results.map((c) => (
+                          <li key={c?.id} style={S.listItem}>
+                            <div>
+                              <div style={{ fontWeight: 600, color: '#0f172a' }}>{c?.name}</div>
+                              {c?.email && <div style={S.muted}>{c.email}</div>}
+                            </div>
+                            <button
+                              style={{ ...S.btnBase, ...S.btnPrimary }}
+                              onClick={() => onAssign(c)}
+                            >
+                              Asignar
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   )}
                 </>
               )}
-
-              {pickerOpen && (
-                <div style={S.pickerPanel}>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <input
-                      style={S.input}
-                      placeholder="Buscar colaborador (nombre o correo)…"
-                      value={term}
-                      onChange={(e) => setTerm(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && doSearch()}
-                      onFocus={(e) => Object.assign(e.currentTarget.style, S.focusPrimary)}
-                      onBlur={(e) => { e.currentTarget.style.boxShadow = ''; e.currentTarget.style.borderColor = 'var(--border)'; }}
-                    />
-                    <button
-                      style={{ ...S.btnBase, ...S.btnPrimary }}
-                      onClick={doSearch}
-                      disabled={searching || !colaboradoresSvc}
-                    >
-                      {searching ? 'Buscando…' : 'Buscar'}
-                    </button>
-                    <button
-                      style={{ ...S.btnBase, ...S.btnGhost }}
-                      onClick={() => { setPickerOpen(false); setTerm(''); setResults([]); }}
-                    >
-                      Cerrar
-                    </button>
-                  </div>
-
-                  <ul style={S.list}>
-                    {results.length === 0 && !searching && (
-                      <li style={S.muted}>Sin resultados</li>
-                    )}
-                    {results.map((c) => (
-                      <li key={c?.id} style={S.listItem}>
-                        <div>
-                          <div style={{ fontWeight: 600, color: '#0f172a' }}>{c?.name}</div>
-                          {c?.email && <div style={S.muted}>{c.email}</div>}
-                        </div>
-                        <button style={{ ...S.btnBase, ...S.btnPrimary }} onClick={() => onAssign(c)}>
-                          Asignar
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
             </div>
           )}
 
-          {/* ===== Reserva puntual (con selector de colaboradores) ===== */}
+          {/* ===== Reserva puntual (solo si existe slot.Id) ===== */}
           {mode === 'reserva' && (
             <div style={S.card}>
               <h4 style={{ margin: 0 }}>Reserva puntual por turno</h4>
@@ -572,172 +627,223 @@ export default function SlotDetailsModal({
                 Crea una reserva para un <strong>día</strong> y <strong>turno</strong> (AM/PM).
               </div>
 
-              {/* Selector de colaborador SOLO para reserva */}
-              <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
-                <div style={S.row2}>
-                  <label style={{ ...S.labelCol, marginBottom: 0 }}>
-                    <span><strong>Colaborador</strong></span>
-                    <input
-                      style={S.input}
-                      type="text"
-                      placeholder="Buscar por nombre/correo/cargo…"
-                      value={colabTerm}
-                      onChange={(e) => setColabTerm(e.target.value)}
-                      disabled={workersLoading}
-                      onFocus={(e) => Object.assign(e.currentTarget.style, S.focusPrimary)}
-                      onBlur={(e) => { e.currentTarget.style.boxShadow = ''; e.currentTarget.style.borderColor = 'var(--border)'; }}
-                    />
-                  </label>
-
-                  <label style={{ ...S.labelCol, marginBottom: 0 }}>
-                    <span><strong>&nbsp;</strong></span>
-                    <select
-                      style={S.select}
-                      value={selectedWorkerId}
-                      onChange={(e) => onSelectWorker(e.target.value)}
-                      disabled={workersLoading}
-                      onFocus={(e) => Object.assign(e.currentTarget.style, S.focusPrimary)}
-                      onBlur={(e) => { e.currentTarget.style.boxShadow = ''; e.currentTarget.style.borderColor = 'var(--border)'; }}
-                    >
-                      <option value="">
-                        {workersLoading
-                          ? 'Cargando colaboradores…'
-                          : filteredWorkers.length === 0
-                          ? 'Sin resultados'
-                          : 'Selecciona un colaborador (opcional)'}
-                      </option>
-
-                      {filteredWorkers.map((w) => (
-                        <option key={w.key} value={w.key}>
-                          {w.name}{w.job ? ` · ${w.job}` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+              {!slot?.Id && (
+                <div style={S.muted as React.CSSProperties}>
+                  Guarda primero la celda para habilitar las reservas.
                 </div>
+              )}
 
-                <small style={S.muted}>
-                  Al seleccionar, se rellenan Nombre y Correo (puedes editarlos).
-                </small>
-              </fieldset>
+              {slot?.Id && (
+                <>
+                  {/* Selector de colaborador SOLO para reserva */}
+                  <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+                    <div style={S.row2}>
+                      <label style={{ ...S.labelCol, marginBottom: 0 }}>
+                        <span>
+                          <strong>Colaborador</strong>
+                        </span>
+                        <input
+                          style={S.input}
+                          type="text"
+                          placeholder="Buscar por nombre/correo/cargo…"
+                          value={colabTerm}
+                          onChange={(e) => setColabTerm(e.target.value)}
+                          disabled={workersLoading}
+                          onFocus={(e) => Object.assign(e.currentTarget.style, S.focusPrimary)}
+                          onBlur={(e) => {
+                            e.currentTarget.style.boxShadow = '';
+                            e.currentTarget.style.borderColor = 'var(--border)';
+                          }}
+                        />
+                      </label>
 
-              {rvError && <div style={{ color: 'crimson' }}>{rvError}</div>}
+                      <label style={{ ...S.labelCol, marginBottom: 0 }}>
+                        <span>
+                          <strong>&nbsp;</strong>
+                        </span>
+                        <select
+                          style={S.select}
+                          value={selectedWorkerId}
+                          onChange={(e) => onSelectWorker(e.target.value)}
+                          disabled={workersLoading}
+                          onFocus={(e) => Object.assign(e.currentTarget.style, S.focusPrimary)}
+                          onBlur={(e) => {
+                            e.currentTarget.style.boxShadow = '';
+                            e.currentTarget.style.borderColor = 'var(--border)';
+                          }}
+                        >
+                          <option value="">
+                            {workersLoading
+                              ? 'Cargando colaboradores…'
+                              : filteredWorkers.length === 0
+                              ? 'Sin resultados'
+                              : 'Selecciona un colaborador (opcional)'}
+                          </option>
 
-              <div style={{ display: 'grid', gap: 10, marginTop: 8 }}>
-                {/* Fila: Fecha + Turno */}
-                <div style={S.row2}>
-                  <label style={S.labelCol}>
-                    <span><strong>Fecha</strong></span>
-                    <input
-                      type="date"
-                      style={S.input}
-                      value={rvDate}
-                      onChange={(e) => setRvDate(e.target.value)}
-                      min={todayISO}
-                      onFocus={(e) => Object.assign(e.currentTarget.style, S.focusPrimary)}
-                      onBlur={(e) => { e.currentTarget.style.boxShadow = ''; e.currentTarget.style.borderColor = 'var(--border)'; }}
-                    />
-                  </label>
+                          {filteredWorkers.map((w) => (
+                            <option key={w.key} value={w.key}>
+                              {w.name}
+                              {w.job ? ` · ${w.job}` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
 
-                  <label style={S.labelCol}>
-                    <span><strong>Turno</strong></span>
-                    <select
-                      style={S.select}
-                      value={rvTurn}
-                      onChange={(e) => setRvTurn(e.target.value as 'Manana' | 'Tarde' | 'Dia completo')}
-                      onFocus={(e) => Object.assign(e.currentTarget.style, S.focusPrimary)}
-                      onBlur={(e) => { e.currentTarget.style.boxShadow = ''; e.currentTarget.style.borderColor = 'var(--border)'; }}
-                    >
-                      <option value="Manana">AM (06:00–12:59)</option>
-                      <option value="Tarde">PM (13:00–19:00)</option>
-                      <option value="Dia completo">Día completo</option>
-                    </select>
-                  </label>
-                </div>
+                    <small style={S.muted}>
+                      Al seleccionar, se rellenan Nombre y Correo (puedes editarlos).
+                    </small>
+                  </fieldset>
 
-                {/* Fila: Nombre + Correo */}
-                <div style={S.row2}>
-                  <label style={S.labelCol}>
-                    <span><strong>Nombre</strong></span>
-                    <input
-                      style={{
-                        ...S.input,
-                        ...(rvTouched.name && nameError ? S.errorBorder : {}),
-                      }}
-                      value={rvName}
-                      onChange={(e) => { setRvName(e.target.value); if (rvError) setRvError(null); }}
-                      onBlur={() => setRvTouched((t) => ({ ...t, name: true }))}
-                      onFocus={(e) => !nameError && Object.assign(e.currentTarget.style, S.focusPrimary)}
-                      placeholder="Nombre del usuario"
-                      required
-                      aria-required="true"
-                      aria-invalid={!!(rvTouched.name && nameError)}
-                    />
-                    {rvTouched.name && nameError && (
-                      <small style={{ color: '#dc2626' }}>{nameError}</small>
-                    )}
-                  </label>
+                  {rvError && <div style={{ color: 'crimson' }}>{rvError}</div>}
 
-                  <label style={S.labelCol}>
-                    <span><strong>Correo</strong></span>
-                    <input
-                      style={{
-                        ...S.input,
-                        ...(rvTouched.mail && mailError ? S.errorBorder : {}),
-                      }}
-                      type="email"
-                      value={rvMail}
-                      onChange={(e) => { setRvMail(e.target.value); if (rvError) setRvError(null); }}
-                      onBlur={() => setRvTouched((t) => ({ ...t, mail: true }))}
-                      onFocus={(e) => !mailError && Object.assign(e.currentTarget.style, S.focusPrimary)}
-                      placeholder="correo@empresa.com"
-                      required
-                      aria-required="true"
-                      aria-invalid={!!(rvTouched.mail && mailError)}
-                    />
-                    {rvTouched.mail && mailError && (
-                      <small style={{ color: '#dc2626' }}>{mailError}</small>
-                    )}
-                  </label>
-                </div>
+                  <div style={{ display: 'grid', gap: 10, marginTop: 8 }}>
+                    {/* Fila: Fecha + Turno */}
+                    <div style={S.row2}>
+                      <label style={S.labelCol}>
+                        <span>
+                          <strong>Fecha</strong>
+                        </span>
+                        <input
+                          type="date"
+                          style={S.input}
+                          value={rvDate}
+                          onChange={(e) => setRvDate(e.target.value)}
+                          min={todayISO}
+                          onFocus={(e) => Object.assign(e.currentTarget.style, S.focusPrimary)}
+                          onBlur={(e) => {
+                            e.currentTarget.style.boxShadow = '';
+                            e.currentTarget.style.borderColor = 'var(--border)';
+                          }}
+                        />
+                      </label>
 
-                {/* Botonera */}
-                <br />
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                  <button
-                    style={{ ...S.btnBase, ...S.btnGhost }}
-                    type="button"
-                    onClick={() => {
-                      setRvDate(todayISO);
-                      setRvTurn('Manana');
-                      setRvName(assignee?.name ?? '');
-                      setRvMail(assignee?.email ?? '');
-                      setRvError(null);
-                      setRvTouched({ name: false, mail: false });
-                      setColabTerm('');
-                      setSelectedWorkerId('');
-                    }}
-                  >
-                    Limpiar
-                  </button>
-                  <button
-                    style={{ ...S.btnBase, ...S.btnPrimary }}
-                    type="button"
-                    onClick={onCreateReservation}
-                    disabled={!canSubmitReservation || !reservationsSvc}
-                  >
-                    {rvSaving ? 'Creando…' : 'Crear reserva'}
-                  </button>
-                </div>
-              </div>
+                      <label style={S.labelCol}>
+                        <span>
+                          <strong>Turno</strong>
+                        </span>
+                        <select
+                          style={S.select}
+                          value={rvTurn}
+                          onChange={(e) =>
+                            setRvTurn(e.target.value as 'Manana' | 'Tarde' | 'Dia completo')
+                          }
+                          onFocus={(e) => Object.assign(e.currentTarget.style, S.focusPrimary)}
+                          onBlur={(e) => {
+                            e.currentTarget.style.boxShadow = '';
+                            e.currentTarget.style.borderColor = 'var(--border)';
+                          }}
+                        >
+                          <option value="Manana">AM (06:00–12:59)</option>
+                          <option value="Tarde">PM (13:00–19:00)</option>
+                          <option value="Dia completo">Día completo</option>
+                        </select>
+                      </label>
+                    </div>
+
+                    {/* Fila: Nombre + Correo */}
+                    <div style={S.row2}>
+                      <label style={S.labelCol}>
+                        <span>
+                          <strong>Nombre</strong>
+                        </span>
+                        <input
+                          style={{
+                            ...S.input,
+                            ...(rvTouched.name && nameError ? S.errorBorder : {}),
+                          }}
+                          value={rvName}
+                          onChange={(e) => {
+                            setRvName(e.target.value);
+                            if (rvError) setRvError(null);
+                          }}
+                          onBlur={() => setRvTouched((t) => ({ ...t, name: true }))}
+                          onFocus={(e) =>
+                            !nameError && Object.assign(e.currentTarget.style, S.focusPrimary)
+                          }
+                          placeholder="Nombre del usuario"
+                          required
+                          aria-required="true"
+                          aria-invalid={!!(rvTouched.name && nameError)}
+                        />
+                        {rvTouched.name && nameError && (
+                          <small style={{ color: '#dc2626' }}>{nameError}</small>
+                        )}
+                      </label>
+
+                      <label style={S.labelCol}>
+                        <span>
+                          <strong>Correo</strong>
+                        </span>
+                        <input
+                          style={{
+                            ...S.input,
+                            ...(rvTouched.mail && mailError ? S.errorBorder : {}),
+                          }}
+                          type="email"
+                          value={rvMail}
+                          onChange={(e) => {
+                            setRvMail(e.target.value);
+                            if (rvError) setRvError(null);
+                          }}
+                          onBlur={() => setRvTouched((t) => ({ ...t, mail: true }))}
+                          onFocus={(e) =>
+                            !mailError && Object.assign(e.currentTarget.style, S.focusPrimary)
+                          }
+                          placeholder="correo@empresa.com"
+                          required
+                          aria-required="true"
+                          aria-invalid={!!(rvTouched.mail && mailError)}
+                        />
+                        {rvTouched.mail && mailError && (
+                          <small style={{ color: '#dc2626' }}>{mailError}</small>
+                        )}
+                      </label>
+                    </div>
+
+                    {/* Botonera */}
+                    <br />
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                      <button
+                        style={{ ...S.btnBase, ...S.btnGhost }}
+                        type="button"
+                        onClick={() => {
+                          setRvDate(todayISO);
+                          setRvTurn('Manana');
+                          setRvName(assignee?.name ?? '');
+                          setRvMail(assignee?.email ?? '');
+                          setRvError(null);
+                          setRvTouched({ name: false, mail: false });
+                          setColabTerm('');
+                          setSelectedWorkerId('');
+                        }}
+                      >
+                        Limpiar
+                      </button>
+                      <button
+                        style={{ ...S.btnBase, ...S.btnPrimary }}
+                        type="button"
+                        onClick={onCreateReservation}
+                        disabled={!canSubmitReservation || !reservationsSvc}
+                      >
+                        {rvSaving ? 'Creando…' : 'Crear reserva'}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
 
         <footer style={S.footer}>
-          <button style={{ ...S.btnBase, ...S.btnGhost }} onClick={onClose}>Cerrar</button>
+          <button style={{ ...S.btnBase, ...S.btnGhost }} onClick={onClose}>
+            Cerrar
+          </button>
         </footer>
       </div>
     </div>
   );
+
+  return createPortal(content, document.body);
 }

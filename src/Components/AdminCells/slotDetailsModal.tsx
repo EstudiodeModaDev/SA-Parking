@@ -26,16 +26,67 @@ type Props = {
   workersLoading?: boolean;
 };
 
-// ===== estilos inline para abreviar
+// ===== estilos inline coherentes con tus variables CSS =====
 const S = {
   backdrop: {
     position: 'fixed' as const,
     inset: 0,
-    background: 'rgba(0,0,0,.45)',
+    background: 'rgba(2,6,23,.45)',
     zIndex: 99999,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  modal: {
+    background: 'var(--bg)',
+    width: 'min(900px, 96vw)',
+    maxHeight: '90vh',
+    overflow: 'auto',
+    borderRadius: 'var(--radius-sm)',
+    boxShadow: '0 12px 32px rgba(2,6,23,.25)',
+    border: '1px solid var(--border)',
+  },
+  header: {
+    padding: '12px 16px',
+    borderBottom: '1px solid var(--border)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  title: { margin: 0, fontSize: 18, fontWeight: 700 as const, color: 'var(--fg)' },
+  closeBtn: {
+    background: 'transparent',
+    border: 0,
+    fontSize: 20,
+    lineHeight: 1,
+    cursor: 'pointer',
+    color: 'var(--muted)',
+    borderRadius: 8,
+    padding: '4px 6px',
+  },
+  body: { padding: '12px 16px', display: 'grid', gap: 10, fontSize: 14, color: 'var(--fg)' },
+  footer: {
+    padding: '12px 16px',
+    borderTop: '1px solid var(--border)',
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: 8,
+  },
+  muted: { color: 'var(--muted)' },
+  card: {
+    border: '1px solid var(--border)',
+    borderRadius: 10,
+    padding: 12,
+    display: 'grid',
+    gap: 10,
+    background: '#fff',
+    boxShadow: 'var(--shadow)',
+  },
+  rowBetween: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
   },
   row2: {
     display: 'grid',
@@ -47,54 +98,16 @@ const S = {
     gridTemplateColumns: '1fr 1fr 1fr',
     gap: 12,
   } as React.CSSProperties,
-  modal: {
-    background: '#fff',
-    width: 'min(900px, 96vw)',
-    maxHeight: '90vh',
-    overflow: 'auto',
-    borderRadius: 12,
-    boxShadow: '0 10px 30px rgba(0,0,0,.2)',
-    border: '1px solid #e5e7eb',
-  },
-  header: {
-    padding: '12px 16px',
-    borderBottom: '1px solid #e5e7eb',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  title: { margin: 0, fontSize: 18, fontWeight: 700 as const },
-  closeBtn: {
-    background: 'transparent',
-    border: 0,
-    fontSize: 20,
-    lineHeight: 1,
+  btnBase: {
+    padding: '8px 12px',
+    borderRadius: 8,
+    border: 'none',
     cursor: 'pointer',
-  },
-  body: { padding: '12px 16px', display: 'grid', gap: 10, fontSize: 14 },
-  footer: {
-    padding: '12px 16px',
-    borderTop: '1px solid #e5e7eb',
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: 8,
-  },
-  muted: { color: '#6b7280' },
-  card: {
-    border: '1px solid #e5e7eb',
-    borderRadius: 10,
-    padding: 12,
-    display: 'grid',
-    gap: 10,
-  },
-  rowBetween: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
+    fontWeight: 700,
+    fontSize: 14,
+  } as React.CSSProperties,
   btnPrimary: {
-    background: '#2563eb',
+    background: 'var(--primary)',
     color: '#fff',
     border: 0,
     padding: '8px 12px',
@@ -103,10 +116,11 @@ const S = {
   },
   btnGhost: {
     background: 'transparent',
-    border: '1px solid #e5e7eb',
+    border: '1px solid var(--border)',
     padding: '8px 12px',
     borderRadius: 8,
     cursor: 'pointer',
+    color: 'var(--fg)',
   },
   btnDanger: {
     background: '#dc2626',
@@ -119,25 +133,31 @@ const S = {
   input: {
     width: '100%',
     padding: '8px 10px',
-    border: '1px solid #e5e7eb',
+    border: '1px solid var(--border)',
     borderRadius: 8,
     fontSize: 14,
+    background: '#fff',
+    color: 'var(--fg)',
+    outline: 'none',
   },
   select: {
     width: '100%',
     padding: '8px 10px',
-    border: '1px solid #e5e7eb',
+    border: '1px solid var(--border)',
     borderRadius: 8,
     fontSize: 14,
     background: '#fff',
+    color: 'var(--fg)',
+    outline: 'none',
   },
   pickerPanel: {
     marginTop: 8,
-    border: '1px solid #e5e7eb',
+    border: '1px solid var(--border)',
     borderRadius: 8,
     padding: 10,
     display: 'grid',
     gap: 10,
+    background: '#fff',
   },
   list: { listStyle: 'none', margin: 0, padding: 0 },
   listItem: {
@@ -148,7 +168,16 @@ const S = {
     borderTop: '1px solid #f3f4f6',
   },
   labelCol: { display: 'grid', gap: 6 },
-};
+  // Helpers de focus ring (aplícalos vía spread cuando corresponda)
+  focusPrimary: {
+    boxShadow: '0 0 0 2px rgba(37,99,235,.15)',
+    borderColor: 'var(--primary)',
+  },
+  errorBorder: {
+    borderColor: '#dc2626',
+    boxShadow: '0 0 0 2px rgba(220,38,38,.12)',
+  },
+} as const;
 
 const norm = (s: string) =>
   s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
@@ -438,7 +467,13 @@ export default function SlotDetailsModal({
       <div style={S.modal}>
         <header style={S.header}>
           <h3 style={S.title}>Celda {slot.Title}</h3>
-          <button style={S.closeBtn} onClick={onClose} aria-label="Cerrar">
+          <button
+            style={S.closeBtn}
+            onClick={onClose}
+            aria-label="Cerrar"
+            onFocus={(e) => Object.assign(e.currentTarget.style, S.focusPrimary)}
+            onBlur={(e) => { e.currentTarget.style.boxShadow = ''; e.currentTarget.style.borderColor = ''; }}
+          >
             ×
           </button>
         </header>
@@ -473,7 +508,7 @@ export default function SlotDetailsModal({
                   ) : (
                     <div style={S.rowBetween}>
                       <div style={S.muted}>Sin asignación</div>
-                      <button style={S.btnPrimary} onClick={() => setPickerOpen(true)}>
+                      <button style={{ ...S.btnBase, ...S.btnPrimary }} onClick={() => setPickerOpen(true)}>
                         Asignar
                       </button>
                     </div>
@@ -490,12 +525,18 @@ export default function SlotDetailsModal({
                       value={term}
                       onChange={(e) => setTerm(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && doSearch()}
+                      onFocus={(e) => Object.assign(e.currentTarget.style, S.focusPrimary)}
+                      onBlur={(e) => { e.currentTarget.style.boxShadow = ''; e.currentTarget.style.borderColor = 'var(--border)'; }}
                     />
-                    <button style={S.btnPrimary} onClick={doSearch} disabled={searching || !colaboradoresSvc}>
+                    <button
+                      style={{ ...S.btnBase, ...S.btnPrimary }}
+                      onClick={doSearch}
+                      disabled={searching || !colaboradoresSvc}
+                    >
                       {searching ? 'Buscando…' : 'Buscar'}
                     </button>
                     <button
-                      style={S.btnGhost}
+                      style={{ ...S.btnBase, ...S.btnGhost }}
                       onClick={() => { setPickerOpen(false); setTerm(''); setResults([]); }}
                     >
                       Cerrar
@@ -509,10 +550,10 @@ export default function SlotDetailsModal({
                     {results.map((c) => (
                       <li key={c?.id} style={S.listItem}>
                         <div>
-                          <div style={{ fontWeight: 600 }}>{c?.name}</div>
+                          <div style={{ fontWeight: 600, color: '#0f172a' }}>{c?.name}</div>
                           {c?.email && <div style={S.muted}>{c.email}</div>}
                         </div>
-                        <button style={S.btnPrimary} onClick={() => onAssign(c)}>
+                        <button style={{ ...S.btnBase, ...S.btnPrimary }} onClick={() => onAssign(c)}>
                           Asignar
                         </button>
                       </li>
@@ -527,7 +568,7 @@ export default function SlotDetailsModal({
           {mode === 'reserva' && (
             <div style={S.card}>
               <h4 style={{ margin: 0 }}>Reserva puntual por turno</h4>
-              <div style={{ ...S.muted, marginBottom: 8 }}>
+              <div style={{ ...(S.muted as React.CSSProperties), marginBottom: 8 }}>
                 Crea una reserva para un <strong>día</strong> y <strong>turno</strong> (AM/PM).
               </div>
 
@@ -543,6 +584,8 @@ export default function SlotDetailsModal({
                       value={colabTerm}
                       onChange={(e) => setColabTerm(e.target.value)}
                       disabled={workersLoading}
+                      onFocus={(e) => Object.assign(e.currentTarget.style, S.focusPrimary)}
+                      onBlur={(e) => { e.currentTarget.style.boxShadow = ''; e.currentTarget.style.borderColor = 'var(--border)'; }}
                     />
                   </label>
 
@@ -553,6 +596,8 @@ export default function SlotDetailsModal({
                       value={selectedWorkerId}
                       onChange={(e) => onSelectWorker(e.target.value)}
                       disabled={workersLoading}
+                      onFocus={(e) => Object.assign(e.currentTarget.style, S.focusPrimary)}
+                      onBlur={(e) => { e.currentTarget.style.boxShadow = ''; e.currentTarget.style.borderColor = 'var(--border)'; }}
                     >
                       <option value="">
                         {workersLoading
@@ -589,6 +634,8 @@ export default function SlotDetailsModal({
                       value={rvDate}
                       onChange={(e) => setRvDate(e.target.value)}
                       min={todayISO}
+                      onFocus={(e) => Object.assign(e.currentTarget.style, S.focusPrimary)}
+                      onBlur={(e) => { e.currentTarget.style.boxShadow = ''; e.currentTarget.style.borderColor = 'var(--border)'; }}
                     />
                   </label>
 
@@ -598,6 +645,8 @@ export default function SlotDetailsModal({
                       style={S.select}
                       value={rvTurn}
                       onChange={(e) => setRvTurn(e.target.value as 'Manana' | 'Tarde' | 'Dia completo')}
+                      onFocus={(e) => Object.assign(e.currentTarget.style, S.focusPrimary)}
+                      onBlur={(e) => { e.currentTarget.style.boxShadow = ''; e.currentTarget.style.borderColor = 'var(--border)'; }}
                     >
                       <option value="Manana">AM (06:00–12:59)</option>
                       <option value="Tarde">PM (13:00–19:00)</option>
@@ -613,12 +662,12 @@ export default function SlotDetailsModal({
                     <input
                       style={{
                         ...S.input,
-                        borderColor: rvTouched.name && nameError ? '#dc2626' : (S.input as any).borderColor,
-                        outlineColor: rvTouched.name && nameError ? '#dc2626' : undefined,
+                        ...(rvTouched.name && nameError ? S.errorBorder : {}),
                       }}
                       value={rvName}
                       onChange={(e) => { setRvName(e.target.value); if (rvError) setRvError(null); }}
                       onBlur={() => setRvTouched((t) => ({ ...t, name: true }))}
+                      onFocus={(e) => !nameError && Object.assign(e.currentTarget.style, S.focusPrimary)}
                       placeholder="Nombre del usuario"
                       required
                       aria-required="true"
@@ -634,13 +683,13 @@ export default function SlotDetailsModal({
                     <input
                       style={{
                         ...S.input,
-                        borderColor: rvTouched.mail && mailError ? '#dc2626' : (S.input as any).borderColor,
-                        outlineColor: rvTouched.mail && mailError ? '#dc2626' : undefined,
+                        ...(rvTouched.mail && mailError ? S.errorBorder : {}),
                       }}
                       type="email"
                       value={rvMail}
                       onChange={(e) => { setRvMail(e.target.value); if (rvError) setRvError(null); }}
                       onBlur={() => setRvTouched((t) => ({ ...t, mail: true }))}
+                      onFocus={(e) => !mailError && Object.assign(e.currentTarget.style, S.focusPrimary)}
                       placeholder="correo@empresa.com"
                       required
                       aria-required="true"
@@ -656,7 +705,7 @@ export default function SlotDetailsModal({
                 <br />
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
                   <button
-                    style={S.btnGhost}
+                    style={{ ...S.btnBase, ...S.btnGhost }}
                     type="button"
                     onClick={() => {
                       setRvDate(todayISO);
@@ -672,7 +721,7 @@ export default function SlotDetailsModal({
                     Limpiar
                   </button>
                   <button
-                    style={S.btnPrimary}
+                    style={{ ...S.btnBase, ...S.btnPrimary }}
                     type="button"
                     onClick={onCreateReservation}
                     disabled={!canSubmitReservation || !reservationsSvc}
@@ -686,7 +735,7 @@ export default function SlotDetailsModal({
         </div>
 
         <footer style={S.footer}>
-          <button style={S.btnGhost} onClick={onClose}>Cerrar</button>
+          <button style={{ ...S.btnBase, ...S.btnGhost }} onClick={onClose}>Cerrar</button>
         </footer>
       </div>
     </div>

@@ -80,13 +80,13 @@ export async function searchUnassignedCollaborators(
   const filters: string[] = [];
 
   // Sin asignación
-  filters.push('(fields/SpotAsignado eq null or fields/SpotAsignado eq 0)');
+  filters.push('(fields/SpotAsignado eq null)');
 
   // Búsqueda por texto
   if (termSafe) {
     // OData v4 en Graph usa contains() y tolower()
     filters.push(
-      `(contains(tolower(fields/Title),'${termSafe}') or contains(tolower(fields/Correo),'${termSafe}'))`
+      `(startswith(fields/Title,'${termSafe}'))`
     );
   }
 

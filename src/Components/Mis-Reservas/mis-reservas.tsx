@@ -4,6 +4,7 @@ import styles from './mis-reservas.module.css';
 import { useMisReservas } from '../../Hooks/useMisReservas';
 import { statusColor } from '../../utils/status';
 import { useGraphServices } from '../../graph/GraphServicesContext';
+import { formatDateTime } from '../../utils/date';
 
 type Props = { userMail: string; isAdmin: boolean };
 
@@ -129,7 +130,7 @@ const MisReservas: React.FC<Props> = ({ userMail, isAdmin = false }) => {
                   {rows.map((r) => (
                     <tr key={r.Id}>
                       {isAdmin ? <td className={styles.td}>{r.User}</td> : null}
-                      <td className={styles.td}>{r.created}</td>
+                      <td className={styles.td}>{formatDateTime(r.created)}</td>
                       <td className={styles.td}>{r.Date}</td>
                       <td className={styles.td}>{r.Turn}</td>
                       <td className={styles.td}>{spotNames[r.Spot] ?? 'Cargando…'}</td>

@@ -116,7 +116,8 @@ const MisReservas: React.FC<Props> = ({ userMail, isAdmin = false }) => {
                 <thead>
                   <tr className={styles.theadRow}>
                     {isAdmin ? <th className={styles.th}>Usuario</th> : null}
-                    <th className={styles.th}>Fecha</th>
+                    <th className={styles.th}>Fecha en la que se reservo</th>
+                    <th className={styles.th}>Fecha de la reserva</th>
                     <th className={styles.th}>Turno</th>
                     <th className={styles.th}>Celda</th>
                     <th className={styles.th}>Vehículo</th>
@@ -128,6 +129,7 @@ const MisReservas: React.FC<Props> = ({ userMail, isAdmin = false }) => {
                   {rows.map((r) => (
                     <tr key={r.Id}>
                       {isAdmin ? <td className={styles.td}>{r.User}</td> : null}
+                      <td className={styles.td}>{r.created}</td>
                       <td className={styles.td}>{r.Date}</td>
                       <td className={styles.td}>{r.Turn}</td>
                       <td className={styles.td}>{spotNames[r.Spot] ?? 'Cargando…'}</td>

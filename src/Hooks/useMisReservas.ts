@@ -17,6 +17,7 @@ const mapModelToUI = (m: Reservations): ReservationUI => ({
   VehicleType: String(m.VehicleType ?? ''),
   Status: String(m.Status ?? ''),
   User: String(m.Title),
+  created: String(m.Created ?? ''),
 });
 
 export type FilterMode = 'upcoming-active' | 'history';

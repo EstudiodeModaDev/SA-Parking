@@ -164,7 +164,7 @@ export function useReservar(
         if (await hasActiveReservationAnyTurnSameDay(userMail, dateISO)) {
           return {
             ok: false,
-            message: `No puedes reservar día completo: ya tienes una reserva activa para el ${dateISO} (en cualquier turno).`,
+            message: `No puedes reservar día completo: ya tienes una reserva activa para el ${dateISO}s.`,
           };
         }
       } else {

@@ -27,7 +27,8 @@ export type ReservationUI = {
   Spot: string;
   VehicleType: string;
   Status: string;
-  User: string
+  User: string,
+  created: string
 };
 
 export const mapReservationToUI = (r: any): ReservationUI => {
@@ -57,7 +58,8 @@ export const mapReservationToUI = (r: any): ReservationUI => {
     Spot: spotTitle,
     VehicleType: String(r.VehicleType ?? r.Vehiculo ?? r.vehicleType ?? ''),
     Status: String(r.Status ?? r.Estado ?? r.status ?? ''),
-    User: String(r.NombreUsuario)
+    User: String(r.NombreUsuario),
+    created: String(r.Created ?? r.created ?? ''),
   };
 };
 

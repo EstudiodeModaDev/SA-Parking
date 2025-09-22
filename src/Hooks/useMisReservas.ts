@@ -78,6 +78,7 @@ export function useMisReservas(
     try {
       const opts = buildFilter();
       const list = await reservationsSvc.getAll(opts);
+      console.log('[MisReservas] fetchRows got', list?.length ?? 0, 'items with opts', list);
       const mapped = (Array.isArray(list) ? list : []).map(mapModelToUI);
 
       setRows(mapped);

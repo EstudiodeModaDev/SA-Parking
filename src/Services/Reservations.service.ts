@@ -2,6 +2,7 @@
 import { GraphRest } from '../graph/GraphRest';
 import type { GetAllOpts } from '../Models/Commons';
 import type { Reservations } from '../Models/Reservation';
+import { format5 } from '../utils/number';
 
 export class ReservationsService {
   private graph!: GraphRest;
@@ -45,6 +46,18 @@ export class ReservationsService {
     } catch {}
   }
 
+    //Definir codigo
+  private async reservationCode(){
+      const items = await this.getAll();
+      let codigo = '00001';
+
+      if (Array.isArray(items)) {
+        codigo = format5(items.length + 1); // -> "00042"
+      }
+
+      return codigo;
+  }
+  
   private async ensureIds() {
     if (!this.siteId || !this.listId) this.loadCache();
 
@@ -105,6 +118,7 @@ export class ReservationsService {
       VehicleType: record.VehicleType, // o VehicleType si así se llama tu columna
       Status: record.Status,
       OData__ColorTag: record.OData__ColorTag,
+      Codigo: await this.reservationCode()
     };
 
     const res = await this.graph.post<any>(

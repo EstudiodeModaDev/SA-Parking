@@ -131,7 +131,7 @@ const MisReservas: React.FC<Props> = ({ userMail, isAdmin = false }) => {
                   {rows.map((r) => (
                     <tr key={r.Id}>
                       {isAdmin ? <td className={styles.td}>{r.User}</td> : null}
-                      <td className={styles.td}>{r.codigo}</td>
+                      <td className={styles.td}>{r.Codigo}</td>
                       <td className={styles.td}>{formatDateTime(r.created)}</td>
                       <td className={styles.td}>{r.Date}</td>
                       <td className={styles.td}>{r.Turn}</td>

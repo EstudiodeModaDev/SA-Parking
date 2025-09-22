@@ -4,7 +4,7 @@ export interface Reservations {
   NombreUsuario?: string;
   Date?: string;
   Turn?: string;
-  codigo?: string;
+  Codigo?: string;
 
   // Lookup a la celda
   SpotIdLookupId?: number | null;
@@ -30,7 +30,7 @@ export type ReservationUI = {
   Status: string;
   User: string,
   created: string,
-  codigo?: string
+  Codigo?: string
 };
 
 export const mapReservationToUI = (r: any): ReservationUI => {

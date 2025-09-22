@@ -88,6 +88,7 @@ export class ReservationsService {
       NombreUsuario: f.NombreUsuario ?? undefined,
       Date: f.Date ?? undefined,
       Turn: f.Turn ?? undefined,
+      Codigo: f.Codigo ?? undefined,
 
       // Lookup SpotId
       SpotIdLookupId: f.SpotIdLookupId ,

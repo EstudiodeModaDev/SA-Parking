@@ -120,7 +120,7 @@ export class ReservationsService {
       OData__ColorTag: record.OData__ColorTag,
       Codigo: await this.reservationCode()
     };
-
+    console.log(fieldsPayload.Codigo)
     const res = await this.graph.post<any>(
       `/sites/${this.siteId}/lists/${this.listId}/items`,
       { fields: fieldsPayload }

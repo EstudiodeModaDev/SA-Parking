@@ -4,6 +4,7 @@ export interface Reservations {
   NombreUsuario?: string;
   Date?: string;
   Turn?: string;
+  codigo?: string;
 
   // Lookup a la celda
   SpotIdLookupId?: number | null;
@@ -28,7 +29,8 @@ export type ReservationUI = {
   VehicleType: string;
   Status: string;
   User: string,
-  created: string
+  created: string,
+  codigo?: string
 };
 
 export const mapReservationToUI = (r: any): ReservationUI => {

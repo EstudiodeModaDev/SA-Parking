@@ -18,6 +18,7 @@ import { GraphServicesProvider, useGraphServices } from './graph/GraphServicesCo
 import { UserService } from './Services/User.Service';
 import { SharedServices } from './Services/Shared.service';
 import UsuariosApp from './Components/PermisosApp/usuariosApp';
+import RegistroVehicular from './Components/RegistroVehicular/RegistroVehicular';
 
 // ------------------ Constantes UI ------------------
 const NAVS_ADMIN = [
@@ -340,7 +341,7 @@ function AppInner() {
             </div>
               {selectedColaborator === "fijos" &&  <ColaboradoresInscritos />}
               {selectedColaborator === "app" &&  <UsuariosApp/>}
-              {selectedColaborator === "fijos" &&  <ColaboradoresInscritos />}
+              {selectedColaborator === "registro" &&  <RegistroVehicular/>}
     
             </div>
           )}

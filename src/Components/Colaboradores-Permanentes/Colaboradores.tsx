@@ -14,6 +14,7 @@ import { useWorkers } from '../../Hooks/useWorkers';
 
 // ⬇️ Context donde expones las instancias de servicios (Graph)
 import { useGraphServices } from '../../graph/GraphServicesContext';
+import UsuariosApp from '../PermisosApp/usuariosApp';
 //   Debe exponer algo como:
 //   { colaboradoresSvc: ColaboradoresFijosService }
 
@@ -247,6 +248,8 @@ const ColaboradoresInscritos: React.FC = () => {
             </div>
           </>
         )}
+
+        <UsuariosApp></UsuariosApp>
 
         {/* MODAL: Agregar colaborador */}
         <ModalAgregarColaborador

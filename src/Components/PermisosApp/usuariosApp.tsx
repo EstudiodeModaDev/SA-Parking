@@ -6,10 +6,8 @@ import { useGroupMembers, addGroupMembersByEmails } from '../../Hooks/GraphUsers
 
 // Hook que trae TODOS los colaboradores/personas (para alimentar el combo del modal)
 import { useWorkers } from '../../Hooks/useWorkers';
-
-
-import ModalAgregarColaborador from '../AgregarColaborador/ModalAgregarColaborador';
 import { useAuth } from '../../auth/AuthProvider';
+import ModalOtorgarPermiso from '../AddGraphUsers/ModalAgregarPermiso';
 
 const UsuariosApp: React.FC = () => {
   const GroupID = '79012669-3208-412c-bae2-97d79f5f5f15';
@@ -189,11 +187,10 @@ const UsuariosApp: React.FC = () => {
       </div>
 
       {/* MODAL: el desplegable se alimenta con TODOS los colaboradores (useWorkers) */}
-      <ModalAgregarColaborador
+      <ModalOtorgarPermiso
         isOpen={isOpenAdd}
         onClose={closeAddModal}
-        onSave={async (c) => { await handleSaveFromModal({ nombre: c.nombre, correo: c.correo }); }}
-        slots={[]}              // si no usas celdas, envía vacío
+        onSave={async (c) => { await handleSaveFromModal({ nombre: c.name, correo: c.mail }); }}           // si no usas celdas, envía vacío
         slotsLoading={false}
         workers={workers}       // <- AQUÍ va la lista para el combo
         workersLoading={workersLoading}

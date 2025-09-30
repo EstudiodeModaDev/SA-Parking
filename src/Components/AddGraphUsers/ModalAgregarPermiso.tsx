@@ -1,87 +1,75 @@
 import * as React from 'react';
 import styles from './modalAgregarColaborador.module.css';
-import type { NewCollaborator } from '../../Models/colaboradores';
-import type { SlotUI } from '../../Models/Celdas';
-import { useGroupMembers } from '../../Hooks/GraphUsers';
 import type { newAccess } from '../../Models/GraphUsers';
 
 type Props = {
   isOpen: boolean;
   onClose: () => void;
   onSave?: (c: newAccess) => Promise<void> | void;
-  slots?: SlotUI[];
   slotsLoading?: boolean;
-  /** Nuevo: grupo desde donde leer miembros */
-  groupId: string;
+  /** Lista completa de colaboradores para alimentar el combo */
+  workers: any[];
+  workersLoading?: boolean;
 };
 
-const initialForm: newAccess = {
-  name:"",
-  mail: ""
-};
-
+const initialForm: newAccess = { name: '', mail: '' };
 const isEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s).trim());
+const norm = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
 
 const ModalOtorgarPermiso: React.FC<Props> = ({
   isOpen,
   onClose,
   onSave,
-  groupId,
+  workers = [],
+  workersLoading = false,
 }) => {
-  // ---- state
   const [form, setForm] = React.useState<newAccess>(initialForm);
   const [saving, setSaving] = React.useState(false);
   const [localError, setLocalError] = React.useState<string | null>(null);
   const [selectedUserId, setSelectedUserId] = React.useState<string>('');
+  const [term, setTerm] = React.useState('');
   const firstInputRef = React.useRef<HTMLInputElement | null>(null);
 
-  // Hook: miembros del grupo (paginado/filtrado en cliente)
-  const {
-    rows,          // AppUsers[]: { id, nombre, correo }
-    loading,       // estado de carga Graph
-    error,         // error del hook
-    search, setSearch,
-    refresh,
-  } = useGroupMembers(groupId);
-
-  // reset al abrir
   React.useEffect(() => {
     if (isOpen) {
       setForm(initialForm);
       setSelectedUserId('');
       setLocalError(null);
-      setSearch('');  // limpiar búsqueda del hook
-      refresh();      // re-cargar miembros
+      setTerm('');
       setTimeout(() => firstInputRef.current?.focus(), 0);
     }
-  }, [isOpen, setSearch, refresh]);
+  }, [isOpen]);
 
-  // cerrar con ESC
   React.useEffect(() => {
     if (!isOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !saving) onClose();
-    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !saving) onClose(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [isOpen, saving, onClose]);
 
+  const filteredWorkers = React.useMemo(() => {
+    if (!term) return workers;
+    const q = norm(term);
+    return workers.filter(w =>
+      norm(`${w.displayName ?? ''} ${w.mail ?? ''} ${w.jobTitle ?? ''}`).includes(q),
+    );
+  }, [workers, term]);
+
   const onSelectUser = (id: string) => {
     setSelectedUserId(id);
-    const u = rows.find(x => String(x.id) === String(id));
+    const u = workers.find(x => String(x.id) === String(id));
     if (!u) {
-      setForm(f => ({ ...f, name: '', mail: '' }));
+      setForm({ name: '', mail: '' });
       return;
     }
-    setForm(f => ({ ...f, name: u.nombre ?? '', mail: u.correo ?? '' }));
+    setForm({ name: u.displayName ?? '', mail: u.mail ?? '' });
     setLocalError(null);
   };
 
-  // validaciones
   const errors = React.useMemo(() => {
-    const e: Partial<Record<keyof NewCollaborator, string>> = {};
-    if (!form.name.trim()) e.nombre = 'El nombre es obligatorio.';
-    if (!isEmail(form.mail)) e.correo = 'Correo inválido.';
+    const e: Partial<Record<keyof newAccess, string>> = {};
+    if (!form.name.trim()) e.name = 'El nombre es obligatorio.';
+    if (!isEmail(form.mail)) e.mail = 'Correo inválido.';
     return e;
   }, [form]);
 
@@ -96,7 +84,7 @@ const ModalOtorgarPermiso: React.FC<Props> = ({
       await onSave?.(form);
       onClose();
     } catch (err: any) {
-      setLocalError(err?.message ?? 'No se pudo guardar el colaborador.');
+      setLocalError(err?.message ?? 'No se pudo otorgar el permiso.');
     } finally {
       setSaving(false);
     }
@@ -109,27 +97,14 @@ const ModalOtorgarPermiso: React.FC<Props> = ({
   };
 
   return (
-    <div
-      className={styles.overlay}
-      role="dialog"
-      aria-modal="true"
-      onMouseDown={onBackdrop}
-    >
+    <div className={styles.overlay} role="dialog" aria-modal="true" onMouseDown={onBackdrop}>
       <div className={styles.modal} onMouseDown={(e) => e.stopPropagation()}>
         <header className={styles.header}>
           <h2 className={styles.title}>Otorgar permiso</h2>
-          <button
-            className={styles.closeBtn}
-            onClick={onClose}
-            aria-label="Cerrar"
-            disabled={saving}
-          >
-            ×
-          </button>
+          <button className={styles.closeBtn} onClick={onClose} aria-label="Cerrar" disabled={saving}>×</button>
         </header>
 
         <form className={styles.body} onSubmit={handleSubmit} noValidate>
-          {/* Colaborador con búsqueda + dropdown alimentado por useGroupMembers */}
           <fieldset className={styles.fieldset}>
             <label className={styles.label}>Colaborador</label>
 
@@ -139,9 +114,9 @@ const ModalOtorgarPermiso: React.FC<Props> = ({
                 className={styles.input}
                 type="text"
                 placeholder="Buscar por nombre o correo…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                disabled={loading || saving}
+                value={term}
+                onChange={(e) => setTerm(e.target.value)}
+                disabled={workersLoading || saving}
                 autoComplete="off"
               />
 
@@ -149,46 +124,41 @@ const ModalOtorgarPermiso: React.FC<Props> = ({
                 className={styles.select}
                 value={selectedUserId}
                 onChange={(e) => onSelectUser(e.target.value)}
-                disabled={loading || saving}
+                disabled={workersLoading || saving}
                 aria-label="Selecciona un colaborador"
               >
                 <option value="">
-                  {loading
+                  {workersLoading
                     ? 'Cargando colaboradores…'
-                    : rows.length === 0
+                    : filteredWorkers.length === 0
                     ? 'Sin resultados'
                     : 'Selecciona un colaborador'}
                 </option>
-                {rows.map((u) => (
-                  <option key={String(u.id)} value={String(u.id)}>
-                    {u.nombre}{u.correo ? ` · ${u.correo}` : ''}
+                {filteredWorkers.map((w) => (
+                  <option key={String(w.id)} value={String(w.id)}>
+                    {w.displayName ?? '(Sin nombre)'}{w.mail ? ` · ${w.mail}` : ''}{w.jobTitle ? ` · ${w.jobTitle}` : ''}
                   </option>
                 ))}
               </select>
             </div>
 
             <small className={styles.hint}>
-              Al seleccionar del desplegable, se llenan Nombre y Correo (puedes editarlos).
+              Al seleccionar del desplegable, se llenan Nombre y Correo.
             </small>
 
-            {(error || localError) && (
-              <div className={styles.error}>{error ?? localError}</div>
-            )}
+            {localError && <div className={styles.error}>{localError}</div>}
           </fieldset>
 
-          {/* Datos editables */}
           <label className={styles.label}>
             Nombre
             <input
               className={styles.input}
               type="text"
               value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
-              required
-              aria-invalid={!!errors.nombre}
-              disabled={true}
+              readOnly
+              aria-invalid={!!errors.name}
             />
-            {errors.nombre && <small className={styles.error}>{errors.nombre}</small>}
+            {errors.name && <small className={styles.error}>{errors.name}</small>}
           </label>
 
           <label className={styles.label}>
@@ -197,29 +167,17 @@ const ModalOtorgarPermiso: React.FC<Props> = ({
               className={styles.input}
               type="email"
               value={form.mail}
-              onChange={(e) => setForm((f) => ({ ...f, correo: e.target.value }))}
-              required
-              disabled={true}
-              aria-invalid={!!errors.correo}
+              readOnly
+              aria-invalid={!!errors.mail}
             />
-            {errors.correo && <small className={styles.error}>{errors.correo}</small>}
+            {errors.mail && <small className={styles.error}>{errors.mail}</small>}
           </label>
 
-
           <div className={styles.actions}>
-            <button
-              type="button"
-              className={styles.btnGhost}
-              onClick={onClose}
-              disabled={saving}
-              >
+            <button type="button" className={styles.btnGhost} onClick={onClose} disabled={saving}>
               Cancelar
             </button>
-            <button
-              type="submit"
-              className={styles.btnPrimary}
-              disabled={saving || hasErrors}
-            >
+            <button type="submit" className={styles.btnPrimary} disabled={saving || hasErrors}>
               {saving ? 'Guardando…' : 'Guardar'}
             </button>
           </div>

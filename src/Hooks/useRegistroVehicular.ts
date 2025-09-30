@@ -1,6 +1,6 @@
 // src/hooks/useCollaborators.ts
 import * as React from 'react';
-import type { RegistroVehicularSP } from '../Models/RegistroVehicular';
+import type { RegistroVehicularMail, RegistroVehicularSP } from '../Models/RegistroVehicular';
 import type { RegistroVehicularService } from '../Services/RegistroVehicular.service';
 
 // ---- Mapeo item → UI ----
@@ -255,4 +255,102 @@ export function useRegistroVehicular(
     addVeh,
     deleteVeh,
   };
+}
+
+export async function sendRegistroVehicularEmail(
+  graph: any, // MicrosoftGraph.Client
+  data: RegistroVehicularMail
+): Promise<void> {
+  const {
+    correo,
+    nombre,
+    tipoVehiculo,
+    placa,
+    cedula,
+    cc = [],
+    solicitanteNombre,
+    solicitanteCorreo,
+  } = data;
+
+  // Asunto
+  const subject = `Solicitud de inscripción de vehículo — ${nombre} (${placa})`;
+
+  // Cuerpo HTML (formal)
+  const html = buildHtml({
+    nombre,
+    tipoVehiculo,
+    placa,
+    cedula,
+    solicitanteNombre,
+    solicitanteCorreo,
+  });
+
+  // Armar destinatarios
+  const toRecipients = [{ emailAddress: { address: correo } }];
+  const ccRecipients =
+    cc?.length ? cc.map((c) => ({ emailAddress: { address: c } })) : [];
+
+  // Enviar usando /me/sendMail (permiso delegado)
+  // Si tu app envía como buzón de servicio, usa `/users/{id|upn}/sendMail`.
+  await graph.api('/me/sendMail').post({
+    message: {
+      subject,
+      body: { contentType: 'HTML', content: html },
+      toRecipients,
+      ccRecipients,
+    },
+    saveToSentItems: true,
+  });
+}
+
+/* ==================== Helper HTML ==================== */
+
+function esc(s?: string): string {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function buildHtml(p: {
+  nombre: string;
+  tipoVehiculo: string;
+  placa: string;
+  cedula: string;
+  solicitanteNombre?: string;
+  solicitanteCorreo?: string;
+}): string {
+  return `
+  <div style="font-family:Segoe UI,Arial,sans-serif;font-size:14px;color:#0f172a;line-height:1.6">
+    <p>Estimado(a),</p>
+
+    <p>
+      Muy respetuosamente solicito la <strong>inscripción del vehículo</strong> del colaborador
+      <strong>${esc(p.nombre)}</strong>, con la siguiente información:
+    </p>
+
+    <table style="border-collapse:collapse;margin:12px 0;border:1px solid #e2e8f0">
+      <tbody>
+        <tr>
+          <td style="padding:8px 12px;background:#f8fafc;border:1px solid #e2e8f0">Tipo de vehículo</td>
+          <td style="padding:8px 12px;border:1px solid #e2e8f0">${esc(p.tipoVehiculo)}</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 12px;background:#f8fafc;border:1px solid #e2e8f0">Placa</td>
+          <td style="padding:8px 12px;border:1px solid #e2e8f0">${esc(p.placa.toUpperCase())}</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 12px;background:#f8fafc;border:1px solid #e2e8f0">Cédula</td>
+          <td style="padding:8px 12px;border:1px solid #e2e8f0">${esc(p.cedula)}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      Agradezco confirmar la actualización correspondiente o indicarnos si se requiere información adicional.
+    </p>
+
+    <p>Cordialmente,</p>
+  </div>
+  `;
 }

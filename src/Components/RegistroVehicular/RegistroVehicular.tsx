@@ -1,42 +1,45 @@
+// src/Components/RegistroVehicular/RegistroVehicular.tsx
 import * as React from 'react';
 import styles from './RegistroVehicular.module.css';
 import type { RegistroVehicularSP } from '../../Models/RegistroVehicular';
-import { useRegistroVehicular } from '../../Hooks/useRegistroVehicular';
+import {
+  useRegistroVehicular,
+  sendRegistroVehicularEmail, // <-- usamos la función que recibe graph como primer arg
+} from '../../Hooks/useRegistroVehicular';
 import { useWorkers } from '../../Hooks/useWorkers';
 import { useGraphServices } from '../../graph/GraphServicesContext';
 import ModalNuevoRegistro from '../AgregarRegistroVehicular/ModalAgregarRegistro';
 
 const RegistroVehicular: React.FC = () => {
-  const { registroVeh: registrosVehSvc } = useGraphServices();
+  // Tomamos servicios y graph del contexto
+  const { registroVeh: registrosVehSvc, graph } = useGraphServices();
 
+  // Hook de data/paginación
   const {
     rows, loading, error,
     search, setSearch,
     pageSize, setPageSize,
     pageIndex, hasNext, nextPage, prevPage,
-    addVeh, // <- úsalo si tu hook lo expone
+    addVeh,
     deleteVeh,
   } = useRegistroVehicular(registrosVehSvc);
 
-  // Si tu hook de workers expone loading, úsalo; si no, pon un false por defecto
+  // Hook de colaboradores (para el modal)
   const { workers, refresh, loading: workersLoading = false } = useWorkers() as any;
 
-  // Modales
+  // Modal "Agregar"
   const [isOpenAdd, setIsOpenAdd] = React.useState(false);
-  const closeAddModal = () => setIsOpenAdd(false);
-
-  // Filtro por tipo
-  const [vehicleFilter, setVehicleFilter] = React.useState<'all' | string>('all');
-
   const openAddModal = async () => {
     try {
-      if (!workers || workers.length === 0) {
-        await refresh();
-      }
+      if (!workers || workers.length === 0) await refresh();
     } finally {
       setIsOpenAdd(true);
     }
   };
+  const closeAddModal = () => setIsOpenAdd(false);
+
+  // Filtro local por tipo de vehículo
+  const [vehicleFilter, setVehicleFilter] = React.useState<'all' | string>('all');
 
   const viewRows = React.useMemo(
     () => vehicleFilter === 'all'
@@ -45,22 +48,25 @@ const RegistroVehicular: React.FC = () => {
     [rows, vehicleFilter]
   );
 
+  // Borrado
   const onDelete = async (c: RegistroVehicularSP) => {
     if (!c?.id) return;
     if (!window.confirm(`¿Eliminar a "${c.Title}"? Esta acción no se puede deshacer.`)) return;
     await deleteVeh(String(c.id));
   };
 
+  // Normalización de error
   const errMsg =
-  typeof error === 'object' && error !== null && 'message' in error
-    ? String((error as { message?: unknown }).message ?? '')
-    : (error ? String(error) : '');
+    typeof error === 'object' && error !== null && 'message' in error
+      ? String((error as { message?: unknown }).message ?? '')
+      : (error ? String(error) : '');
 
   return (
     <section className={styles.section}>
       <div className={styles.card}>
         <h1 className={styles.title}>Registro Vehicular</h1>
 
+        {/* Top bar */}
         <div className={styles.topBarGrid}>
           {/* IZQUIERDA: segmentación por vehículo */}
           <div className={styles.groupLeft}>
@@ -122,7 +128,12 @@ const RegistroVehicular: React.FC = () => {
 
           {/* DERECHA: acción primaria */}
           <div className={styles.groupRight}>
-            <button className={styles.button} type="button" onClick={openAddModal} disabled={loading}>
+            <button
+              className={styles.button}
+              type="button"
+              onClick={openAddModal}
+              disabled={loading}
+            >
               Agregar colaborador
             </button>
           </div>
@@ -182,10 +193,18 @@ const RegistroVehicular: React.FC = () => {
             {/* Paginación */}
             <div className={styles.paginationBar}>
               <div className={styles.paginationLeft}>
-                <button className={styles.pageBtn} onClick={prevPage} disabled={pageIndex === 0 || loading}>
+                <button
+                  className={styles.pageBtn}
+                  onClick={prevPage}
+                  disabled={pageIndex === 0 || loading}
+                >
                   ← Anterior
                 </button>
-                <button className={styles.pageBtn} onClick={nextPage} disabled={!hasNext || loading}>
+                <button
+                  className={styles.pageBtn}
+                  onClick={nextPage}
+                  disabled={!hasNext || loading}
+                >
                   Siguiente →
                 </button>
                 <span className={styles.pageInfo}>
@@ -217,7 +236,23 @@ const RegistroVehicular: React.FC = () => {
           isOpen={isOpenAdd}
           onClose={closeAddModal}
           onSave={async (c) => {
-            await addVeh?.(c); // si tu hook lo expone
+            try {
+              // 1) Envía el correo desde el buzón del usuario logueado
+              await sendRegistroVehicularEmail(graph, {
+                correo: c.CorreoReporte,
+                nombre: c.Title,
+                tipoVehiculo: c.TipoVeh,
+                placa: c.PlacaVeh,
+                cedula: c.Cedula,
+              });
+            } catch (e) {
+              console.error('Fallo enviando correo de registro:', e);
+              // TIP: podrías mostrar un toast, pero no bloquees el alta
+            }
+
+            // 2) Crea el registro
+            await addVeh?.(c);
+
             closeAddModal();
           }}
           workers={workers}

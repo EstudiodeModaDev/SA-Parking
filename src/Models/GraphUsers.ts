@@ -9,3 +9,10 @@ export type GraphUser = {
   jobTitle?: string;
   "@odata.type"?: string; // "#microsoft.graph.user"
 };
+
+export type GraphUserLite = { id: string; userPrincipalName?: string; mail?: string };
+
+export type newAccess = {
+  mail: string;
+  name: string
+}

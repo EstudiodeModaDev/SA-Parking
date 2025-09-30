@@ -1,37 +1,45 @@
 import * as React from 'react';
 import styles from './colaboradores.module.css';
-import { useGroupMembers} from '../../Hooks/GraphUsers';
 
+// Hook que lista miembros del grupo destino
+import { useGroupMembers, addGroupMembersByEmails } from '../../Hooks/GraphUsers';
+
+// Hook que trae TODOS los colaboradores/personas (para alimentar el combo del modal)
+import { useWorkers } from '../../Hooks/useWorkers';
+
+
+import ModalAgregarColaborador from '../AgregarColaborador/ModalAgregarColaborador';
+import { useAuth } from '../../auth/AuthProvider';
 
 const UsuariosApp: React.FC = () => {
-  const GroupID = "79012669-3208-412c-bae2-97d79f5f5f15"
+  const GroupID = '79012669-3208-412c-bae2-97d79f5f5f15';
 
-  const{
+  const { getToken } = useAuth();
+
+  const {
     rows,
     loading,
     error,
     search, setSearch,
     pageSize, setPageSize,
     pageIndex, hasNext, nextPage, prevPage,
-    //refresh
-  } = useGroupMembers(GroupID)
+    refresh, // <- lo usamos para recargar tras añadir
+  } = useGroupMembers(GroupID);
 
-  const viewRows = rows
+  // Todos los colaboradores (para llenar el desplegable del modal)
+  const { workers, loading: workersLoading, refresh: refreshWorkers } = useWorkers();
 
+  // Vista (lo que se muestra en la tabla)
+  const viewRows = rows;
 
+  // ====== modal otorgar accesos
+  const [isOpenAdd, setIsOpenAdd] = React.useState(false);
 
-  // ====== modales
-  //const [isOpenAdd, setIsOpenAdd] = React.useState(false);
-  //const [isOpenDetails, setIsOpenDetails] = React.useState(false);
-  //const [selected, setSelected] = React.useState<AppUsers | null>(null);
-
-
-  /*
   const openAddModal = async () => {
-    // asegúrate de tener lista la gente para el combo
     try {
+      // Garantiza que el combo tenga data
       if (!workers || workers.length === 0) {
-        await refresh();
+        await refreshWorkers();
       }
     } finally {
       setIsOpenAdd(true);
@@ -39,16 +47,22 @@ const UsuariosApp: React.FC = () => {
   };
 
   const closeAddModal = () => setIsOpenAdd(false);
-  const closeDetails = () => { setIsOpenDetails(false); setSelected(null); }; 
 
-
-
-  const onDelete = async (c: Collaborator) => {
-    if (!c?.id) return;
-    const ok = window.confirm(`¿Eliminar a "${c.nombre}"? Esta acción no se puede deshacer.`);
-    if (!ok) return;
-    await deleteCollaborator(String(c.id));
-  };*/
+  // Guardado desde el modal: añade el correo al grupo y refresca la lista
+  const handleSaveFromModal = async (c: { nombre: string; correo: string }) => {
+    if (!c?.correo) return;
+    try {
+      await addGroupMembersByEmails(GroupID, [c.correo], getToken);
+      await refresh(); // recargar miembros del grupo
+      // UX opcional: filtra por el correo añadido
+      setSearch(c.correo);
+    } catch (e) {
+      console.error('No se pudo otorgar acceso:', e);
+      // Aquí podrías mostrar un toast/notificación
+    } finally {
+      closeAddModal();
+    }
+  };
 
   return (
     <section className={styles.section}>
@@ -56,7 +70,6 @@ const UsuariosApp: React.FC = () => {
         <h1 className={styles.title}>Usuarios App</h1>
 
         <div className={styles.topBarGrid}>
-         
           {/* CENTRO: búsqueda */}
           <div className={styles.groupCenter}>
             <div className={styles.searchForm}>
@@ -82,7 +95,7 @@ const UsuariosApp: React.FC = () => {
 
           {/* DERECHA: acción primaria */}
           <div className={styles.groupRight}>
-            <button className={styles.button} type="button">
+            <button className={styles.button} type="button" onClick={openAddModal}>
               Otorgar accesos
             </button>
           </div>
@@ -104,6 +117,7 @@ const UsuariosApp: React.FC = () => {
                     <tr className={styles.theadRow}>
                       <th className={styles.th} style={{ textAlign: 'center' }}>Nombre</th>
                       <th className={styles.th} style={{ textAlign: 'center' }}>Correo electrónico</th>
+                      <th className={styles.th} />
                     </tr>
                   </thead>
                   <tbody>
@@ -111,15 +125,14 @@ const UsuariosApp: React.FC = () => {
                       <tr key={c.id}>
                         <td className={styles.td}>{c.nombre}</td>
                         <td className={styles.td}>{c.correo}</td>
-                        <td>
-                          {/* Eliminar */}
+                        <td className={styles.td} style={{ textAlign: 'right' }}>
+                          {/* Acciones futuras (deshabilitadas por ahora) */}
                           <button
                             type="button"
                             className={`${styles.iconBtn} ${styles.iconBtnDanger}`}
-                            title="Eliminar colaborador"
+                            title="Eliminar"
                             aria-label={`Eliminar ${c.nombre}`}
-                            //onClick={() => onDelete(c)}
-                            disabled={loading}
+                            disabled
                           >
                             <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
                               <path d="M9 3h6a1 1 0 0 1 1 1v1h4v2H4V5h4V4a1 1 0 0 1 1-1zm2 0v1h2V3h-2zM6 9h12l-1 11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 9zm4 2v8h2v-8h-2zm-4 0h2v8H8v-8zm8 0h2v8h-2v-8z"/>
@@ -174,6 +187,17 @@ const UsuariosApp: React.FC = () => {
           </>
         )}
       </div>
+
+      {/* MODAL: el desplegable se alimenta con TODOS los colaboradores (useWorkers) */}
+      <ModalAgregarColaborador
+        isOpen={isOpenAdd}
+        onClose={closeAddModal}
+        onSave={async (c) => { await handleSaveFromModal({ nombre: c.nombre, correo: c.correo }); }}
+        slots={[]}              // si no usas celdas, envía vacío
+        slotsLoading={false}
+        workers={workers}       // <- AQUÍ va la lista para el combo
+        workersLoading={workersLoading}
+      />
     </section>
   );
 };

@@ -36,7 +36,7 @@ async function fetchGroupMembers(
     url = data["@odata.nextLink"] ?? "";
   }
   // Solo usuarios (cuando es transitive puede venir group/device)
-  return all.filter((m) => (m["@odata.type"] ?? "").endsWith("user"));
+  return all
 }
 
 export type AppUsers = {

@@ -20,7 +20,6 @@ function filterLocal(items: RegistroVehicularSP[], term: string): RegistroVehicu
   if (!q) return items;
   const parts = q.split(/\s+/).filter(Boolean);
   if (!parts.length) return items;
-
   return items.filter((it) => {
     const name = normalize(it.Title);
     const mail = normalize(it.CorreoReporte);

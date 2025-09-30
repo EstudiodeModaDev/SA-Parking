@@ -151,20 +151,31 @@ const RegistroVehicular: React.FC = () => {
           onClose={closeAddModal}
           onSave={async (c) => {
             try {
-              // Enviar correo desde el buzón del usuario logueado (/me/sendMail)
+              // Opción 1 (usuario actual): requiere Mail.Send delegado y mailbox del usuario
               await sendRegistroVehicularEmail(graph, {
                 correo: c.CorreoReporte,
                 nombre: c.Title,
                 tipoVehiculo: c.TipoVeh,
                 placa: c.PlacaVeh,
                 cedula: c.Cedula,
-                // cc: ['seguridad@empresa.com'],
-                // solicitanteNombre: userName,
-                // solicitanteCorreo: userMail,
               });
+
+              // Opción 2 (buzón específico: compartido/servicio). Descomenta si quieres enviar desde otro buzón:
+              /*
+              const { upn, id } = await resolveUserUpnOrId(graph, { email: 'registro.vehicular@tuempresa.com' });
+              const userKey = upn ?? id;
+              if (!userKey) throw new Error('No se pudo resolver el buzón de servicio');
+              await sendRegistroVehicularEmailFrom(graph, userKey, {
+                correo: c.CorreoReporte,
+                nombre: c.Title,
+                tipoVehiculo: c.TipoVeh,
+                placa: c.PlacaVeh,
+                cedula: c.Cedula,
+              });
+              */
             } catch (e) {
               console.error('Fallo enviando correo de registro:', e);
-              // opcional: toast de advertencia
+              // TIP: mostrar toast de advertencia pero no bloquear el alta
             }
             await addVeh?.(c);
             closeAddModal();

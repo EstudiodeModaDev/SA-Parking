@@ -1,10 +1,10 @@
 // src/utils/sendRegistroVehicularEmail.ts
 import type { RegistroVehicularMail } from '../Models/RegistroVehicular';
 
-// Soporta tanto tu GraphRest (con .post) como el SDK (con .api().post())
+// Graph "like": soporta tu GraphRest (.post) o el SDK (.api().post())
 type GraphLike =
   | { post: (path: string, body: any, init?: RequestInit) => Promise<any> } // GraphRest
-  | { api: (path: string) => { post: (body: any) => Promise<any> } };       // SDK oficial
+  | { api: (path: string) => { post: (body: any) => Promise<any> } };       // SDK
 
 function isGraphRest(g: GraphLike): g is { post: (p: string, b: any, i?: RequestInit) => Promise<any> } {
   return typeof (g as any)?.post === 'function';
@@ -45,16 +45,12 @@ function buildHtml(p: {
   </div>`;
 }
 
-export async function sendRegistroVehicularEmail(
-  graph: GraphLike, // pásale useGraphServices().graph
-  data: RegistroVehicularMail
-): Promise<void> {
+function buildPayload(data: RegistroVehicularMail) {
   const {
     correo, nombre, tipoVehiculo, placa, cedula,
     cc = [], solicitanteNombre, solicitanteCorreo,
   } = data;
-
-  const payload = {
+  return {
     message: {
       subject: `Solicitud de inscripción de vehículo — ${nombre} (${placa})`,
       body: { contentType: 'HTML', content: buildHtml({ nombre, tipoVehiculo, placa, cedula, solicitanteNombre, solicitanteCorreo }) },
@@ -63,12 +59,29 @@ export async function sendRegistroVehicularEmail(
     },
     saveToSentItems: true,
   };
+}
 
-  // Si es GraphRest (tu wrapper)
+/** Enviar desde el usuario actual (/me/sendMail) — requiere Mail.Send delegado y mailbox */
+export async function sendRegistroVehicularEmail(graph: GraphLike, data: RegistroVehicularMail): Promise<void> {
+  const payload = buildPayload(data);
   if (isGraphRest(graph)) {
     await graph.post('/me/sendMail', payload);
-    return;
+  } else {
+    await (graph as any).api('/me/sendMail').post(payload);
   }
-  // Si es SDK oficial
-  await (graph as any).api('/me/sendMail').post(payload);
+}
+
+/** Enviar desde un buzón específico (/users/{userKey}/sendMail) — usa UPN o ID */
+export async function sendRegistroVehicularEmailFrom(
+  graph: GraphLike,
+  userKey: string, // UPN o ID
+  data: RegistroVehicularMail
+): Promise<void> {
+  const payload = buildPayload(data);
+  const path = `/users/${encodeURIComponent(userKey)}/sendMail`;
+  if (isGraphRest(graph)) {
+    await graph.post(path, payload);
+  } else {
+    await (graph as any).api(path).post(payload);
+  }
 }

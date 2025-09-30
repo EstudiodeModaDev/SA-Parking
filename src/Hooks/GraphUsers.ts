@@ -85,7 +85,7 @@ export function useGroupMembers(groupId: string) {
 
   // estado de búsqueda/paginación para “API compatible” con tu tabla
   const [search, setSearch] = React.useState("");
-  const [pageSize, setPageSize] = React.useState(10);
+  const [pageSize, setPageSize] = React.useState(5);
   const [pageIndex, setPageIndex] = React.useState(0);
 
   const refresh = React.useCallback(async () => {

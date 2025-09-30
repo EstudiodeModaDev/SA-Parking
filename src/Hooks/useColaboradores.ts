@@ -66,7 +66,7 @@ export function useCollaborators(
   const [error, setError] = React.useState<string | null>(null);
 
   const [search, setSearch] = React.useState('');
-  const [pageSize, _setPageSize] = React.useState(20);
+  const [pageSize, _setPageSize] = React.useState(5);
   const [pageIndex, setPageIndex] = React.useState(0);
   const [hasNext, setHasNext] = React.useState(false);
 

@@ -17,6 +17,7 @@ import { useAuth } from './auth/AuthProvider';
 import { GraphServicesProvider, useGraphServices } from './graph/GraphServicesContext';
 import { UserService } from './Services/User.Service';
 import { SharedServices } from './Services/Shared.service';
+import UsuariosApp from './Components/PermisosApp/usuariosApp';
 
 // ------------------ Constantes UI ------------------
 const NAVS_ADMIN = [
@@ -141,6 +142,7 @@ function useRoleHelpers() {
 // ------------------ App interna (requiere sesión) ------------------
 function AppInner() {
   const [selected, setSelected] = useState<NavKey>('misreservas');
+  const [selectedColaborator, setSelectedColaborator] = useState<string>('fijos');
 
   const [user, setUser] = useState<User>(null);
   const [userLoading, setUserLoading] = useState(true);
@@ -310,8 +312,36 @@ function AppInner() {
 
           {isAdmin && selected === 'colaboradores' && (
             <div className="center">
-              <h2>Colaboradores</h2>
-              <ColaboradoresInscritos />
+              <div className="segmented">
+              <button
+                type="button"
+                className={`segmentBtn ${selectedColaborator === 'fijos' ? "segmentBtnActive" : ''}`}
+                onClick={() => setSelectedColaborator('fijos')}
+                title="Colaboradores fijos"
+              >
+                Colaboradores Fijos
+              </button>
+              <button
+                type="button"
+                className={`$segmentBtn ${selectedColaborator === 'app' ? "segmentBtnActive" : ''}`}
+                onClick={() => setSelectedColaborator('app')}
+                title="Usuarios APP"
+              >
+                Usuarios APP
+              </button>
+              <button
+                type="button"
+                className={`segmentBtn ${selectedColaborator === 'registro' ? "segmentBtnActive" : ''}`}
+                onClick={() => setSelectedColaborator('registro')}
+                title="Registro vehicular"
+              >
+                Registro vehicular
+              </button>
+            </div>
+              {selectedColaborator === "fijos" &&  <ColaboradoresInscritos />}
+              {selectedColaborator === "app" &&  <UsuariosApp/>}
+              {selectedColaborator === "fijos" &&  <ColaboradoresInscritos />}
+    
             </div>
           )}
 

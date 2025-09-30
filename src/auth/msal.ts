@@ -19,9 +19,7 @@ export async function initMSAL() {
 }
 
 const SCOPES = [
-  // básicos OIDC (recomendado)
   'openid', 'profile', 'email',
-  // lo que usa tu app
   'User.Read', 'Sites.ReadWrite.All', "Directory.Read.All"
 ];
 

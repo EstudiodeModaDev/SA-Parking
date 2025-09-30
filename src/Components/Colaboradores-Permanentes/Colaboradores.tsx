@@ -79,7 +79,7 @@ const ColaboradoresInscritos: React.FC = () => {
   return (
     <section className={styles.section}>
       <div className={styles.card}>
-        <h1 className={styles.title}>Colaboradores inscritos</h1>
+        <h1 className={styles.title}>Colaboradores fijos</h1>
 
         <div className={styles.topBarGrid}>
           {/* IZQUIERDA: segmentación por vehículo */}
@@ -239,9 +239,6 @@ const ColaboradoresInscritos: React.FC = () => {
                     onChange={(e) => setPageSize(Number(e.target.value) || 10)}
                   >
                     <option value={5}>5</option>
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
                   </select>
                 </label>
               </div>

@@ -17,4 +17,3 @@ export type RegistroVehicularMail = {
   solicitanteNombre?: string;// opcional: quien solicita (para firma)
   solicitanteCorreo?: string;// opcional
 };
-

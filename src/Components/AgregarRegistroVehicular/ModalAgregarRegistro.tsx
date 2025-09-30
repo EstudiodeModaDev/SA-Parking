@@ -92,7 +92,7 @@ const ModalNuevoRegistro: React.FC<Props> = ({
     >
       <div className={styles.modal} onMouseDown={(e) => e.stopPropagation()}>
         <header className={styles.header}>
-          <h2 className={styles.title}>Agregar colaborador</h2>
+          <h2 className={styles.title}>Registrar vehiculo</h2>
           <button
             className={styles.closeBtn}
             onClick={onClose}

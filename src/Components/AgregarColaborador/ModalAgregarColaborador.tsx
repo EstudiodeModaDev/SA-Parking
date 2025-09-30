@@ -153,6 +153,7 @@ const ModalAgregarColaborador: React.FC<Props> = ({
         <header className={styles.header}>
           <h2 className={styles.title}>Agregar colaborador</h2>
           <button
+            type="button"
             className={styles.closeBtn}
             onClick={onClose}
             aria-label="Cerrar"

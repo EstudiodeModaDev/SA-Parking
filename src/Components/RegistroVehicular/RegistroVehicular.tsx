@@ -76,7 +76,7 @@ const RegistroVehicular: React.FC = () => {
 
           <div className={styles.groupRight}>
             <button className={styles.button} type="button" onClick={openAddModal} disabled={loading}>
-              Agregar colaborador
+              Registrar Vehiculo
             </button>
           </div>
         </div>

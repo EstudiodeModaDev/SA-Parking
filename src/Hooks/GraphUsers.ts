@@ -31,6 +31,7 @@ async function fetchGroupMembers(
   const all: GraphUser[] = [];
   while (url) {
     const data = await graphGet<GraphListResponse<GraphUser>>(url, getToken);
+    console.log("Data obtenida", data)
     all.push(...(data.value ?? []));
     url = data["@odata.nextLink"] ?? "";
   }

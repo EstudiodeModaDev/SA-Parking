@@ -20,7 +20,7 @@ export async function initMSAL() {
 
 const SCOPES = [
   'openid', 'profile', 'email',
-  'User.Read', 'Sites.ReadWrite.All', "Directory.Read.All"
+  'User.Read', 'Sites.ReadWrite.All', "Directory.Read.All", "Group.ReadWrite.All"
 ];
 
 // Garantiza que siempre haya “active account”

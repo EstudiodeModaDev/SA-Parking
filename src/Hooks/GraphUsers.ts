@@ -1,6 +1,6 @@
 // src/Hooks/useGroupMembers.ts
 import * as React from "react";
-import type { GraphListResponse, GraphUser, GraphUserLite } from "../Models/GraphUsers";
+import type { GraphListResponse, GraphUser } from "../Models/GraphUsers";
 import { useAuth } from "../auth/AuthProvider";
 
 
@@ -51,39 +51,15 @@ async function fetchGroupMembers(
   return all
 }
 
-//Encontrar el ID del usuario
-async function resolveUserIdByEmail(email: string, getToken: () => Promise<string>): Promise<string> {
-  const base = "https://graph.microsoft.com/v1.0";
 
-  // intento directo por UPN
-  try {
-    const u = await graphGet<GraphUserLite>(`${base}/users/${encodeURIComponent(email)}`, getToken);
-    if (u?.id) return u.id;
-  } catch { /* 404 probable; seguimos */ }
-
-  // filtro por mail exacto
-  const byMail = await graphGet<{ value: GraphUserLite[] }>(
-    `${base}/users?$select=id,mail,userPrincipalName&$filter=mail eq '${email.replace(/'/g, "''")}'`,
-    getToken
-  );
-  if (byMail.value?.[0]?.id) return byMail.value[0].id;
-
-  // búsqueda por alias (proxyAddresses) — útil si el correo es un alias
-  const byProxy = await graphGet<{ value: GraphUserLite[] }>(
-    `${base}/users?$select=id,mail,userPrincipalName&$filter=proxyAddresses/any(p:p eq 'smtp:${email.toLowerCase()}')`,
-    getToken
-  );
-  if (byProxy.value?.[0]?.id) return byProxy.value[0].id;
-
-  throw new Error(`No se encontró el usuario por correo: ${email}`);
-}
 
 //añadir usuarios al grupo de correos
-async function addMemberByUserId(groupId: string, userId: string, getToken: () => Promise<string>) {
+export async function addMemberByUserId(groupId: string, userId: string, getToken: () => Promise<string>) {
   const url = `https://graph.microsoft.com/v1.0/groups/${groupId}/members/$ref`;
   const body = { "@odata.id": `https://graph.microsoft.com/v1.0/users/${userId}` };
   try {
-    await graphPost(url, body, getToken); // 204 No Content si OK
+    const prueba = await graphPost(url, body, getToken); // 204 No Content si OK
+    console.log("userId", userId, " resiñtadp ", prueba)
     return { ok: true as const };
   } catch (e: any) {
     // Si ya existe, Graph suele devolver 400 con "One or more added object references already exist"
@@ -93,28 +69,6 @@ async function addMemberByUserId(groupId: string, userId: string, getToken: () =
     }
     throw e;
   }
-}
-
-
-//Expuesto
-export async function addGroupMembersByEmails(
-  groupId: string,
-  emails: string[],
-  getToken: () => Promise<string>
-) {
-  const results: Array<{ email: string; status: "added" | "exists" | "notfound" | "error"; detail?: string }> = [];
-
-  for (const email of emails) {
-    try {
-      const userId = await resolveUserIdByEmail(email, getToken);
-      const r = await addMemberByUserId(groupId, userId, getToken);
-      results.push({ email, status: r.already ? "exists" : "added" });
-    } catch (e: any) {
-      const msg = String(e?.message ?? "");
-      results.push({ email, status: msg.startsWith("No se encontró") ? "notfound" : "error", detail: msg });
-    }
-  }
-  return results;
 }
 
 export type AppUsers = {

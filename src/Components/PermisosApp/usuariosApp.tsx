@@ -1,18 +1,13 @@
 import * as React from 'react';
 import styles from './colaboradores.module.css';
 
-// Hook que lista miembros del grupo destino
-import { useGroupMembers, addGroupMembersByEmails } from '../../Hooks/GraphUsers';
-
-// Hook que trae TODOS los colaboradores/personas (para alimentar el combo del modal)
+import { addMemberByUserId, useGroupMembers } from '../../Hooks/GraphUsers';
 import { useWorkers } from '../../Hooks/useWorkers';
-import { useAuth } from '../../auth/AuthProvider';
 import ModalOtorgarPermiso from '../AddGraphUsers/ModalAgregarPermiso';
+import { getAccessToken } from '../../auth/msal';
 
 const UsuariosApp: React.FC = () => {
   const GroupID = '79012669-3208-412c-bae2-97d79f5f5f15';
-
-  const { getToken } = useAuth();
 
   const {
     rows,
@@ -21,21 +16,17 @@ const UsuariosApp: React.FC = () => {
     search, setSearch,
     pageSize, setPageSize,
     pageIndex, hasNext, nextPage, prevPage,
-    refresh, // <- lo usamos para recargar tras añadir
+    refresh, // <- lo usamos tras otorgar acceso
   } = useGroupMembers(GroupID);
 
-  // Todos los colaboradores (para llenar el desplegable del modal)
   const { workers, loading: workersLoading, refresh: refreshWorkers } = useWorkers();
 
-  // Vista (lo que se muestra en la tabla)
   const viewRows = rows;
 
-  // ====== modal otorgar accesos
   const [isOpenAdd, setIsOpenAdd] = React.useState(false);
 
   const openAddModal = async () => {
     try {
-      // Garantiza que el combo tenga data
       if (!workers || workers.length === 0) {
         await refreshWorkers();
       }
@@ -46,17 +37,14 @@ const UsuariosApp: React.FC = () => {
 
   const closeAddModal = () => setIsOpenAdd(false);
 
-  // Guardado desde el modal: añade el correo al grupo y refresca la lista
-  const handleSaveFromModal = async (c: { nombre: string; correo: string }) => {
-    if (!c?.correo) return;
+  // Recibe userId y mail desde el modal; agrega al grupo y refresca
+  const handleSaveFromModal = async (c: { userId: string; mail: string }) => {
+    if (!c?.mail || !c?.userId) return;
     try {
-      await addGroupMembersByEmails(GroupID, [c.correo], getToken);
-      await refresh(); // recargar miembros del grupo
-      // UX opcional: filtra por el correo añadido
-      setSearch(c.correo);
+      await addMemberByUserId(GroupID, c.userId, getAccessToken);
+      await refresh();
     } catch (e) {
       console.error('No se pudo otorgar acceso:', e);
-      // Aquí podrías mostrar un toast/notificación
     } finally {
       closeAddModal();
     }
@@ -68,7 +56,6 @@ const UsuariosApp: React.FC = () => {
         <h1 className={styles.title}>Usuarios App</h1>
 
         <div className={styles.topBarGrid}>
-          {/* CENTRO: búsqueda */}
           <div className={styles.groupCenter}>
             <div className={styles.searchForm}>
               <input
@@ -91,7 +78,6 @@ const UsuariosApp: React.FC = () => {
             </div>
           </div>
 
-          {/* DERECHA: acción primaria */}
           <div className={styles.groupRight}>
             <button className={styles.button} type="button" onClick={openAddModal}>
               Otorgar accesos
@@ -99,11 +85,9 @@ const UsuariosApp: React.FC = () => {
           </div>
         </div>
 
-        {/* Estados */}
         {loading && <div className={styles.info}>Cargando…</div>}
         {error && <div className={styles.error}>{error}</div>}
 
-        {/* Tabla */}
         {!loading && !error && (
           <>
             {viewRows.length === 0 ? (
@@ -124,7 +108,6 @@ const UsuariosApp: React.FC = () => {
                         <td className={styles.td}>{c.nombre}</td>
                         <td className={styles.td}>{c.correo}</td>
                         <td className={styles.td} style={{ textAlign: 'right' }}>
-                          {/* Acciones futuras (deshabilitadas por ahora) */}
                           <button
                             type="button"
                             className={`${styles.iconBtn} ${styles.iconBtnDanger}`}
@@ -144,26 +127,15 @@ const UsuariosApp: React.FC = () => {
               </div>
             )}
 
-            {/* Paginación */}
             <div className={styles.paginationBar}>
               <div className={styles.paginationLeft}>
-                <button
-                  className={styles.pageBtn}
-                  onClick={prevPage}
-                  disabled={pageIndex === 0}
-                >
+                <button className={styles.pageBtn} onClick={prevPage} disabled={pageIndex === 0}>
                   ← Anterior
                 </button>
-                <button
-                  className={styles.pageBtn}
-                  onClick={nextPage}
-                  disabled={!hasNext}
-                >
+                <button className={styles.pageBtn} onClick={nextPage} disabled={!hasNext}>
                   Siguiente →
                 </button>
-                <span className={styles.pageInfo}>
-                  Página {pageIndex + 1}
-                </span>
+                <span className={styles.pageInfo}>Página {pageIndex + 1}</span>
               </div>
 
               <div className={styles.paginationRight}>
@@ -186,13 +158,13 @@ const UsuariosApp: React.FC = () => {
         )}
       </div>
 
-      {/* MODAL: el desplegable se alimenta con TODOS los colaboradores (useWorkers) */}
+      {/* Modal: alimentado con TODOS los colaboradores */}
       <ModalOtorgarPermiso
         isOpen={isOpenAdd}
         onClose={closeAddModal}
-        onSave={async (c) => { await handleSaveFromModal({ nombre: c.name, correo: c.mail }); }}           // si no usas celdas, envía vacío
+        onSave={handleSaveFromModal}
         slotsLoading={false}
-        workers={workers}       // <- AQUÍ va la lista para el combo
+        workers={workers}
         workersLoading={workersLoading}
       />
     </section>

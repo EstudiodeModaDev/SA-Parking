@@ -5,9 +5,9 @@ import type { newAccess } from '../../Models/GraphUsers';
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  onSave?: (c: newAccess) => Promise<void> | void;
+  // Enviamos también el userId seleccionado
+  onSave?: (c: { userId: string; name: string; mail: string }) => Promise<void> | void;
   slotsLoading?: boolean;
-  /** Lista completa de colaboradores para alimentar el combo */
   workers: any[];
   workersLoading?: boolean;
 };
@@ -50,15 +50,14 @@ const ModalOtorgarPermiso: React.FC<Props> = ({
   const filteredWorkers = React.useMemo(() => {
     if (!term) return workers;
     const q = norm(term);
-    return workers.filter(w =>
+    return workers.filter((w: any) =>
       norm(`${w.displayName ?? ''} ${w.mail ?? ''} ${w.jobTitle ?? ''}`).includes(q),
     );
   }, [workers, term]);
 
   const onSelectUser = (id: string) => {
-    setSelectedUserId(id);
-    console.log("User ID", selectedUserId)
-    const u = workers.find(x => String(x.id) === String(id));
+    setSelectedUserId(id); // <-- importante
+    const u = workers.find((x: any) => String(x.id) === String(id));
     if (!u) {
       setForm({ name: '', mail: '' });
       return;
@@ -78,11 +77,11 @@ const ModalOtorgarPermiso: React.FC<Props> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (saving || hasErrors) return;
+    if (saving || hasErrors || !selectedUserId) return;
     try {
       setSaving(true);
       setLocalError(null);
-      await onSave?.(form);
+      await onSave?.({ userId: selectedUserId, name: form.name, mail: form.mail });
       onClose();
     } catch (err: any) {
       setLocalError(err?.message ?? 'No se pudo otorgar el permiso.');
@@ -135,9 +134,11 @@ const ModalOtorgarPermiso: React.FC<Props> = ({
                     ? 'Sin resultados'
                     : 'Selecciona un colaborador'}
                 </option>
-                {filteredWorkers.map((w) => (
+                {filteredWorkers.map((w: any) => (
                   <option key={String(w.id)} value={String(w.id)}>
-                    {w.displayName ?? '(Sin nombre)'}{w.mail ? ` · ${w.mail}` : ''}{w.jobTitle ? ` · ${w.jobTitle}` : ''}
+                    {w.displayName ?? '(Sin nombre)'}
+                    {w.mail ? ` · ${w.mail}` : ''}
+                    {w.jobTitle ? ` · ${w.jobTitle}` : ''}
                   </option>
                 ))}
               </select>
@@ -178,7 +179,11 @@ const ModalOtorgarPermiso: React.FC<Props> = ({
             <button type="button" className={styles.btnGhost} onClick={onClose} disabled={saving}>
               Cancelar
             </button>
-            <button type="submit" className={styles.btnPrimary} disabled={saving || hasErrors}>
+            <button
+              type="submit"
+              className={styles.btnPrimary}
+              disabled={saving || hasErrors || !selectedUserId}
+            >
               {saving ? 'Guardando…' : 'Guardar'}
             </button>
           </div>

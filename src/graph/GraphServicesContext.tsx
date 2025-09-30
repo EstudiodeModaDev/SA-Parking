@@ -14,7 +14,8 @@ import { ReservationsService } from '../Services/Reservations.service';
 import { SettingsService } from '../Services/Setting.service';
 import { UsuariosParkingService } from '../Services/UsuariosParking.service';
 import { PicoYPlacaService } from '../Services/PicoPlaca';
-import { SharedServices } from '../Services/Shared.service'; // <- singular
+import { SharedServices } from '../Services/Shared.service'; 
+import { RegistroVehicularService } from '../Services/RegistroVehicular.service';
 
 // ================== Tipos ==================
 export type GraphSiteConfig = {
@@ -27,6 +28,7 @@ export type GraphSiteConfig = {
     usuariosParking: string;     // "usuariosparking"
     settings: string;            // "settings"
     picoYPlaca: string;          // "pico y placa"
+    registroVeh: string
   };
 };
 
@@ -40,6 +42,7 @@ export type GraphServices = {
   settings: SettingsService;
   picoYPlaca: PicoYPlacaService;
   shared: SharedServices; // <- singular
+  registroVeh: RegistroVehicularService
 };
 
 // ================== Contexto ==================
@@ -62,6 +65,7 @@ const DEFAULT_CONFIG: GraphSiteConfig = {
     usuariosParking: 'usuariosparking',
     settings: 'settings',
     picoYPlaca: 'pico y placa',
+    registroVeh: 'RegistroVehicular'
   },
 };
 
@@ -82,6 +86,7 @@ export const GraphServicesProvider: React.FC<ProviderProps> = ({ children, confi
         usuariosParking:   config?.lists?.usuariosParking   ?? base.lists.usuariosParking,
         settings:          config?.lists?.settings          ?? base.lists.settings,
         picoYPlaca:        config?.lists?.picoYPlaca        ?? base.lists.picoYPlaca,
+        registroVeh:       config?.lists?.registroVeh       ?? base.lists.registroVeh
       },
     };
   }, [config]);
@@ -102,6 +107,7 @@ export const GraphServicesProvider: React.FC<ProviderProps> = ({ children, confi
     const usuariosParking    = new UsuariosParkingService(graph, hostname, sitePath, lists.usuariosParking);
     const settings           = new SettingsService(graph, hostname, sitePath, lists.settings);
     const picoYPlaca         = new PicoYPlacaService(graph, hostname, sitePath, lists.picoYPlaca);
+    const registroVeh        = new RegistroVehicularService(graph, hostname, sitePath, lists.registroVeh)
 
     // SharedService depende de UsuariosParkingService
     const shared             = new SharedServices(usuariosParking);
@@ -115,6 +121,7 @@ export const GraphServicesProvider: React.FC<ProviderProps> = ({ children, confi
       settings,
       picoYPlaca,
       shared,
+      registroVeh
     };
   }, [graph, cfg]);
 

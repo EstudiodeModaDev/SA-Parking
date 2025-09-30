@@ -323,7 +323,7 @@ function AppInner() {
               </button>
               <button
                 type="button"
-                className={`$segmentBtn ${selectedColaborator === 'app' ? "segmentBtnActive" : ''}`}
+                className={`segmentBtn ${selectedColaborator === 'app' ? "segmentBtnActive" : ''}`}
                 onClick={() => setSelectedColaborator('app')}
                 title="Usuarios APP"
               >

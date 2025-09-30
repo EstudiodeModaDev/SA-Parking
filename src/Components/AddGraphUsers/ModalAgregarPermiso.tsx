@@ -57,6 +57,7 @@ const ModalOtorgarPermiso: React.FC<Props> = ({
 
   const onSelectUser = (id: string) => {
     setSelectedUserId(id);
+    console.log("User ID", selectedUserId)
     const u = workers.find(x => String(x.id) === String(id));
     if (!u) {
       setForm({ name: '', mail: '' });

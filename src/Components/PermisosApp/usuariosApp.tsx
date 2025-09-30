@@ -51,7 +51,7 @@ const UsuariosApp: React.FC = () => {
   };
 
   return (
-    <section className={styles.section}>
+      <div className={styles.card}>
         <h1 className={styles.title}>Usuarios App</h1>
 
         <div className={styles.topBarGrid}>
@@ -146,6 +146,9 @@ const UsuariosApp: React.FC = () => {
                     onChange={(e) => setPageSize(Number(e.target.value) || 10)}
                   >
                     <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
                   </select>
                 </label>
               </div>
@@ -153,7 +156,7 @@ const UsuariosApp: React.FC = () => {
           </>
         )}
 
-      {/* Modal: alimentado con TODOS los colaboradores */}
+              {/* Modal: alimentado con TODOS los colaboradores */}
       <ModalOtorgarPermiso
         isOpen={isOpenAdd}
         onClose={closeAddModal}
@@ -162,7 +165,9 @@ const UsuariosApp: React.FC = () => {
         workers={workers}
         workersLoading={workersLoading}
       />
-    </section>
+      </div>
+
+
   );
 };
 

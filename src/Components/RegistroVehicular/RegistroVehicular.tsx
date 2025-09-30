@@ -2,41 +2,33 @@ import * as React from 'react';
 import styles from './RegistroVehicular.module.css';
 import type { RegistroVehicularSP } from '../../Models/RegistroVehicular';
 import { useRegistroVehicular } from '../../Hooks/useRegistroVehicular';
-// ⬇️ Hook de personas (Graph / Office 365)
 import { useWorkers } from '../../Hooks/useWorkers';
-
-// ⬇️ Context donde expones las instancias de servicios (Graph)
 import { useGraphServices } from '../../graph/GraphServicesContext';
+import ModalNuevoRegistro from '../AgregarRegistroVehicular/ModalAgregarRegistro';
 
 const RegistroVehicular: React.FC = () => {
-  // ====== servicios Graph
-  const {  registroVeh: registrosVehSvc } = useGraphServices();
+  const { registroVeh: registrosVehSvc } = useGraphServices();
 
-  // ====== hook de colaboradores (inyectando el servicio)
   const {
     rows, loading, error,
     search, setSearch,
     pageSize, setPageSize,
     pageIndex, hasNext, nextPage, prevPage,
-     //addVeh, 
-     deleteVeh,
+    addVeh, // <- úsalo si tu hook lo expone
+    deleteVeh,
   } = useRegistroVehicular(registrosVehSvc);
-3
-  // ====== hook de workers (Graph users)
-  const { workers,  refresh } = useWorkers();
 
-  // ====== modales
+  // Si tu hook de workers expone loading, úsalo; si no, pon un false por defecto
+  const { workers, refresh, loading: workersLoading = false } = useWorkers() as any;
+
+  // Modales
   const [isOpenAdd, setIsOpenAdd] = React.useState(false);
-  console.log(isOpenAdd)
- // const [isOpenDetails, setIsOpenDetails] = React.useState(false);
- // const [selected, setSelected] = React.useState<RegistroVehicularSP | null>(null);
- // const [slotsLoading] = React.useState(false);
+  const closeAddModal = () => setIsOpenAdd(false);
 
-  // filtro en cliente por tipo de vehículo
+  // Filtro por tipo
   const [vehicleFilter, setVehicleFilter] = React.useState<'all' | string>('all');
 
   const openAddModal = async () => {
-    // asegúrate de tener lista la gente para el combo
     try {
       if (!workers || workers.length === 0) {
         await refresh();
@@ -46,10 +38,6 @@ const RegistroVehicular: React.FC = () => {
     }
   };
 
- // const closeAddModal = () => setIsOpenAdd(false);
- // const closeDetails = () => { setIsOpenDetails(false); setSelected(null); };
-
-  // vista filtrada por tipo
   const viewRows = React.useMemo(
     () => vehicleFilter === 'all'
       ? rows
@@ -57,18 +45,21 @@ const RegistroVehicular: React.FC = () => {
     [rows, vehicleFilter]
   );
 
-
   const onDelete = async (c: RegistroVehicularSP) => {
     if (!c?.id) return;
-    const ok = window.confirm(`¿Eliminar a "${c.Title}"? Esta acción no se puede deshacer.`);
-    if (!ok) return;
+    if (!window.confirm(`¿Eliminar a "${c.Title}"? Esta acción no se puede deshacer.`)) return;
     await deleteVeh(String(c.id));
   };
+
+  const errMsg =
+  typeof error === 'object' && error !== null && 'message' in error
+    ? String((error as { message?: unknown }).message ?? '')
+    : (error ? String(error) : '');
 
   return (
     <section className={styles.section}>
       <div className={styles.card}>
-        <h1 className={styles.title}>Colaboradores fijos</h1>
+        <h1 className={styles.title}>Registro Vehicular</h1>
 
         <div className={styles.topBarGrid}>
           {/* IZQUIERDA: segmentación por vehículo */}
@@ -113,6 +104,7 @@ const RegistroVehicular: React.FC = () => {
                 placeholder="Buscar por nombre, correo o placa…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                disabled={loading}
               />
               {search && (
                 <button
@@ -120,6 +112,7 @@ const RegistroVehicular: React.FC = () => {
                   className={styles.searchClear}
                   onClick={() => setSearch('')}
                   aria-label="Limpiar búsqueda"
+                  disabled={loading}
                 >
                   ✕
                 </button>
@@ -129,7 +122,7 @@ const RegistroVehicular: React.FC = () => {
 
           {/* DERECHA: acción primaria */}
           <div className={styles.groupRight}>
-            <button className={styles.button} type="button" onClick={openAddModal}>
+            <button className={styles.button} type="button" onClick={openAddModal} disabled={loading}>
               Agregar colaborador
             </button>
           </div>
@@ -137,23 +130,24 @@ const RegistroVehicular: React.FC = () => {
 
         {/* Estados */}
         {loading && <div className={styles.info}>Cargando…</div>}
-        {error && <div className={styles.error}>{error}</div>}
+        {!loading && errMsg && <div className={styles.error}>{errMsg}</div>}
 
         {/* Tabla */}
-        {!loading && !error && (
+        {!loading && !errMsg && (
           <>
             {viewRows.length === 0 ? (
-              <div className={styles.empty}>No hay colaboradores que coincidan.</div>
+              <div className={styles.empty}>No hay registros que coincidan.</div>
             ) : (
               <div className={styles.tableWrap}>
                 <table className={styles.table}>
                   <thead>
                     <tr className={styles.theadRow}>
-                      <th className={styles.th} style={{ textAlign: 'center' }}>Cedula</th>
+                      <th className={styles.th} style={{ textAlign: 'center' }}>Cédula</th>
                       <th className={styles.th} style={{ textAlign: 'center' }}>Nombre</th>
-                      <th className={styles.th} style={{ textAlign: 'center' }}>Tipo de vehiculo</th>
+                      <th className={styles.th} style={{ textAlign: 'center' }}>Tipo de vehículo</th>
                       <th className={styles.th} style={{ textAlign: 'center' }}>Placa</th>
-                      <th className={styles.th} style={{ textAlign: 'center' }}>Registro solicitado a:</th>
+                      <th className={styles.th} style={{ textAlign: 'center' }}>Registro solicitado a</th>
+                      <th className={styles.th} style={{ textAlign: 'center' }}>Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -165,11 +159,10 @@ const RegistroVehicular: React.FC = () => {
                         <td className={styles.td}>{c.PlacaVeh}</td>
                         <td className={styles.td}>{c.CorreoReporte}</td>
                         <td className={styles.td}>
-                          {/* Eliminar */}
                           <button
                             type="button"
                             className={`${styles.iconBtn} ${styles.iconBtnDanger}`}
-                            title="Eliminar colaborador"
+                            title="Eliminar registro"
                             aria-label={`Eliminar ${c.Title}`}
                             onClick={() => onDelete(c)}
                             disabled={loading}
@@ -189,18 +182,10 @@ const RegistroVehicular: React.FC = () => {
             {/* Paginación */}
             <div className={styles.paginationBar}>
               <div className={styles.paginationLeft}>
-                <button
-                  className={styles.pageBtn}
-                  onClick={prevPage}
-                  disabled={pageIndex === 0}
-                >
+                <button className={styles.pageBtn} onClick={prevPage} disabled={pageIndex === 0 || loading}>
                   ← Anterior
                 </button>
-                <button
-                  className={styles.pageBtn}
-                  onClick={nextPage}
-                  disabled={!hasNext}
-                >
+                <button className={styles.pageBtn} onClick={nextPage} disabled={!hasNext || loading}>
                   Siguiente →
                 </button>
                 <span className={styles.pageInfo}>
@@ -215,8 +200,11 @@ const RegistroVehicular: React.FC = () => {
                     className={styles.pageSizeSelect}
                     value={pageSize}
                     onChange={(e) => setPageSize(Number(e.target.value) || 10)}
+                    disabled={loading}
                   >
                     <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
                   </select>
                 </label>
               </div>
@@ -224,16 +212,17 @@ const RegistroVehicular: React.FC = () => {
           </>
         )}
 
-        {/* MODAL: Agregar colaborador 
-        <ModalAgregarColaborador
+        {/* Modal: Agregar colaborador */}
+        <ModalNuevoRegistro
           isOpen={isOpenAdd}
           onClose={closeAddModal}
-          onSave={async (c) => { await addVeh(c); closeAddModal(); }}
-          slotsLoading={slotsLoading}
+          onSave={async (c) => {
+            await addVeh?.(c); // si tu hook lo expone
+            closeAddModal();
+          }}
           workers={workers}
           workersLoading={workersLoading}
         />
-        */}
       </div>
     </section>
   );

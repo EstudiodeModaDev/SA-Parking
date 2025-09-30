@@ -154,6 +154,7 @@ export function useRegistroVehicular(
           orderby: 'fields/Title asc', // opcional
         });
 
+        console.log("Registro ", items)
         const master: RegistroVehicularSP[] = (items as any[]).map(mapToCollaborator);
         masterRef.current = master;
 

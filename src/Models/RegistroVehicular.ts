@@ -7,3 +7,5 @@ export type RegistroVehicularSP = {
   Cedula: string
 };
 
+
+

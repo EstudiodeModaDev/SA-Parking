@@ -245,7 +245,7 @@ const ColaboradoresInscritos: React.FC = () => {
             </div>
           </>
         )}
-
+        <br />
         <UsuariosApp></UsuariosApp>
 
         {/* MODAL: Agregar colaborador */}

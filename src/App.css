@@ -577,26 +577,6 @@ body {
   }
 }
 
-/* (Opcional) Modo oscuro si tu app lo usa con .dark en body */
-.dark .segmented {
-  background: #0b1220;                /* slate-950-ish */
-  border-color: #1f2937;              /* slate-800 */
-}
-.dark .segmentBtn { color: #60a5fa; } /* blue-400 */
-.dark .segmentBtn:hover { background: rgba(37, 99, 235, 0.15); }
-.dark .segmentBtnActive {
-  background: linear-gradient(90deg, #1d4ed8, #0891b2); /* blue-700 → teal-600 */
-  box-shadow: 0 8px 22px rgba(8, 145, 178, 0.35);
-}
-
-.segmentBtn:not(.segmentBtnActive):hover {
-  background: #eff6ff; /* blue-50 */
-}
-.segmentBtn.segmentBtnActive:hover,
-.segmentBtn.segmentBtnActive:focus-visible {
-  background: linear-gradient(90deg, #2563eb, #38bdf8);
-  color: #fff;
-}
 .segmentBtn.segmentBtnActive:focus-visible {
   box-shadow:
     0 0 0 2px #fff,

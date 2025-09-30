@@ -21,20 +21,36 @@ const initialForm: RegistroVehicularSP = {
   CorreoReporte: ''
 };
 
+// normaliza para búsqueda (sin acentos / case-insensitive)
+const norm = (s: string) =>
+  String(s || '')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .trim();
+
 const ModalNuevoRegistro: React.FC<Props> = ({
   isOpen,
   onClose,
   onSave,
+  workers = [],
+  workersLoading = false,
 }) => {
   const [form, setForm] = React.useState<RegistroVehicularSP>(initialForm);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  // selector de colaboradores (igual a #2)
+  const [colabTerm, setColabTerm] = React.useState('');
+  const [selectedWorkerId, setSelectedWorkerId] = React.useState<string>('');
   const firstInputRef = React.useRef<HTMLInputElement | null>(null);
 
   React.useEffect(() => {
     if (isOpen) {
       setForm(initialForm);
       setError(null);
+      setColabTerm('');
+      setSelectedWorkerId('');
       setTimeout(() => firstInputRef.current?.focus(), 0);
     }
   }, [isOpen]);
@@ -47,6 +63,31 @@ const ModalNuevoRegistro: React.FC<Props> = ({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [isOpen, saving, onClose]);
+
+  // lista filtrada por término
+  const filteredWorkers = React.useMemo(() => {
+    if (!colabTerm) return workers;
+    const q = norm(colabTerm);
+    return workers.filter(w =>
+      norm(`${w.displayName} ${w.mail ?? ''} ${w.jobTitle ?? ''}`).includes(q),
+    );
+  }, [workers, colabTerm]);
+
+  // al elegir un colaborador, copia su nombre al formulario
+  const onSelectWorker = (id: string) => {
+    setSelectedWorkerId(id);
+    const w = workers.find(x => String(x.id) === String(id));
+    if (!w) {
+      setForm(f => ({ ...f, Title: '' /*, CorreoReporte: ''*/ }));
+      return;
+    }
+    setForm(f => ({
+      ...f,
+      Title: w.displayName || '',
+      // CorreoReporte: w.mail || f.CorreoReporte, // ← descomenta si también quieres autollenar el correo
+    }));
+    setError(null);
+  };
 
   // Validaciones simples
   const errors = React.useMemo(() => {
@@ -92,8 +133,9 @@ const ModalNuevoRegistro: React.FC<Props> = ({
     >
       <div className={styles.modal} onMouseDown={(e) => e.stopPropagation()}>
         <header className={styles.header}>
-          <h2 className={styles.title}>Registrar vehiculo</h2>
+          <h2 className={styles.title}>Registrar vehículo</h2>
           <button
+            type="button"
             className={styles.closeBtn}
             onClick={onClose}
             aria-label="Cerrar"
@@ -104,15 +146,51 @@ const ModalNuevoRegistro: React.FC<Props> = ({
         </header>
 
         <form className={styles.body} onSubmit={handleSubmit} noValidate>
-          {/* Colaborador con búsqueda + dropdown */}
+          {/* Colaborador con búsqueda + dropdown (como #2) */}
           <fieldset className={styles.fieldset}>
             <label className={styles.label}>Colaborador</label>
 
+            <div className={styles.comboColab}>
+              <input
+                ref={firstInputRef}
+                className={styles.input}
+                type="text"
+                placeholder="Buscar por nombre, correo o cargo…"
+                value={colabTerm}
+                onChange={(e) => setColabTerm(e.target.value)}
+                disabled={workersLoading || saving}
+                autoComplete="off"
+              />
+
+              <select
+                className={styles.select}
+                value={selectedWorkerId}
+                onChange={(e) => onSelectWorker(e.target.value)}
+                disabled={workersLoading || saving}
+              >
+                <option value="">
+                  {workersLoading
+                    ? 'Cargando colaboradores…'
+                    : filteredWorkers.length === 0
+                    ? 'Sin resultados'
+                    : 'Selecciona un colaborador (opcional)'}
+                </option>
+                {filteredWorkers.map((w) => (
+                  <option key={String(w.id)} value={String(w.id)}>
+                    {w.displayName}
+                    {w.mail ? ` · ${w.mail}` : ''}
+                    {w.jobTitle ? ` · ${w.jobTitle}` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <small className={styles.hint}>
-              Al seleccionar un colaborador, se llenan Nombre y Correo (puedes editarlos).
+              Al seleccionar un colaborador, se llena el Nombre (puedes editarlo).
             </small>
           </fieldset>
 
+          {/* Datos editables */}
           <label className={styles.label}>
             Nombre del colaborador
             <input

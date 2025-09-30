@@ -1,6 +1,7 @@
 import { GraphRest } from '../graph/GraphRest';
 import type { Colaboradoresfijos } from '../Models/Colaboradoresfijos';
 import type { GetAllOpts } from '../Models/Commons';
+import type { RegistroVehicularSP } from '../Models/RegistroVehicular';
 
 export class RegistroVehicularService {
   private graph!: GraphRest;
@@ -63,16 +64,15 @@ export class RegistroVehicularService {
     }
 
     //Parsear todo al modelo
-    private toModel(item: any): Colaboradoresfijos {
+    private toModel(item: any): RegistroVehicularSP {
         const f = item?.fields ?? {};
         return {
-            ID: Number(item?.id ?? NaN),
+            id: Number(item?.id ?? NaN),
             Title: f.Title,
-            Correo: f.Correo,
-            Tipodevehiculo: f.Tipodevehiculo,
-            Placa: f.Placa,
-            CodigoCelda: f.CodigoCelda,
-            SpotAsignado: f.SpotAsignado
+            CorreoReporte: f.CorreoReporte,
+            TipoVeh: f.TipoVeh,
+            PlacaVeh: f.PlacaVeh,
+            Cedula: f.Cedula
         };
     }
 

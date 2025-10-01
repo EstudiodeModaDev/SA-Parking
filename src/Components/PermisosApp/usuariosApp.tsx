@@ -1,3 +1,4 @@
+// src/Components/Colaboradores/UsuariosApp.tsx
 import * as React from 'react';
 import styles from './colaboradores.module.css';
 
@@ -5,6 +6,9 @@ import { addMemberByUserId, useGroupMembers } from '../../Hooks/GraphUsers';
 import { useWorkers } from '../../Hooks/useWorkers';
 import ModalOtorgarPermiso from '../AddGraphUsers/ModalAgregarPermiso';
 import { getAccessToken } from '../../auth/msal';
+
+// ⬇️ Importa el remove desde tu servicio Graph
+import { removeMemberByUserId, removeMemberByEmail } from '../../Services/GraphUsers.service';
 
 const UsuariosApp: React.FC = () => {
   const GroupID = '79012669-3208-412c-bae2-97d79f5f5f15';
@@ -16,14 +20,14 @@ const UsuariosApp: React.FC = () => {
     search, setSearch,
     pageSize, setPageSize,
     pageIndex, hasNext, nextPage, prevPage,
-    refresh, // <- lo usamos tras otorgar acceso
+    refresh,
   } = useGroupMembers(GroupID);
 
   const { workers, loading: workersLoading, refresh: refreshWorkers } = useWorkers();
 
   const viewRows = rows;
-
   const [isOpenAdd, setIsOpenAdd] = React.useState(false);
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
 
   const openAddModal = async () => {
     try {
@@ -37,7 +41,7 @@ const UsuariosApp: React.FC = () => {
 
   const closeAddModal = () => setIsOpenAdd(false);
 
-  // Recibe userId y mail desde el modal; agrega al grupo y refresca
+  // Guardar desde modal (agregar al grupo)
   const handleSaveFromModal = async (c: { userId: string; mail: string }) => {
     if (!c?.mail || !c?.userId) return;
     try {
@@ -49,6 +53,33 @@ const UsuariosApp: React.FC = () => {
       closeAddModal();
     }
   };
+
+  // 🗑️ Eliminar del grupo
+  const handleDelete = async (user: { id: string; correo: string; nombre: string }) => {
+    if (!user?.id && !user?.correo) return;
+    const ok = window.confirm(`¿Eliminar a "${user.nombre}" del grupo?`);
+    if (!ok) return;
+
+    try {
+      setDeletingId(user.id);
+      if (user.id) {
+        await removeMemberByUserId(GroupID, user.id, getAccessToken);
+      } else if (user.correo) {
+        await removeMemberByEmail(GroupID, user.correo, getAccessToken);
+      }
+      await refresh();
+    } catch (e) {
+      console.error('No se pudo eliminar del grupo:', e);
+      alert('No se pudo eliminar del grupo. Revisa permisos Group.ReadWrite.All y que sea miembro directo.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const errMsg =
+    typeof error === 'object' && error !== null && 'message' in error
+      ? String((error as { message?: unknown }).message ?? '')
+      : (error ? String(error) : '');
 
   return (
     <section>
@@ -86,9 +117,9 @@ const UsuariosApp: React.FC = () => {
         </div>
 
         {loading && <div className={styles.info}>Cargando…</div>}
-        {error && <div className={styles.error}>{error}</div>}
+        {errMsg && !loading && <div className={styles.error}>{errMsg}</div>}
 
-        {!loading && !error && (
+        {!loading && !errMsg && (
           <>
             {viewRows.length === 0 ? (
               <div className={styles.empty}>No hay usuarios que coincidan.</div>
@@ -103,25 +134,33 @@ const UsuariosApp: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {viewRows.map((c) => (
-                      <tr key={c.id}>
-                        <td className={styles.td}>{c.nombre}</td>
-                        <td className={styles.td}>{c.correo}</td>
-                        <td className={styles.td} style={{ textAlign: 'right' }}>
-                          <button
-                            type="button"
-                            className={`${styles.iconBtn} ${styles.iconBtnDanger}`}
-                            title="Eliminar"
-                            aria-label={`Eliminar ${c.nombre}`}
-                            disabled
-                          >
-                            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-                              <path d="M9 3h6a1 1 0 0 1 1 1v1h4v2H4V5h4V4a1 1 0 0 1 1-1zm2 0v1h2V3h-2zM6 9h12l-1 11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 9zm4 2v8h2v-8h-2zm-4 0h2v8H8v-8zm8 0h2v8h-2v-8z"/>
-                            </svg>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {viewRows.map((c) => {
+                      const isDeleting = deletingId === c.id;
+                      return (
+                        <tr key={c.id}>
+                          <td className={styles.td}>{c.nombre}</td>
+                          <td className={styles.td}>{c.correo}</td>
+                          <td className={styles.td} style={{ textAlign: 'right' }}>
+                            <button
+                              type="button"
+                              className={`${styles.iconBtn} ${styles.iconBtnDanger}`}
+                              title="Eliminar"
+                              aria-label={`Eliminar ${c.nombre}`}
+                              onClick={() => handleDelete(c)}
+                              disabled={loading || isDeleting}
+                            >
+                              {isDeleting ? (
+                                <span style={{ padding: '0 4px' }}>…</span>
+                              ) : (
+                                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                                  <path d="M9 3h6a1 1 0 0 1 1 1v1h4v2H4V5h4V4a1 1 0 0 1 1-1zm2 0v1h2V3h-2zM6 9h12l-1 11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 9zm4 2v8h2v-8h-2zm-4 0h2v8H8v-8zm8 0h2v8h-2v-8z"/>
+                                </svg>
+                              )}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -154,19 +193,17 @@ const UsuariosApp: React.FC = () => {
           </>
         )}
 
-              {/* Modal: alimentado con TODOS los colaboradores */}
-      <ModalOtorgarPermiso
-        isOpen={isOpenAdd}
-        onClose={closeAddModal}
-        onSave={handleSaveFromModal}
-        slotsLoading={false}
-        workers={workers}
-        workersLoading={workersLoading}
-      />
+        {/* Modal: alimentado con TODOS los colaboradores */}
+        <ModalOtorgarPermiso
+          isOpen={isOpenAdd}
+          onClose={closeAddModal}
+          onSave={handleSaveFromModal}
+          slotsLoading={false}
+          workers={workers}
+          workersLoading={workersLoading}
+        />
       </div>
     </section>
-
-
   );
 };
 

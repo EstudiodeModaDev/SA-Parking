@@ -8,17 +8,8 @@ import { useGraphServices } from '../../graph/GraphServicesContext';
 import ModalNuevoRegistro from '../AgregarRegistroVehicular/ModalAgregarRegistro';
 import { sendRegistroVehicularEmail } from '../../utils/SendEmail';
 
-// 👇 Nuevo: import del servicio para remover del grupo (por email)
-import { removeMemberByEmail } from '../../Services/GraphUsers.service';
-// 👇 Nuevo: acceso a token para Graph
-import { useAuth } from '../../auth/AuthProvider';
-
-// Lee el GroupId desde una env var para no hardcodear en código
-const GROUP_ID = import.meta.env.VITE_GROUP_REGISTRO_VEHICULAR_ID as string | undefined;
-
 const RegistroVehicular: React.FC = () => {
   const { registroVeh: registrosVehSvc, graph } = useGraphServices();
-  const { getToken } = useAuth();
 
   const {
     rows, loading, error,
@@ -39,9 +30,6 @@ const RegistroVehicular: React.FC = () => {
 
   const [vehicleFilter, setVehicleFilter] = React.useState<'all' | string>('all');
 
-  // 👇 Nuevo: toggle para también quitar del grupo de correos al eliminar
-  const [alsoRemoveFromGroup, setAlsoRemoveFromGroup] = React.useState<boolean>(false);
-
   const viewRows = React.useMemo(
     () => vehicleFilter === 'all' ? rows : rows.filter(r => r.TipoVeh === vehicleFilter),
     [rows, vehicleFilter]
@@ -50,16 +38,6 @@ const RegistroVehicular: React.FC = () => {
   const onDelete = async (c: RegistroVehicularSP) => {
     if (!c?.id) return;
     if (!window.confirm(`¿Eliminar a "${c.Title}"? Esta acción no se puede deshacer.`)) return;
-
-    // 1) Opcional: remover del grupo de correos (si hay GroupId y correo)
-    if (alsoRemoveFromGroup && GROUP_ID && c.CorreoReporte) {
-      try {
-        await removeMemberByEmail(GROUP_ID, String(c.CorreoReporte), getToken);
-      } catch (e) {
-        // No bloqueo la eliminación del registro si falla el quitado del grupo
-        console.warn('[RegistroVehicular] No se pudo quitar del grupo de correos:', e);
-      }
-    }
 
     // 2) Eliminar el registro en SharePoint (flujo original)
     await deleteVeh(String(c.id));
@@ -99,16 +77,6 @@ const RegistroVehicular: React.FC = () => {
           </div>
 
           <div className={styles.groupRight}>
-            {/* 👇 Nuevo: toggle para controlar si también se quita del grupo en la eliminación */}
-            <label className={styles.toggleInline} title={GROUP_ID ? '' : 'Configura VITE_GROUP_REGISTRO_VEHICULAR_ID para habilitar'}>
-              <input
-                type="checkbox"
-                checked={alsoRemoveFromGroup}
-                onChange={(e) => setAlsoRemoveFromGroup(e.target.checked)}
-                disabled={loading || !GROUP_ID}
-              />
-              <span>Quitar también del grupo de correos</span>
-            </label>
 
             <button className={styles.button} type="button" onClick={openAddModal} disabled={loading}>
               Registrar Vehículo

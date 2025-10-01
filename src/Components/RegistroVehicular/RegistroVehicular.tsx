@@ -8,8 +8,17 @@ import { useGraphServices } from '../../graph/GraphServicesContext';
 import ModalNuevoRegistro from '../AgregarRegistroVehicular/ModalAgregarRegistro';
 import { sendRegistroVehicularEmail } from '../../utils/SendEmail';
 
+// 👇 Nuevo: import del servicio para remover del grupo (por email)
+import { removeMemberByEmail } from '../../Services/GraphUsers.service';
+// 👇 Nuevo: acceso a token para Graph
+import { useAuth } from '../../auth/AuthProvider';
+
+// Lee el GroupId desde una env var para no hardcodear en código
+const GROUP_ID = import.meta.env.VITE_GROUP_REGISTRO_VEHICULAR_ID as string | undefined;
+
 const RegistroVehicular: React.FC = () => {
   const { registroVeh: registrosVehSvc, graph } = useGraphServices();
+  const { getToken } = useAuth();
 
   const {
     rows, loading, error,
@@ -30,6 +39,9 @@ const RegistroVehicular: React.FC = () => {
 
   const [vehicleFilter, setVehicleFilter] = React.useState<'all' | string>('all');
 
+  // 👇 Nuevo: toggle para también quitar del grupo de correos al eliminar
+  const [alsoRemoveFromGroup, setAlsoRemoveFromGroup] = React.useState<boolean>(false);
+
   const viewRows = React.useMemo(
     () => vehicleFilter === 'all' ? rows : rows.filter(r => r.TipoVeh === vehicleFilter),
     [rows, vehicleFilter]
@@ -38,6 +50,18 @@ const RegistroVehicular: React.FC = () => {
   const onDelete = async (c: RegistroVehicularSP) => {
     if (!c?.id) return;
     if (!window.confirm(`¿Eliminar a "${c.Title}"? Esta acción no se puede deshacer.`)) return;
+
+    // 1) Opcional: remover del grupo de correos (si hay GroupId y correo)
+    if (alsoRemoveFromGroup && GROUP_ID && c.CorreoReporte) {
+      try {
+        await removeMemberByEmail(GROUP_ID, String(c.CorreoReporte), getToken);
+      } catch (e) {
+        // No bloqueo la eliminación del registro si falla el quitado del grupo
+        console.warn('[RegistroVehicular] No se pudo quitar del grupo de correos:', e);
+      }
+    }
+
+    // 2) Eliminar el registro en SharePoint (flujo original)
     await deleteVeh(String(c.id));
   };
 
@@ -75,8 +99,19 @@ const RegistroVehicular: React.FC = () => {
           </div>
 
           <div className={styles.groupRight}>
+            {/* 👇 Nuevo: toggle para controlar si también se quita del grupo en la eliminación */}
+            <label className={styles.toggleInline} title={GROUP_ID ? '' : 'Configura VITE_GROUP_REGISTRO_VEHICULAR_ID para habilitar'}>
+              <input
+                type="checkbox"
+                checked={alsoRemoveFromGroup}
+                onChange={(e) => setAlsoRemoveFromGroup(e.target.checked)}
+                disabled={loading || !GROUP_ID}
+              />
+              <span>Quitar también del grupo de correos</span>
+            </label>
+
             <button className={styles.button} type="button" onClick={openAddModal} disabled={loading}>
-              Registrar Vehiculo
+              Registrar Vehículo
             </button>
           </div>
         </div>
@@ -110,9 +145,14 @@ const RegistroVehicular: React.FC = () => {
                         <td className={styles.td}>{c.PlacaVeh}</td>
                         <td className={styles.td}>{c.CorreoReporte}</td>
                         <td className={styles.td}>
-                          <button type="button" className={`${styles.iconBtn} ${styles.iconBtnDanger}`}
-                                  title="Eliminar registro" aria-label={`Eliminar ${c.Title}`}
-                                  onClick={() => onDelete(c)} disabled={loading}>
+                          <button
+                            type="button"
+                            className={`${styles.iconBtn} ${styles.iconBtnDanger}`}
+                            title="Eliminar registro"
+                            aria-label={`Eliminar ${c.Title}`}
+                            onClick={() => onDelete(c)}
+                            disabled={loading}
+                          >
                             <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
                               <path d="M9 3h6a1 1 0 0 1 1 1v1h4v2H4V5h4V4a1 1 0 0 1 1-1zm2 0v1h2V3h-2zM6 9h12l-1 11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 9zm4 2v8h2v-8h-2zm-4 0h2v8H8v-8zm8 0h2v8h-2v-8z"/>
                             </svg>
@@ -160,10 +200,10 @@ const RegistroVehicular: React.FC = () => {
                 cedula: c.Cedula,
               });
 
-              // Opción 2 (buzón específico: compartido/servicio). Descomenta si quieres enviar desde otro buzón:
+              // Opción 2 (buzón específico)
               /*
               const { upn, id } = await resolveUserUpnOrId(graph, { email: 'registro.vehicular@tuempresa.com' });
-              const userKey = upn ?? id;
+              const userKey = upn ?? id;2
               if (!userKey) throw new Error('No se pudo resolver el buzón de servicio');
               await sendRegistroVehicularEmailFrom(graph, userKey, {
                 correo: c.CorreoReporte,
@@ -175,7 +215,7 @@ const RegistroVehicular: React.FC = () => {
               */
             } catch (e) {
               console.error('Fallo enviando correo de registro:', e);
-              // TIP: mostrar toast de advertencia pero no bloquear el alta
+              // TIP: mostrar toast pero no bloquear el alta
             }
             await addVeh?.(c);
             closeAddModal();

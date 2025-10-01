@@ -57,7 +57,7 @@ async function fetchGroupMembers(
   let url =
     `https://graph.microsoft.com/v1.0/groups/${groupId}/` +
     `${transitive ? "transitiveMembers" : "members"}` +
-    `?$select=id,displayName,mail,userPrincipalName,jobTitle,@odata.type&$top=999`;
+    `?$select=id,displayName,mail,userPrincipalName,jobTitle&$top=999`;
 
   const all: any[] = [];
   while (url) {

@@ -41,7 +41,7 @@ export function useReporteria(
     if (persona?.trim()) {
       const p = persona.trim().toLowerCase().replace(/'/g, "''");
       parts.push(
-        `contains(tolower(fields/Title),'${p}')`
+        `startswith(fields/Title,'${p}')`
       );
     }
 

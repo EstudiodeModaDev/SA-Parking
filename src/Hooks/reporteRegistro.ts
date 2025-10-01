@@ -30,8 +30,8 @@ export function useReporteria(
     const { desde, hasta, persona, tipoVehiculo } = filters;
 
     const parts: string[] = [
-      `fields/Date ge '${desde}'`,
-      `fields/Date le '${hasta}'`,
+      `fields/Created ge '${desde}'`,
+      `fields/Created le '${hasta}'`,
     ];
 
     if (tipoVehiculo) {
@@ -47,7 +47,7 @@ export function useReporteria(
 
     const items = await registros.getAll({
       filter: parts.join(' and '),
-      orderby: 'fields/Date asc,fields/Turn asc',
+      orderby: 'fields/Created',
       top: 2000,
     });
 

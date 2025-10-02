@@ -19,18 +19,16 @@ type UseReservarOptions = {
   onAfterReserve?: () => void | Promise<void>;
 };
 
-const MOTO_CAPACITY = 4 as const;
-
 // ---------- Tipos auxiliares (ajusta si en tu modelo son distintos) ----------
 type VehicleType = 'Carro' | 'Moto';
 type TurnDb = 'Manana' | 'Tarde' | 'Dia completo';
 
 type ReservationCreate = {
-  Title: string;              // mail del usuario
-  Date: string;               // ISO (yyyy-mm-dd)
-  Turn: TurnDb;               // 'Manana' | 'Tarde' | 'Dia completo'
-  SpotIdLookupId: number;     // ID numérico del lookup
-  VehicleType: VehicleType;   // 'Carro' | 'Moto'
+  Title: string;            // mail del usuario
+  Date: string;             // ISO (yyyy-mm-dd)
+  Turn: TurnDb;             // 'Manana' | 'Tarde' | 'Dia completo'
+  SpotIdLookupId: number;   // ID numérico del lookup
+  VehicleType: VehicleType; // 'Carro' | 'Moto'
   Status: 'Activa' | 'Cancelada' | 'Rechazada' | 'Pendiente';
   NombreUsuario: string;
 };
@@ -72,7 +70,7 @@ export function useReservar(
     const hasVisibleDays = (v: unknown): v is { VisibleDays?: number } => {
       if (typeof v !== 'object' || v === null) return false;
       const o = v as Record<string, unknown>;
-      return !('VisibleDays' in o) || typeof o.VisibleDays === 'number';
+      return !('VisibleDays' in o) || typeof (o as any).VisibleDays === 'number';
     };
 
     (async () => {
@@ -81,8 +79,8 @@ export function useReservar(
 
         const settings: unknown = await settingsSvc.get('1');
         const days: number =
-          hasVisibleDays(settings) && typeof settings.VisibleDays === 'number'
-            ? settings.VisibleDays
+          hasVisibleDays(settings) && typeof (settings as any).VisibleDays === 'number'
+            ? (settings as any).VisibleDays
             : 3;
 
         setMaxDate(addDays(hoy, days));
@@ -102,14 +100,20 @@ export function useReservar(
   // ───────────────── Helpers ─────────────────
   const sanitizeForOdata = (s: string) => s.replace(/'/g, "''");
 
-  // Cuenta reservas para un slot/fecha/turno
+  // Cuenta reservas para un slot/fecha/turnos (capacidad por turno = 1)
   const countReservations = React.useCallback(
-    async (slotId: number | string, dateISO: string, turn: Exclude<TurnType, 'Dia'>) => {
+    async (
+      slotId: number | string,
+      dateISO: string,
+      turns: Array<'Manana' | 'Tarde' | 'Dia completo'>
+    ) => {
       const sid = Number(slotId);
+      const turnFilter = `(${turns.map(t => `fields/Turn eq '${t}'`).join(' or ')})`;
+
       const filter = [
-        `fields/SpotIdLookupId eq ${sid}`, // cambia si tu lookup se llama distinto
+        `fields/SpotIdLookupId eq ${sid}`,   // cambia si tu lookup se llama distinto
         `fields/Date eq '${dateISO}'`,
-        `fields/Turn eq '${turn}'`,
+        turnFilter,
         `(fields/Status ne 'Cancelada')`,
       ].join(' and ');
 
@@ -119,7 +123,7 @@ export function useReservar(
     [reservationsSvc]
   );
 
-  // ¿ya tiene una reserva activa el mismo día y turno?
+  // ¿ya tiene una reserva activa el mismo día y turno (o día completo)?
   const hasActiveReservationSameDay = React.useCallback(
     async (email: string, dateISO: string, turn: string): Promise<boolean> => {
       if (!email?.trim() || !dateISO) return false;
@@ -129,7 +133,7 @@ export function useReservar(
         `fields/Title eq '${emailSafe}'`,
         `fields/Date eq '${dateISO}'`,
         `(fields/Status ne 'Cancelada')`,
-        `fields/Turn eq '${turn}'`,
+        `(fields/Turn eq '${turn}' or fields/Turn eq 'Dia completo')`, // si tiene 'Dia completo' también bloquea
       ].join(' and ');
 
       const items = await reservationsSvc.getAll({ filter, top: 1, orderby: 'ID asc' });
@@ -156,21 +160,19 @@ export function useReservar(
     [reservationsSvc]
   );
 
-
-
   const reservar = React.useCallback(
     async ({ vehicle, turn, dateISO }: ReserveArgs): Promise<ReserveResult> => {
-      // 0) Validación según tipo de turno
+      // 0) Validación por tipo de turno respecto al usuario
       if (turn === 'Dia') {
-        // Para Día: bloquear si ya existe cualquier reserva ese día
+        // Día completo: bloquear si ya existe cualquier reserva del usuario ese día
         if (await hasActiveReservationAnyTurnSameDay(userMail, dateISO)) {
           return {
             ok: false,
-            message: `No puedes reservar día completo: ya tienes una reserva activa para el ${dateISO}s.`,
+            message: `No puedes reservar día completo: ya tienes una reserva activa para el ${dateISO}.`,
           };
         }
       } else {
-        // Para turnos normales: bloquear solo si ya tiene reserva en ese mismo turno
+        // Mañana/Tarde: bloquear si el usuario ya tiene reserva en ese mismo turno o un 'Día completo'
         if (await hasActiveReservationSameDay(userMail, dateISO, turn)) {
           return {
             ok: false,
@@ -190,6 +192,7 @@ export function useReservar(
       if (!Array.isArray(slots) || slots.length === 0) {
         return { ok: false, message: `No existen celdas activas para ${vehicle}.` };
       }
+      console.log('[useReservar] Slots: ', slots);
 
       // 2) Turnos a validar capacidad (para 'Dia' valida mañana y tarde)
       const turnsToCheck: Exclude<TurnType, 'Dia'>[] =
@@ -209,19 +212,24 @@ export function useReservar(
 
         if (slotId == null) continue;
 
-        // 3) Validar cupo por turno
+        // 3) Validar disponibilidad (capacidad por turno = 1, sin distinción por tipo de vehículo)
         let available = true;
-        for (const t of turnsToCheck) {
-          const count = await countReservations(slotId, dateISO, t);
-          if (vehicle === 'Carro') {
+
+        if (turn === 'Dia') {
+          // Debe estar libre en ambos turnos y sin 'Dia completo' previo
+          const any = await countReservations(slotId, dateISO, ['Manana', 'Tarde', 'Dia completo']);
+          if (any > 0) available = false;
+        } else {
+          // Mañana/Tarde: considera también 'Dia completo' como bloqueo del turno
+          for (const t of turnsToCheck) {
+            const count = await countReservations(slotId, dateISO, [t, 'Dia completo']);
             if (count >= 1) { available = false; break; }
-          } else {
-            if (count >= MOTO_CAPACITY) { available = false; break; }
           }
         }
+
         if (!available) continue;
 
-        // 4) Crear **una** sola reserva
+        // 4) Crear **una** sola reserva en la primera celda disponible
         const turnValue: TurnDb = (turn === 'Dia' ? 'Dia completo' : (turn as TurnDb));
 
         try {
@@ -246,7 +254,8 @@ export function useReservar(
               : `Reserva creada en celda ${code} para ${dateISO} (${turn}).`;
 
           return { ok: true, message: successMsg, reservation: created };
-        } catch {
+        } catch (e) {
+          console.warn('[useReservar] Falló crear en celda', code, e);
           // Si falla con esta celda, intenta con la siguiente
           continue;
         }

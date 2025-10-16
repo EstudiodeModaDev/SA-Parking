@@ -230,35 +230,3 @@ function ReporteAforoTabla({ rows }: { rows: RowAforo[] }) {
 }
 
 /* ---------- Tabla AFORO ---------- */
-function ReporteLogAuditoria({ rows }: { rows: RowAforo[] }) {
-  if (!rows?.length) {
-    return <div className={styles.empty}>Sin resultados</div>;
-  }
-
-  return (
-    <table className={styles.table}>
-      <thead>
-        <tr>
-          <th>Fecha</th>
-          <th>Turno</th>
-          <th>Ocupadas</th>
-          <th>Disponibles</th>
-          <th>Capacidad</th>
-          <th>% Aforo</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((r) => (
-          <tr key={r.key ?? `${r.Fecha}-${r.Turno}`}>
-            <td>{r.Fecha}</td>
-            <td>{r.Turno}</td>
-            <td>{r.Ocupadas}</td>
-            <td>{r.Disponibles}</td>
-            <td>{r.Capacidad}</td>
-            <td>{r.AforoPct}%</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}

@@ -65,7 +65,7 @@ const S = {
     } as React.CSSProperties,
 
   iconBtn: {
-    width: 45,
+    width: 65,
     height: 28,
     padding: '6px 16px', 
     display: 'inline-flex',
@@ -80,7 +80,7 @@ const S = {
   } as React.CSSProperties,
 
   iconBtnDanger: {
-    width: 45,
+    width: 65,
     height: 28,
     padding: '6px 16px', 
     display: 'inline-flex',

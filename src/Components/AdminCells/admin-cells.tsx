@@ -8,6 +8,7 @@ import { useSettingsHours } from '../../Hooks/useSettingHour';
 import { useReservar } from '../../Hooks/useReservar';
 import type { TurnType, VehicleType } from '../../Models/shared';
 import { useGraphServices } from '../../graph/GraphServicesContext';
+import { useReporteria } from '../../Hooks/useReportes';
 
 const AdminCells: React.FC = () => {
   const {
@@ -61,6 +62,8 @@ const AdminCells: React.FC = () => {
 
   const { minDate, maxDate, reservar, loading: reservarLoading, error: reservarError } =
     useReservar(reservations, parkingSlots, settings, qrUserEmail, qrUserName);
+
+  const {aforoPct,} = useReporteria(reservations, parkingSlots);
     const minISO = React.useMemo(() => toISODate(minDate), [minDate]);
   const maxISO = React.useMemo(() => toISODate(maxDate), [maxDate]);
   const workerOptions = React.useMemo(
@@ -236,6 +239,7 @@ async function submitQuickReserve() {
           </div>
 
           <div style={{ marginTop: 6 }}>
+            <small>Aforo (Hoy):{aforoPct}%</small>
             <small>{hoursLabel}</small>
           </div>
         </div>
@@ -600,7 +604,6 @@ async function submitQuickReserve() {
 };
 
 export default AdminCells;
-
 
 
 

@@ -535,7 +535,7 @@ export default function SlotDetailsModal({open, slot, workers = [], workersLoadi
   };
 
   return (
-    <div style={S.backdrop} onMouseDown={onBackdrop}>
+    <div style={S.backdrop} onMouseDown={onBackdrop} data-force-light>
       <div style={S.modal}>
         <header style={S.header}>
           <h3 style={S.title}>Celda {slot.Title}</h3>
@@ -830,7 +830,7 @@ export default function SlotDetailsModal({open, slot, workers = [], workersLoadi
               <div style={{ padding: 16, display: "grid", gap: 12 }}>
                 {/* Desplegable: 3 opciones */}
                 <label style={{ display: "grid", gap: 6 }}>
-                  <span><strong>Itinerancia</strong></span>
+                  <span><strong>Cambiar tipo de usuario:</strong></span>
                   <select
                     style={S.select}
                     value={editOption}
@@ -845,7 +845,7 @@ export default function SlotDetailsModal({open, slot, workers = [], workersLoadi
 
                 {/* Texto con validación AA - xxxxx… */}
                 <label style={{ display: "grid", gap: 6 }}>
-                  <span><strong>Detalle</strong> <small style={S.muted}>Formato: AA - mínimo 5 caracteres</small></span>
+                  <span><strong>Nuevo identificador de celda</strong> <small style={S.muted}>Formato: AA - mínimo 5 caracteres</small></span>
                   <input
                     type="text"
                     style={{

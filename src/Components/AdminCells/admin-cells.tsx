@@ -464,7 +464,7 @@ async function submitQuickReserve() {
                     <br />
                     <span className={styles.metaLabel}>Tipo: {r.TipoCelda}</span>
                     <br />
-                    <span className={styles.metaLabel}>Itinerancia: {r.Itinerancia}</span>
+                    <span className={styles.metaLabel}>Usuario: {r.Itinerancia}</span>
                   </div>
 
                   <button

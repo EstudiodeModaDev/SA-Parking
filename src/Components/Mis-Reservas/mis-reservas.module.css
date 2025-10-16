@@ -1,5 +1,14 @@
 /* === Layout base === */
-.section { display: flex; justify-content: center; }
+:root {
+  color-scheme: light; /* fuerza el modo claro global */
+}
+
+.section { 
+  display: flex; 
+  justify-content: center; 
+  isolation: isolate; /* evita heredar filtros de modo oscuro */
+}
+
 .card {
   box-sizing: border-box;
   background: #fff;
@@ -10,15 +19,16 @@
   max-width: 100%;
   min-width: 0;
 }
+
 .title { font-size: 24px; color: #2563eb; margin-bottom: 16px; }
 
-/* Tabla */
+/* === Tabla === */
 .tableWrap { overflow-x: auto; }
 .table { width: 100%; border-collapse: collapse; min-width: 720px; }
 .theadRow { background: #f1f5f9; }
 .th, .td { padding: 8px; text-align: left; }
 
-/* Pill de estado */
+/* === Pill de estado === */
 .pill {
   color: #fff;
   border-radius: 8px;
@@ -27,7 +37,7 @@
   font-weight: 500;
 }
 
-/* Botón cancelar */
+/* === Botón cancelar === */
 .cancelBtn {
   background: red;
   color: white;
@@ -44,7 +54,7 @@
 .cancelBtn:active:not(:disabled) { transform: scale(0.98); }
 .cancelBtn:disabled { cursor: not-allowed; opacity: .6; }
 
-/* Mensajes */
+/* === Mensajes === */
 .info { color: #475569; font-size: 14px; }
 .error {
   color: #b91c1c;
@@ -55,7 +65,7 @@
   font-size: 14px;
 }
 
-/* ====== Top Bar ====== */
+/* === Top Bar === */
 .topBar {
   display: flex;
   flex-direction: column;
@@ -65,7 +75,7 @@
   margin-bottom: 16px;
 }
 
-/* ====== Segmentación ====== */
+/* === Segmentación === */
 .segmented {
   display: inline-flex;
   border: 1px solid #e2e8f0;
@@ -101,7 +111,7 @@
 }
 .segmentBtnActive:hover { background: #1d4ed8; color: #fff; }
 
-/* ====== Formulario de rango (history) ====== */
+/* === Formulario de rango (history) === */
 .form {
   display: flex;
   gap: 12px;
@@ -136,7 +146,7 @@
   box-shadow: 0 0 0 3px rgba(37,99,235,.2);
 }
 
-/* ====== Paginación ====== */
+/* === Paginación === */
 .paginationBar {
   display: flex;
   align-items: center;
@@ -172,7 +182,7 @@
 
 .pageInfo { font-size: 14px; color: #64748b; }
 
-/* Selector de filas por página */
+/* === Selector de filas por página === */
 .pageSizeLabel {
   display: inline-flex;
   align-items: center;
@@ -186,8 +196,32 @@
   border-radius: 8px;
   outline: none;
   font: inherit;
+  background: #fff;
+  color: #0f172a;
 }
 .pageSizeSelect:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 2px rgba(37,99,235,.15);
+}
+
+/* === Protección completa contra modo oscuro === */
+@media (prefers-color-scheme: dark) {
+  .card,
+  .table,
+  .theadRow,
+  .input,
+  .pageBtn,
+  .pageSizeSelect {
+    background: #fff !important;
+    color: #0f172a !important;
+    border-color: #cbd5e1 !important;
+  }
+
+  .title { color: #2563eb !important; }
+  .error { background: #fef2f2 !important; color: #b91c1c !important; border-color: #fecaca !important; }
+  .info { color: #475569 !important; }
+  .segmentBtnActive { background: #2563eb !important; color: #fff !important; }
+  .segmentBtn:hover { background: #eef2ff !important; }
+  .pageBtn:hover { background: #f3f4f6 !important; }
+  .cancelBtn { background: red !important; color: white !important; }
 }

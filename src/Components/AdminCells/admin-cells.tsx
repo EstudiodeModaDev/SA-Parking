@@ -387,7 +387,7 @@ async function submitQuickReserve() {
         </div>
 
         <div className={styles.pageSizeBox}>
-          <span>Itinerancia</span>
+          <span>Tipo de usuario</span>
           <select
             className={styles.pageSizeSelect}
             value={itinerancia}

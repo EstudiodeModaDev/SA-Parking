@@ -65,7 +65,7 @@ headerActions: {
   } as React.CSSProperties,
 
   iconBtn: {
-    width: 28,
+    width: 35,
     height: 28,
     display: 'inline-flex',
     alignItems: 'center',
@@ -79,7 +79,7 @@ headerActions: {
   } as React.CSSProperties,
 
   iconBtnDanger: {
-    width: 28,
+    width: 35,
     height: 28,
     display: 'inline-flex',
     alignItems: 'center',

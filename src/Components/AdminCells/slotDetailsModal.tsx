@@ -57,16 +57,17 @@ const S = {
     position: 'relative'
   } as React.CSSProperties,
 
-headerActions: {
-    display: 'flex',
-    gap: 8,
-    alignItems: 'center',
-    marginRight: 8
-  } as React.CSSProperties,
+  headerActions: {
+      display: 'flex',
+      gap: 8,
+      alignItems: 'center',
+      marginRight: 8
+    } as React.CSSProperties,
 
   iconBtn: {
-    width: 35,
+    width: 45,
     height: 28,
+    padding: '6px 16px', 
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -79,8 +80,9 @@ headerActions: {
   } as React.CSSProperties,
 
   iconBtnDanger: {
-    width: 35,
+    width: 45,
     height: 28,
+    padding: '6px 16px', 
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',

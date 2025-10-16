@@ -116,8 +116,8 @@ const MisReservas: React.FC<Props> = ({ userMail, isAdmin = false }) => {
               <table className={styles.table}>
                 <thead>
                   <tr className={styles.theadRow}>
-                    {isAdmin ? <th className={styles.th}>Usuario</th> : null}
                     <th className={styles.th}>Codigo de reserva</th>
+                    {isAdmin ? <th className={styles.th}>Usuario</th> : null}      
                     <th className={styles.th}>Fecha en la que se reservo</th>
                     <th className={styles.th}>Fecha de la reserva</th>
                     <th className={styles.th}>Turno</th>

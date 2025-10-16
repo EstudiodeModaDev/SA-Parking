@@ -239,7 +239,9 @@ async function submitQuickReserve() {
           </div>
 
           <div style={{ marginTop: 6 }}>
-            <small>Aforo (Hoy):{aforoPct}%</small>
+            <div className={styles.aforo}>
+              Aforo (periodo filtrado): <strong>{aforoPct}%</strong>
+            </div>
             <small>{hoursLabel}</small>
           </div>
         </div>

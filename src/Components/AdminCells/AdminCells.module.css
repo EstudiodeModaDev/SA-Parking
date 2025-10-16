@@ -20,6 +20,13 @@
 }
 @media (min-width:1024px){ .filtersBar{ flex-wrap:nowrap; } }
 
+.aforo {
+  font-size: 14px;
+  color: var(--muted);
+}
+.aforo strong { color: var(--brand); }
+.aforoCap { margin-left: 8px; }
+
 .searchBox{ display:flex; flex:0 1 200px; min-width:180px; max-width:220px; gap:6px; }
 .searchInput{
   flex:1; padding:6px 10px; border:1px solid var(--border); border-radius:8px; outline:none; font:inherit;

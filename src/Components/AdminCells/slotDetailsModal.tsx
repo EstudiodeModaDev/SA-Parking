@@ -524,7 +524,7 @@ export default function SlotDetailsModal({open, slot, workers = [], workersLoadi
             <button
               type="button"
               style={S.iconBtnDanger}
-              onClick={onDeleteCell}         // <-- ya la tienes (borrar reservas + celda)
+              onClick={() => onDeleteCell()}         // <-- ya la tienes (borrar reservas + celda)
               title="Eliminar celda"
               aria-label="Eliminar celda"
             >

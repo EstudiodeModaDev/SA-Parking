@@ -7,7 +7,6 @@
   display: flex; 
   justify-content: center; 
   isolation: isolate; 
-  width: 1250px;
 }
 
 .card {

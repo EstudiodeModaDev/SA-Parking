@@ -274,17 +274,9 @@ export default function SlotDetailsModal({open, slot, workers = [], workersLoadi
     return selectableWorkers.filter((w) => norm(`${w.name} ${w.email} ${w.job}`).includes(q));
   }, [selectableWorkers, colabTerm]);
 
-  const EDIT_REGEX = /^[A-Za-z]{2} - .{5,}$/;
 
-  const editTextError =
-  editTouched && !EDIT_REGEX.test(editText)
-      ? "Formato inválido: usa 'AA - (mínimo 5 caracteres)'."
-      : null;
-
-  const canSaveEdit = Boolean(editOption && EDIT_REGEX.test(editText));
 
   function handleEditSave() {
-    if (!canSaveEdit) return;
     onEditCell(editText, editOption)
     // Limpia y cierra
     setEditOpen(false);
@@ -858,8 +850,8 @@ export default function SlotDetailsModal({open, slot, workers = [], workersLoadi
                     type="text"
                     style={{
                       ...S.input,
-                      borderColor: editTouched && editTextError ? "#dc2626" : (S.input as any).borderColor,
-                      outlineColor: editTouched && editTextError ? "#dc2626" : undefined,
+                      borderColor: editTouched  ? "#dc2626" : (S.input as any).borderColor,
+                      outlineColor: editTouched  ? "#dc2626" : undefined,
                     }}
                     placeholder="AB - descripción..."
                     value={editText}
@@ -871,11 +863,8 @@ export default function SlotDetailsModal({open, slot, workers = [], workersLoadi
                     pattern="^[A-Za-z]{2} - .{5,}$"
                     title="Usa 'AA - (mínimo 5 caracteres)'"
                     required
-                    aria-invalid={!!(editTouched && editTextError)}
+                    aria-invalid={!!(editTouched )}
                   />
-                  {editTouched && editTextError && (
-                    <small style={{ color: "#dc2626" }}>{editTextError}</small>
-                  )}
                 </label>
               </div>
 
@@ -894,7 +883,6 @@ export default function SlotDetailsModal({open, slot, workers = [], workersLoadi
                 <button
                   type="button"
                   style={S.btnPrimary}
-                  disabled={!canSaveEdit}
                   onClick={handleEditSave}
                 >
                   Guardar

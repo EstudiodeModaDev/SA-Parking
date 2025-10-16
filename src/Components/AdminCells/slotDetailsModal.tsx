@@ -14,17 +14,10 @@ import { useAuth } from '../../auth/AuthProvider';
 import { GraphRest } from '../../graph/GraphRest';
 import { ReservationsService } from '../../Services/Reservations.service';
 import { ColaboradoresFijosService } from '../../Services/Colaboradoresfijos.service';
+import { ParkingSlotsService } from '../../Services/ParkingSlot.service';
+import type { Reservations } from '../../Models/Reservation';
 
-type Props = {
-  open: boolean;
-  slot: SlotUI | null;
-  onClose: () => void;
-  onChanged?: () => void;
-
-  // 🔽 Solo se usan en modo "reserva" para precargar nombre/correo
-  workers?: Worker[];
-  workersLoading?: boolean;
-};
+type Props = {open: boolean; slot: SlotUI | null; onClose: () => void; onChanged?: () => void;workers?: Worker[]; workersLoading?: boolean;};
 
 // ===== estilos inline para abreviar
 const S = {
@@ -57,12 +50,48 @@ const S = {
     border: '1px solid #e5e7eb',
   },
   header: {
-    padding: '12px 16px',
-    borderBottom: '1px solid #e5e7eb',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-  },
+    padding: '8px 12px',
+    position: 'relative'
+  } as React.CSSProperties,
+
+  headerActions: {
+    display: 'flex',
+    gap: 8,
+    alignItems: 'center',
+    marginRight: 8
+  } as React.CSSProperties,
+
+  iconBtn: {
+    width: 28,
+    height: 28,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 6,
+    border: '1px solid #d4d4d4',
+    background: '#fff',
+    cursor: 'pointer',
+    fontSize: 16,
+    lineHeight: 1
+  } as React.CSSProperties,
+
+  iconBtnDanger: {
+    width: 28,
+    height: 28,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 6,
+    border: '1px solid #ef4444',
+    background: '#fff',
+    cursor: 'pointer',
+    fontSize: 16,
+    lineHeight: 1,
+    color: '#b91c1c'
+  } as React.CSSProperties,
   title: { margin: 0, fontSize: 18, fontWeight: 700 as const },
   closeBtn: {
     background: 'transparent',
@@ -153,13 +182,8 @@ const S = {
 const norm = (s: string) =>
   s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
 
-export default function SlotDetailsModal({
-  open, slot, workers = [], workersLoading = false,
-  onClose, onChanged,
-}: Props) {
-  // ====== construir services Graph con MSAL ======
+export default function SlotDetailsModal({open, slot, workers = [], workersLoading = false,onClose, onChanged,}: Props) {
   const { ready, getToken } = useAuth();
-
   const reservationsSvc = React.useMemo(() => {
     if (!ready) return null;
     const graph = new GraphRest(getToken);
@@ -181,6 +205,17 @@ export default function SlotDetailsModal({
       'Colaboradores fijos'
     );
   }, [ready, getToken]);
+
+  const cellsScv = React.useMemo(() => {
+  if (!ready) return null;
+  const graph = new GraphRest(getToken);
+  return new ParkingSlotsService(
+    graph,
+    'estudiodemoda.sharepoint.com',
+    '/sites/TransformacionDigital/IN/SA',
+    'ParkingSlots'
+  );
+}, [ready, getToken]);
 
   // ===== Estado asignación fija =====
   const [loading, setLoading] = React.useState(false);
@@ -426,6 +461,51 @@ export default function SlotDetailsModal({
     [slot, rvDate, rvTurn, rvName, rvMail, isBusy, onChanged, onClose, nameError, mailError, reservationsSvc]
   );
 
+  const onDeleteCell = React.useCallback(
+    async () => {
+      if (!slot || !reservationsSvc) return;
+
+      setRvTouched({ name: true, mail: true });
+      if (nameError || mailError) {
+        setRvError(nameError || mailError);
+        return;
+      }
+
+      setRvSaving(true);
+      setRvError(null);
+
+      try {
+        const reserves = await reservationsSvc.getAll({
+          filter: `fields/SpotId eq ${slot.Id} and (fields/Status ne 'Cancelada')`
+        });
+        const toDelete = reserves?.items ?? [];
+        if (toDelete.length > 0) {
+          const results = await Promise.allSettled(
+            toDelete.map((r:  Reservations ) =>
+              reservationsSvc.delete(String((r).ID ?? (r as any).id))
+            )
+          );
+
+          const failed = results.filter(r => r.status === "rejected");
+          if (failed.length > 0) {
+            console.warn(`No se pudieron eliminar ${failed.length} reservas de ${toDelete.length}.`);
+          }
+        }
+        await cellsScv!.delete(String(slot.Id));
+
+        await onChanged?.();
+        alert("Celda y reservas asociadas eliminadas correctamente");
+        onClose();
+      } catch (e: any) {
+        setRvError(e?.message ?? "No fue posible eliminar la celda y sus reservas.");
+      } finally {
+        setRvSaving(false);
+      }
+    },
+    // Dependencias reales (quita lo que no usas: rvDate, rvTurn, rvName, rvMail, isBusy)
+    [slot, onChanged, onClose, nameError, mailError, reservationsSvc, cellsScv]
+  );
+
   // ===== Render =====
   if (!open || !slot) return null;
 
@@ -438,9 +518,21 @@ export default function SlotDetailsModal({
       <div style={S.modal}>
         <header style={S.header}>
           <h3 style={S.title}>Celda {slot.Title}</h3>
-          <button style={S.closeBtn} onClick={onClose} aria-label="Cerrar">
-            ×
-          </button>
+
+          {/* Acciones arriba a la derecha */}
+          <div style={S.headerActions}>
+            <button
+              type="button"
+              style={S.iconBtnDanger}
+              onClick={onDeleteCell}         // <-- ya la tienes (borrar reservas + celda)
+              title="Eliminar celda"
+              aria-label="Eliminar celda"
+            >
+              🗑️
+            </button>
+          </div>
+
+          <button style={S.closeBtn} onClick={onClose} aria-label="Cerrar">×</button>
         </header>
 
         <div style={S.body}>

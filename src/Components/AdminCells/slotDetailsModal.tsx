@@ -540,10 +540,24 @@ export default function SlotDetailsModal({open, slot, workers = [], workersLoadi
         <header style={S.header}>
           <h3 style={S.title}>Celda {slot.Title}</h3>
           <div style={S.headerActions}>
-            <button type="button" style={S.iconBtnDanger} onClick={() => onDeleteCell()} title="Eliminar celda" aria-label="Eliminar celda">
+            <button
+              type="button"
+              style={S.iconBtnDanger}
+              onMouseEnter={(e) => Object.assign(e.currentTarget.style, S.iconBtnDangerHover)}
+              onMouseLeave={(e) => Object.assign(e.currentTarget.style, S.iconBtnDanger)}
+              onClick={() => onDeleteCell()}
+              title="Eliminar celda"
+            >
               Eliminar
             </button>
-            <button type="button" style={S.iconBtn} onClick={() => setEditOpen(true)} title="Editar celda" aria-label="Editar celda">
+            <button
+              type="button"
+              style={S.iconBtn}
+              onMouseEnter={(e) => Object.assign(e.currentTarget.style, S.iconBtnHover)}
+              onMouseLeave={(e) => Object.assign(e.currentTarget.style, S.iconBtn)}
+              onClick={() => setEditOpen(true)}
+              title="Editar celda"
+            >
               Editar
             </button>
             

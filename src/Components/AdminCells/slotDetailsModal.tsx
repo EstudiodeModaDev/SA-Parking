@@ -235,6 +235,10 @@ export default function SlotDetailsModal({open, slot, workers = [], workersLoadi
   const [rvError, setRvError] = React.useState<string | null>(null);
   const [rvName, setRvName] = React.useState('');
   const [rvMail, setRvMail] = React.useState('');
+  const [editTouched, setEditTouched] = React.useState(false);
+  const [editText, setEditText] = React.useState<string>("");
+  const [editOpen, setEditOpen] = React.useState(false);
+  const [editOption, setEditOption] = React.useState<string>("");
 
   // === Validación Reserva (Nombre y Correo obligatorios)
   const [rvTouched, setRvTouched] = React.useState<{ name: boolean; mail: boolean }>({
@@ -269,6 +273,25 @@ export default function SlotDetailsModal({open, slot, workers = [], workersLoadi
     const q = norm(colabTerm);
     return selectableWorkers.filter((w) => norm(`${w.name} ${w.email} ${w.job}`).includes(q));
   }, [selectableWorkers, colabTerm]);
+
+  const EDIT_REGEX = /^[A-Za-z]{2} - .{5,}$/;
+
+  const editTextError =
+  editTouched && !EDIT_REGEX.test(editText)
+      ? "Formato inválido: usa 'AA - (mínimo 5 caracteres)'."
+      : null;
+
+  const canSaveEdit = Boolean(editOption && EDIT_REGEX.test(editText));
+
+  function handleEditSave() {
+    if (!canSaveEdit) return;
+    onEditCell(editText, editOption)
+    // Limpia y cierra
+    setEditOpen(false);
+    setEditOption("");
+    setEditText("");
+    setEditTouched(false);
+}
 
   const lastPickRef = React.useRef<symbol | null>(null);
   const onSelectWorker = React.useCallback(
@@ -496,6 +519,22 @@ export default function SlotDetailsModal({open, slot, workers = [], workersLoadi
     [slot, onChanged, onClose, nameError, mailError, reservationsSvc, cellsScv]
   );
 
+  const onEditCell = React.useCallback(
+    async (name: string, itinerancia: string) => {
+      if (!slot || !cellsScv) return;                 // ← usa el servicio correcto
+      try {
+        await cellsScv.update(String(slot.Id), { Itinerancia: itinerancia, Title: name });  // ← await
+        await onChanged?.();
+        alert("Celda editada con exito");
+        onClose();
+      } catch (e: any) {
+        setRvError(e?.message ?? "No fue posible editar la celda.");
+      } finally {
+        setRvSaving(false);
+      }
+    },
+    [slot, onChanged, onClose, cellsScv]              // ← dependencias mínimas y correctas
+  );
   // ===== Render =====
   if (!open || !slot) return null;
 
@@ -512,6 +551,10 @@ export default function SlotDetailsModal({open, slot, workers = [], workersLoadi
             <button type="button" style={S.iconBtnDanger} onClick={() => onDeleteCell()} title="Eliminar celda" aria-label="Eliminar celda">
               Eliminar celda
             </button>
+            <button type="button" style={S.iconBtn} onClick={() => setEditOpen(true)} title="Editar celda" aria-label="Editar celda">
+              Editar
+            </button>
+            
           </div>
           <button style={S.closeBtn} onClick={onClose} aria-label="Cerrar">×</button>
         </header>
@@ -757,6 +800,109 @@ export default function SlotDetailsModal({open, slot, workers = [], workersLoadi
             </div>
           )}
         </div>
+
+        {editOpen && (
+          <div role="dialog" aria-modal="true" aria-labelledby="edit-title" onMouseDown={(e) => { if (e.target === e.currentTarget) setEditOpen(false);}}
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.35)", display: "grid", placeItems: "center", zIndex: 9999, }}>
+            <div
+              style={{
+                width: 520,
+                maxWidth: "92vw",
+                background: "#fff",
+                borderRadius: 12,
+                boxShadow: "0 10px 30px rgba(0,0,0,.25)",
+                overflow: "hidden",
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <header
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "12px 16px",
+                  borderBottom: "1px solid #e5e7eb",
+                }}
+              >
+                <h4 id="edit-title" style={{ margin: 0 }}>Editar celda</h4>
+                <button
+                  type="button"
+                  style={S.closeBtn}
+                  onClick={() => setEditOpen(false)}
+                  aria-label="Cerrar"
+                >
+                  ×
+                </button>
+              </header>
+
+              <div style={{ padding: 16, display: "grid", gap: 12 }}>
+                {/* Desplegable: 3 opciones */}
+                <label style={{ display: "grid", gap: 6 }}>
+                  <span><strong>Acción</strong></span>
+                  <select
+                    style={S.select}
+                    value={editOption}
+                    onChange={(e) => setEditOption(e.target.value)}
+                  >
+                    <option value="">Selecciona…</option>
+                    <option value="mantenimiento">Mover a mantenimiento</option>
+                    <option value="cambiar-tipo">Cambiar tipo</option>
+                    <option value="marcar-especial">Marcar como especial</option>
+                  </select>
+                </label>
+
+                {/* Texto con validación AA - xxxxx… */}
+                <label style={{ display: "grid", gap: 6 }}>
+                  <span><strong>Detalle</strong> <small style={S.muted}>Formato: AA - mínimo 5 caracteres</small></span>
+                  <input
+                    type="text"
+                    style={{
+                      ...S.input,
+                      borderColor: editTouched && editTextError ? "#dc2626" : (S.input as any).borderColor,
+                      outlineColor: editTouched && editTextError ? "#dc2626" : undefined,
+                    }}
+                    placeholder="AB - descripción..."
+                    value={editText}
+                    onChange={(e) => {
+                      setEditText(e.target.value);
+                    }}
+                    onBlur={() => setEditTouched(true)}
+                    // Validación nativa del navegador (opcional)
+                    pattern="^[A-Za-z]{2} - .{5,}$"
+                    title="Usa 'AA - (mínimo 5 caracteres)'"
+                    required
+                    aria-invalid={!!(editTouched && editTextError)}
+                  />
+                  {editTouched && editTextError && (
+                    <small style={{ color: "#dc2626" }}>{editTextError}</small>
+                  )}
+                </label>
+              </div>
+
+              <footer
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: 8,
+                  padding: 16,
+                  borderTop: "1px solid #e5e7eb",
+                }}
+              >
+                <button type="button" style={S.btnGhost} onClick={() => setEditOpen(false)}>
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  style={S.btnPrimary}
+                  disabled={!canSaveEdit}
+                  onClick={handleEditSave}
+                >
+                  Guardar
+                </button>
+              </footer>
+            </div>
+          </div>
+        )}
 
         <footer style={S.footer}>
           <button style={S.btnGhost} onClick={onClose}>Cerrar</button>

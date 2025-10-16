@@ -830,16 +830,16 @@ export default function SlotDetailsModal({open, slot, workers = [], workersLoadi
               <div style={{ padding: 16, display: "grid", gap: 12 }}>
                 {/* Desplegable: 3 opciones */}
                 <label style={{ display: "grid", gap: 6 }}>
-                  <span><strong>Acción</strong></span>
+                  <span><strong>Itinerancia</strong></span>
                   <select
                     style={S.select}
                     value={editOption}
                     onChange={(e) => setEditOption(e.target.value)}
                   >
                     <option value="">Selecciona…</option>
-                    <option value="mantenimiento">Mover a mantenimiento</option>
-                    <option value="cambiar-tipo">Cambiar tipo</option>
-                    <option value="marcar-especial">Marcar como especial</option>
+                    <option value="Directico">Directivo</option>
+                    <option value="Empleado Fijo">Empleado Fijo</option>
+                    <option value="Empleado Itinerante">Empleado Itinerante</option>
                   </select>
                 </label>
 

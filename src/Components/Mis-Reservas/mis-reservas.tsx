@@ -119,7 +119,7 @@ const MisReservas: React.FC<Props> = ({ userMail, isAdmin = false }) => {
                     <th className={styles.th}>Reserva No.</th>
                     {isAdmin ? <th className={styles.th}>Usuario</th> : null}      
                     <th className={styles.th}>Reservo el:</th>
-                    <th className={styles.th}>Reserva para:</th>
+                    <th className={styles.th}>Reserva para el:</th>
                     <th className={styles.th}>Turno</th>
                     <th className={styles.th}>Celda</th>
                     <th className={styles.th}>Vehículo</th>

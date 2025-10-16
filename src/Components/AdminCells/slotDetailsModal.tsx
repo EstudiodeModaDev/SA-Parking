@@ -543,7 +543,7 @@ export default function SlotDetailsModal({open, slot, workers = [], workersLoadi
             <button
               type="button"
               style={S.iconBtnDanger}
-              onMouseEnter={(e) => Object.assign(e.currentTarget.style, S.iconBtnDangerHover)}
+              onMouseEnter={(e) => Object.assign(e.currentTarget.style, S.iconBtnDanger)}
               onMouseLeave={(e) => Object.assign(e.currentTarget.style, S.iconBtnDanger)}
               onClick={() => onDeleteCell()}
               title="Eliminar celda"
@@ -553,7 +553,7 @@ export default function SlotDetailsModal({open, slot, workers = [], workersLoadi
             <button
               type="button"
               style={S.iconBtn}
-              onMouseEnter={(e) => Object.assign(e.currentTarget.style, S.iconBtnHover)}
+              onMouseEnter={(e) => Object.assign(e.currentTarget.style, S.iconBtn)}
               onMouseLeave={(e) => Object.assign(e.currentTarget.style, S.iconBtn)}
               onClick={() => setEditOpen(true)}
               title="Editar celda"

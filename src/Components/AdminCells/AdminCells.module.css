@@ -69,7 +69,43 @@
 .badgeWho{ color:#64748b; font-size:11px; }
 
 /* Botones genéricos */
-.btn{ padding:6px 10px; border-radius:8px; border:none; cursor:pointer; font-weight:600; font-size:14px; transition:background .2s ease, transform .05s ease; }
+.btn {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: background .2s ease, transform .05s ease;
+  
+  /* 🔒 Protección contra modo oscuro */
+  background: #fff;         /* color base fijo */
+  color: #111827;           /* texto oscuro fijo */
+  color-scheme: light;      /* fuerza el esquema claro */
+  isolation: isolate;       /* evita heredar inversión global */
+}
+
+/* Si querés variantes, agrégalas igual de seguras */
+.btn:hover {
+  background: #f3f4f6;      /* gris claro fijo */
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+/* 🔒 Reafirma los colores en modo oscuro */
+@media (prefers-color-scheme: dark) {
+  .btn {
+    background: #fff !important;
+    color: #111827 !important;
+  }
+}
 .btn:disabled{ opacity:.6; cursor:not-allowed; }
 .btnPrimary{ background:var(--primary); color:#fff; }
 .btnPrimary:hover{ background:var(--primary-600); }

@@ -57,7 +57,7 @@ const S = {
     position: 'relative'
   } as React.CSSProperties,
 
-  headerActions: {
+headerActions: {
     display: 'flex',
     gap: 8,
     alignItems: 'center',
@@ -555,7 +555,7 @@ export default function SlotDetailsModal({open, slot, workers = [], workersLoadi
           <div><strong>Tipo:</strong> {slot.TipoCelda}</div>
           <div><strong>Estado:</strong> {slot.Activa}</div>
           <div style={S.muted as React.CSSProperties}>
-            <strong>Itinerancia:</strong> {slot.Itinerancia ?? '—'} &nbsp;→&nbsp;
+            <strong>Tipo de usuario:</strong> {slot.Itinerancia ?? '—'} &nbsp;→&nbsp;
             <strong>{mode === 'reserva' ? 'Modo Reserva (turno)' : 'Modo Asignación fija'}</strong>
           </div>
 

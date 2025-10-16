@@ -464,16 +464,6 @@ export default function SlotDetailsModal({open, slot, workers = [], workersLoadi
   const onDeleteCell = React.useCallback(
     async () => {
       if (!slot || !reservationsSvc) return;
-
-      setRvTouched({ name: true, mail: true });
-      if (nameError || mailError) {
-        setRvError(nameError || mailError);
-        return;
-      }
-
-      setRvSaving(true);
-      setRvError(null);
-
       try {
         const reserves = await reservationsSvc.getAll({
           filter: `fields/SpotId eq ${slot.Id} and (fields/Status ne 'Cancelada')`
@@ -518,20 +508,11 @@ export default function SlotDetailsModal({open, slot, workers = [], workersLoadi
       <div style={S.modal}>
         <header style={S.header}>
           <h3 style={S.title}>Celda {slot.Title}</h3>
-
-          {/* Acciones arriba a la derecha */}
           <div style={S.headerActions}>
-            <button
-              type="button"
-              style={S.iconBtnDanger}
-              onClick={() => onDeleteCell()}         // <-- ya la tienes (borrar reservas + celda)
-              title="Eliminar celda"
-              aria-label="Eliminar celda"
-            >
-              🗑️
+            <button type="button" style={S.iconBtnDanger} onClick={() => onDeleteCell()} title="Eliminar celda" aria-label="Eliminar celda">
+              Eliminar celda
             </button>
           </div>
-
           <button style={S.closeBtn} onClick={onClose} aria-label="Cerrar">×</button>
         </header>
 

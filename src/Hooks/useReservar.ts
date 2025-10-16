@@ -21,14 +21,14 @@ type UseReservarOptions = {
 
 // ---------- Tipos auxiliares (ajusta si en tu modelo son distintos) ----------
 type VehicleType = 'Carro' | 'Moto';
-type TurnDb = 'Manana' | 'Tarde' | 'Dia completo';
+type TurnDb = 'Manana' | 'Tarde' | 'Día completo';
 
 type ReservationCreate = {
-  Title: string;            // mail del usuario
-  Date: string;             // ISO (yyyy-mm-dd)
-  Turn: TurnDb;             // 'Manana' | 'Tarde' | 'Dia completo'
-  SpotIdLookupId: number;   // ID numérico del lookup
-  VehicleType: VehicleType; // 'Carro' | 'Moto'
+  Title: string;           
+  Date: string;             
+  Turn: TurnDb;             
+  SpotIdLookupId: number;   
+  VehicleType: VehicleType; 
   Status: 'Activa' | 'Cancelada' | 'Rechazada' | 'Pendiente';
   NombreUsuario: string;
 };
@@ -105,7 +105,7 @@ export function useReservar(
     async (
       slotId: number | string,
       dateISO: string,
-      turns: Array<'Manana' | 'Tarde' | 'Dia completo'>
+      turns: Array<'Manana' | 'Tarde' | 'Día completo'>
     ) => {
       const sid = Number(slotId);
       const turnFilter = `(${turns.map(t => `fields/Turn eq '${t}'`).join(' or ')})`;
@@ -133,7 +133,7 @@ export function useReservar(
         `fields/Title eq '${emailSafe}'`,
         `fields/Date eq '${dateISO}'`,
         `(fields/Status ne 'Cancelada')`,
-        `(fields/Turn eq '${turn}' or fields/Turn eq 'Dia completo')`, // si tiene 'Dia completo' también bloquea
+        `(fields/Turn eq '${turn}' or fields/Turn eq 'Día completo')`, // si tiene 'Día completo' también bloquea
       ].join(' and ');
 
       const items = await reservationsSvc.getAll({ filter, top: 1, orderby: 'ID asc' });
@@ -216,13 +216,13 @@ export function useReservar(
         let available = true;
 
         if (turn === 'Dia') {
-          // Debe estar libre en ambos turnos y sin 'Dia completo' previo
-          const any = await countReservations(slotId, dateISO, ['Manana', 'Tarde', 'Dia completo']);
+          // Debe estar libre en ambos turnos y sin 'Día completo' previo
+          const any = await countReservations(slotId, dateISO, ['Manana', 'Tarde', 'Día completo']);
           if (any > 0) available = false;
         } else {
-          // Mañana/Tarde: considera también 'Dia completo' como bloqueo del turno
+          // Mañana/Tarde: considera también 'Día completo' como bloqueo del turno
           for (const t of turnsToCheck) {
-            const count = await countReservations(slotId, dateISO, [t, 'Dia completo']);
+            const count = await countReservations(slotId, dateISO, [t, 'Día completo']);
             if (count >= 1) { available = false; break; }
           }
         }
@@ -230,7 +230,7 @@ export function useReservar(
         if (!available) continue;
 
         // 4) Crear **una** sola reserva en la primera celda disponible
-        const turnValue: TurnDb = (turn === 'Dia' ? 'Dia completo' : (turn as TurnDb));
+        const turnValue: TurnDb = (turn === 'Dia' ? 'Día completo' : (turn as TurnDb));
 
         try {
           const payload = {

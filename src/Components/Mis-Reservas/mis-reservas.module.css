@@ -219,7 +219,5 @@
   .error { background: #fef2f2 !important; color: #b91c1c !important; border-color: #fecaca !important; }
   .info { color: #475569 !important; }
   .segmentBtnActive { background: #2563eb !important; color: #fff !important; }
-  .segmentBtn:hover { background: #eef2ff !important; }
-  .pageBtn:hover { background: #f3f4f6 !important; }
   .cancelBtn { background: red !important; color: white !important; }
 }

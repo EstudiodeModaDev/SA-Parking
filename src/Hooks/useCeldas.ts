@@ -55,7 +55,7 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
 
   const [search, setSearch] = React.useState('');
   const [tipo, setTipo] = React.useState<'all' | 'Carro' | 'Moto'>('all');
-  const [itinerancia, setItinerancia] = React.useState<'all' | 'Empleado Fijo' | 'Empleado Itinerante' | 'Directivo'>('all');
+  const [itinerancia, setItinerancia] = React.useState<'all' | 'Empleado Fijo' | 'Empleado Itinerante' | 'Directivo'>('Empleado Itinerante');
 
   const [pageSize, _setPageSize] = React.useState(50);
   const [pageIndex, setPageIndex] = React.useState(0);

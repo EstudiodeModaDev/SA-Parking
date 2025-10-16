@@ -153,7 +153,7 @@ const MisReservas: React.FC<Props> = ({ userMail, isAdmin = false }) => {
                             Cancelar
                           </button>
                         ) : (
-                          <p>No hay acciones disponibles</p>
+                          <p>No aplica hacer cancelación</p>
                         )}
                       </td>
                     </tr>

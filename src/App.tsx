@@ -292,8 +292,8 @@ function AppInner() {
             <>
               <div className="center">
                 <h2>Reservar Parqueadero</h2>
-                <Availability userEmail={user.mail} userName={user.displayName!} />
               </div>
+              <Availability userEmail={user.mail} userName={user.displayName!} />
               <MisReservas userMail={user.mail} isAdmin={false} />
             </>
           )}

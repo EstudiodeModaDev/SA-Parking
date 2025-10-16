@@ -70,28 +70,30 @@
 
 /* Botones genéricos */
 .btn {
-  padding: 6px 10px;
+  padding: 6px 12px;
   border-radius: 8px;
-  border: none;
+  border: 1px solid #2563eb;   /* 🔹 Borde azul */
   cursor: pointer;
   font-weight: 600;
   font-size: 14px;
-  transition: background .2s ease, transform .05s ease;
-  color: blue;
-  
+  transition: background .2s ease, transform .05s ease, color .2s ease, border-color .2s ease;
+
   /* 🔒 Protección contra modo oscuro */
-  background: #fff;         /* color base fijo */
-  color: #111827;           /* texto oscuro fijo */
-  color-scheme: light;      /* fuerza el esquema claro */
-  isolation: isolate;       /* evita heredar inversión global */
+  background: #fff;            /* fondo fijo blanco */
+  color: #2563eb;              /* texto azul */
+  color-scheme: light;         /* fuerza modo claro */
+  isolation: isolate;          /* evita inversión global */
 }
 
 .btn:hover {
-  background: #f3f4f6;      
+  background: #eff6ff;         /* 🔹 Azul muy claro al hover */
+  border-color: #1d4ed8;       /* azul más intenso */
+  color: #1d4ed8;              /* texto también más oscuro */
 }
 
 .btn:active {
   transform: translateY(1px);
+  background: #dbeafe;         /* azul un poco más notorio al click */
 }
 
 .btn:disabled {

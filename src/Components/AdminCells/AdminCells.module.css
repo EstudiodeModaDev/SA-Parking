@@ -1,243 +1,136 @@
 /* =====================================================
-   VARIABLES FIJAS (inmutables ante modo oscuro)
+   🔒 Protección contra modo oscuro global
    ===================================================== */
 :root {
-  /* Fuerza esquema claro */
-  color-scheme: light;
+  color-scheme: light; /* fuerza el esquema claro */
+  --bg:#ffffff;
+  --fg:#111827;
+  --muted:#64748b;
+  --border:#cbd5e1;
+  --border-strong:#94a3b8;
+  --primary:#2563eb;
+  --primary-600:#1d4ed8;
+  --shadow:0 2px 12px rgba(30,41,59,.08);
+  --radius:16px;
+  --radius-sm:8px;
+}
 
-  /* Paleta fija */
-  --bg: #ffffff;
-  --fg: #111827;
-  --muted: #64748b;
-  --border: #cbd5e1;
-  --border-strong: #94a3b8;
-  --primary: #2563eb;
-  --primary-600: #1d4ed8;
-  --shadow: 0 2px 12px rgba(30,41,59,0.08);
-  --radius: 16px;
-  --radius-sm: 8px;
+/* Reasegura los valores en modo oscuro */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:#ffffff !important;
+    --fg:#111827 !important;
+    --muted:#64748b !important;
+    --border:#cbd5e1 !important;
+    --border-strong:#94a3b8 !important;
+    --primary:#2563eb !important;
+    --primary-600:#1d4ed8 !important;
+  }
 }
 
 /* =====================================================
-   LAYOUT Y TEXTO BASE
+   Layout
    ===================================================== */
 .wrapper {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  isolation: isolate; /* evita heredar filtros globales */
-}
-
-.h3 {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--fg);
-  margin: 8px 0;
-}
-
-/* =====================================================
-   BARRA DE FILTROS
-   ===================================================== */
-.filtersBar {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 8px;
-  box-shadow: var(--shadow);
-}
-
-@media (min-width: 1024px) {
-  .filtersBar { flex-wrap: nowrap; }
-}
-
-.searchBox {
-  display: flex;
-  flex: 0 1 200px;
-  min-width: 180px;
-  max-width: 220px;
-  gap: 6px;
-}
-
-.searchInput {
-  flex: 1;
-  padding: 6px 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  outline: none;
-  font: inherit;
   background: var(--bg);
   color: var(--fg);
-}
-
-.searchInput:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(37,99,235,.15);
-}
-
-.pageSizeBox {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--fg);
-  flex: 0 0 auto;
-}
-
-.pageSizeSelect {
-  padding: 0 10px;
-  height: 36px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  outline: none;
-  font: inherit;
-  background: var(--bg);
-  color: var(--fg);
-}
-
-.pageSizeSelect:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(37,99,235,.15);
-}
-
-/* =====================================================
-   TARJETAS GRID (CELDAS)
-   ===================================================== */
-.cardGrid {
-  list-style: none;
-  margin: 12px 0 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 12px;
-}
-
-.card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 10px;
-  box-shadow: 0 2px 10px rgba(2,6,23,0.04);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
   isolation: isolate;
 }
 
-.cardHeader {
-  display: grid !important;
-  grid-template-columns: 1fr auto;
-  grid-template-areas: "title details" "badges badges";
-  align-items: start !important;
-  gap: 6px 10px !important;
-}
-
-.celdaTitle {
-  grid-area: title;
-  width: auto !important;
-  text-align: left !important;
-}
-
-.cardHeader .btnLink,
-.cardHeader .btnPrimary {
-  grid-area: details;
-  justify-self: start;
-  margin-top: 2px;
-}
-
-.cardCode { font-weight: 600; color: #0f172a; }
-.cardBody { display: grid; gap: 6px; }
-.metaLabel { color: #64748b; font-size: 12px; }
-.emptyGrid { margin-top: 8px; color: #64748b; font-style: italic; }
+.h3 { font-size:20px; font-weight:700; color:var(--fg); margin:8px 0; }
 
 /* =====================================================
-   BADGES (ETIQUETAS DE ESTADO)
+   Barra de filtros
    ===================================================== */
-.badgeGroup {
-  grid-area: badges;
-  justify-self: start;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: flex-start !important;
-  gap: 6px !important;
+.filtersBar {
+  display:flex; justify-content:flex-start; align-items:center;
+  gap:6px; flex-wrap:wrap;
+  background:var(--bg);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:8px;
+  box-shadow:var(--shadow);
+  isolation: isolate;
 }
+@media (min-width:1024px){ .filtersBar{ flex-wrap:nowrap; } }
 
-.badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-  border: 1px solid transparent;
+.searchBox { display:flex; flex:0 1 200px; min-width:180px; max-width:220px; gap:6px; }
+.searchInput {
+  flex:1;
+  padding:6px 10px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  outline:none;
+  font:inherit;
+  background:#fff;
+  color:var(--fg);
+  color-scheme: light;
 }
-
-.badgeFree { background: #dcfce7; color: #166534; border-color: #86efac; }
-.badgeReserved { background: #ffedd5; color: #9a3412; border-color: #fdba74; }
-.badgeInUse { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
-.badgeInactive { background: #e5e7eb; color: #374151; border-color: #d1d5db; }
-.badgeWho { color: #64748b; font-size: 11px; }
+.searchInput:focus {
+  border-color:var(--primary);
+  box-shadow:0 0 0 2px rgba(37,99,235,.15);
+}
 
 /* =====================================================
-   BOTONES
+   Tarjetas (grid de celdas)
+   ===================================================== */
+.cardGrid {
+  list-style:none;
+  margin:12px 0 0;
+  padding:0;
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  gap:12px;
+}
+.card {
+  background:#fff;
+  border:1px solid #e5e7eb;
+  border-radius:12px;
+  padding:10px;
+  box-shadow:0 2px 10px rgba(2,6,23,0.04);
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  isolation: isolate;
+}
+
+/* =====================================================
+   Badges
+   ===================================================== */
+.badgeFree{ background:#dcfce7; color:#166534; border-color:#86efac; }
+.badgeReserved{ background:#ffedd5; color:#9a3412; border-color:#fdba74; }
+.badgeInUse{ background:#fee2e2; color:#991b1b; border-color:#fca5a5; }
+.badgeInactive{ background:#e5e7eb; color:#374151; border-color:#d1d5db; }
+
+/* =====================================================
+   Botones
    ===================================================== */
 .btn {
-  padding: 6px 10px;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 14px;
-  transition: background .2s ease, transform .05s ease;
+  padding:6px 10px;
+  border-radius:8px;
+  border:none;
+  cursor:pointer;
+  font-weight:600;
+  font-size:14px;
+  transition:background .2s ease, transform .05s ease;
 }
-.btn:disabled { opacity: .6; cursor: not-allowed; }
-
-.btnPrimary { background: var(--primary); color: #fff; }
-.btnPrimary:hover { background: var(--primary-600); }
-.btnPrimary:active { transform: translateY(1px); }
-
-.btnLink {
-  background: transparent;
-  border: none;
-  color: var(--primary);
-  padding: 6px 8px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 14px;
-  appearance: none;
+.btnPrimary {
+  background:var(--primary);
+  color:#fff;
 }
-.btnLink:hover { text-decoration: underline; }
-.btnLink:active { transform: translateY(1px); }
+.btnPrimary:hover { background:var(--primary-600); }
+.btnGhost {
+  background:#fff;
+  border:1px solid var(--border);
+  color:var(--fg);
+}
+.btnGhost:hover { background:#f8fafc; }
 
 /* =====================================================
-   PAGINACIÓN
-   ===================================================== */
-.paginationBar {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.pageBtn {
-  padding: 6px 10px;
-  border-radius: 8px;
-  background: #fff;
-  border: 1px solid var(--border);
-  color: var(--fg);
-  cursor: pointer;
-  font-weight: 600;
-}
-.pageBtn:disabled { opacity: .6; cursor: not-allowed; }
-.pageBtn:hover { background: #f3f4f6; }
-.pageInfo { font-size: 13px; color: var(--muted); }
-
-/* =====================================================
-   MODAL Y MENSAJES
+   Modal
    ===================================================== */
 .modalBackdrop {
   position: fixed;
@@ -249,6 +142,8 @@
   padding: 4vh 16px;
   z-index: 2147483647;
   animation: modal-fade-in 120ms ease-out;
+  color-scheme: light;
+  isolation: isolate;
 }
 
 .modal {
@@ -259,45 +154,33 @@
   color: var(--fg);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  box-shadow: 0 12px 32px rgba(2,6,23,0.25);
+  box-shadow: 0 12px 32px rgba(2, 6, 23, 0.25);
   padding: 16px;
   animation: modal-pop 140ms cubic-bezier(.2,.8,.2,1);
-}
-
-.modalActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.btnGhost {
-  background: #fff;
-  border: 1px solid var(--border);
-  color: var(--fg);
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-.btnGhost:hover { background: #f8fafc; }
-
-.error {
-  background: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-  padding: 8px 10px;
-  border-radius: 8px;
-}
-.ok {
-  background: #dcfce7;
-  color: #166534;
-  border: 1px solid #bbf7d0;
-  padding: 8px 10px;
-  border-radius: 8px;
+  color-scheme: light;
+  isolation: isolate;
 }
 
 /* =====================================================
-   ANIMACIONES
+   Mensajes
+   ===================================================== */
+.error {
+  background:#fee2e2;
+  color:#991b1b;
+  border:1px solid #fecaca;
+  border-radius:8px;
+  padding:8px 10px;
+}
+.ok {
+  background:#dcfce7;
+  color:#166534;
+  border:1px solid #bbf7d0;
+  border-radius:8px;
+  padding:8px 10px;
+}
+
+/* =====================================================
+   Animaciones
    ===================================================== */
 @keyframes modal-fade-in {
   from { opacity: 0; } to { opacity: 1; }
@@ -305,34 +188,4 @@
 @keyframes modal-pop {
   from { transform: translateY(4px) scale(.98); opacity: .96; }
   to   { transform: translateY(0) scale(1); opacity: 1; }
-}
-
-/* =====================================================
-   🔒 BLOQUEO DE MODO OSCURO
-   ===================================================== */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #ffffff !important;
-    --fg: #111827 !important;
-    --muted: #64748b !important;
-    --border: #cbd5e1 !important;
-    --border-strong: #94a3b8 !important;
-    --primary: #2563eb !important;
-    --primary-600: #1d4ed8 !important;
-  }
-
-  .card,
-  .modal,
-  .filtersBar,
-  .capacityCard,
-  .quickCard {
-    background: #ffffff !important;
-    color: #111827 !important;
-    border-color: #cbd5e1 !important;
-  }
-
-  .btnPrimary { background: #2563eb !important; color: #fff !important; }
-  .btnLink { color: #2563eb !important; }
-  .error { background: #fee2e2 !important; color: #991b1b !important; }
-  .ok { background: #dcfce7 !important; color: #166534 !important; }
 }

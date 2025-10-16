@@ -541,7 +541,7 @@ export default function SlotDetailsModal({open, slot, workers = [], workersLoadi
           <h3 style={S.title}>Celda {slot.Title}</h3>
           <div style={S.headerActions}>
             <button type="button" style={S.iconBtnDanger} onClick={() => onDeleteCell()} title="Eliminar celda" aria-label="Eliminar celda">
-              Eliminar celda
+              Eliminar
             </button>
             <button type="button" style={S.iconBtn} onClick={() => setEditOpen(true)} title="Editar celda" aria-label="Editar celda">
               Editar

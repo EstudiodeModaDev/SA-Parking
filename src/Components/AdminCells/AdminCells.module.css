@@ -77,6 +77,7 @@
   font-weight: 600;
   font-size: 14px;
   transition: background .2s ease, transform .05s ease;
+  color: blue;
   
   /* 🔒 Protección contra modo oscuro */
   background: #fff;         /* color base fijo */
@@ -85,9 +86,8 @@
   isolation: isolate;       /* evita heredar inversión global */
 }
 
-/* Si querés variantes, agrégalas igual de seguras */
 .btn:hover {
-  background: #f3f4f6;      /* gris claro fijo */
+  background: #f3f4f6;      
 }
 
 .btn:active {

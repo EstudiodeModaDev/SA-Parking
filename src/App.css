@@ -34,7 +34,7 @@ body {
   display: flex;
   flex-direction: column;
   border-radius: 12px;
-  overflow: hidden; /* recorta el bg del header si se sale */
+  overflow: scroll; /* recorta el bg del header si se sale */
 }
 
 /* Contenedores fluidos y centrados */

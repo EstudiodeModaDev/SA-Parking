@@ -12,6 +12,8 @@
 
   --danger: #e11d48;            /* rojo */
   --danger-600: #be123c;
+  --container-max: 1400px;   /* o 1500/1600px */
+  --container-vw: 96vw;
 }
 
 /* ====== Base ====== */
@@ -193,7 +195,7 @@ body {
 
 /* ====== Asegurar ancho de secciones centradas ====== */
 .userCard, .nav, .main, .section {
-  width: min(1100px, 92vw);
+  width: min(var(--container-max, 1100px), var(--container-vw, 92vw));
   margin-inline: auto;
 }
 

@@ -4,6 +4,7 @@
 }
 
 .section { 
+  width: min(1400px, 96vw);
   display: flex; 
   justify-content: center; 
   isolation: isolate; 
@@ -14,7 +15,7 @@
   background: #fff;
   border-radius: 16px;
   box-shadow: 0 2px 12px rgba(30,41,59,0.08);
-  padding: 24px;
+  padding: clamp(16px, 2vw, 28px);
   width: 100%;
   max-width: 100%;
   min-width: 0;

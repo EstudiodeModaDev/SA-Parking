@@ -10,24 +10,15 @@ type Props = { userMail: string; isAdmin: boolean };
 
 const MisReservas: React.FC<Props> = ({ userMail, isAdmin = false }) => {
   const { reservations,  parkingSlots} = useGraphServices();
-
   const [spotNames, setSpotNames] = React.useState<Record<string, string>>({});
-
-  // 👇 servicio primero, luego mail, luego flag
-  const {
-    rows, loading, error,
-    range, setRange, applyRange,
-    pageSize, setPageSize, pageIndex, hasNext, nextPage, prevPage,
-    cancelReservation,
-    filterMode, setFilterMode, reloadAll
-  } = useMisReservas(reservations, userMail, isAdmin);
-
+  const {rows, loading, error, range, pageSize, pageIndex, hasNext, filterMode,
+    cancelReservation,setRange, applyRange, setPageSize, nextPage, prevPage, setFilterMode, reloadAll} = useMisReservas(reservations, userMail, isAdmin);
 
   React.useEffect(() => {
     reloadAll();
   }, [userMail, filterMode, range.from, range.to, pageIndex, pageSize]);
 
-    React.useEffect(() => {
+  React.useEffect(() => {
     const fetchSpots = async () => {
       if (!rows || rows.length === 0) return;
 
@@ -60,22 +51,10 @@ const MisReservas: React.FC<Props> = ({ userMail, isAdmin = false }) => {
 
         <div className={styles.topBar}>
           <div className={styles.segmented}>
-            <button
-              type="button"
-              className={`${styles.segmentBtn} ${filterMode === 'upcoming-active' ? styles.segmentBtnActive : ''}`}
-              onClick={() => setFilterMode('upcoming-active')}
-              disabled={loading}
-              title="Mostrar próximas con estado Activa"
-            >
+            <button type="button" className={`${styles.segmentBtn} ${filterMode === 'upcoming-active' ? styles.segmentBtnActive : ''}`} onClick={() => setFilterMode('upcoming-active')} disabled={loading} title="Mostrar próximas con estado Activa">
               Próximas activas
             </button>
-            <button
-              type="button"
-              className={`${styles.segmentBtn} ${filterMode === 'history' ? styles.segmentBtnActive : ''}`}
-              onClick={() => setFilterMode('history')}
-              disabled={loading}
-              title="Ver pasadas y canceladas (con rango de fechas)"
-            >
+            <button type="button" className={`${styles.segmentBtn} ${filterMode === 'history' ? styles.segmentBtnActive : ''}`} onClick={() => setFilterMode('history')} disabled={loading} title="Ver pasadas y canceladas (con rango de fechas)">
               Historial
             </button>
           </div>
@@ -85,24 +64,12 @@ const MisReservas: React.FC<Props> = ({ userMail, isAdmin = false }) => {
           <form className={styles.form} onSubmit={(e) => { e.preventDefault(); applyRange(); }}>
             <label className={styles.label}>
               Desde
-              <input
-                className={styles.input}
-                type="date"
-                value={range.from}
-                max={range.to || undefined}
-                onChange={(e) => setRange(r => ({ ...r, from: e.target.value }))}
-              />
+              <input className={styles.input} type="date" value={range.from} max={range.to || undefined} onChange={(e) => setRange(r => ({ ...r, from: e.target.value }))}/>
             </label>
 
             <label className={styles.label}>
               Hasta
-              <input
-                className={styles.input}
-                type="date"
-                value={range.to}
-                min={range.from || undefined}
-                onChange={(e) => setRange(r => ({ ...r, to: e.target.value }))}
-              />
+              <input className={styles.input} type="date" value={range.to} min={range.from || undefined} onChange={(e) => setRange(r => ({ ...r, to: e.target.value }))}/>
             </label>
           </form>
         )}
@@ -144,12 +111,7 @@ const MisReservas: React.FC<Props> = ({ userMail, isAdmin = false }) => {
                       </td>
                       <td className={styles.td}>
                         {r.Status === 'Activa' ? (
-                          <button
-                            className={styles.cancelBtn}
-                            onClick={() => { void cancelReservation(r.Id); }}
-                            disabled={loading}
-                            title="Cancelar esta reserva"
-                          >
+                          <button className={styles.cancelBtn} onClick={() => { void cancelReservation(r.Id); }} disabled={loading} title="Cancelar esta reserva">
                             Cancelar
                           </button>
                         ) : (
@@ -176,12 +138,7 @@ const MisReservas: React.FC<Props> = ({ userMail, isAdmin = false }) => {
               <div className={styles.paginationRight}>
                 <label className={styles.pageSizeLabel}>
                   Filas por página
-                  <select
-                    className={styles.pageSizeSelect}
-                    value={pageSize}
-                    onChange={(e) => setPageSize(Number(e.target.value) || 20)}
-                    disabled={loading}
-                  >
+                  <select className={styles.pageSizeSelect} value={pageSize} onChange={(e) => setPageSize(Number(e.target.value) || 20)} disabled={loading}>
                     <option value={5}>5</option>
                     <option value={10}>10</option>
                     <option value={20}>20</option>

@@ -23,6 +23,7 @@ body {
   place-items: center; /* centra el .page en pantalla */
   background: var(--brand-bg); /* leve contraste con .page */
   color: var(--brand-text);
+  overflow: hidden;
 }
 
 /* ====== Page layout ====== */

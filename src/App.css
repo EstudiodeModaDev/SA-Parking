@@ -27,7 +27,7 @@ body {
 
 /* ====== Page layout ====== */
 .page {
-  width: min(1200px, 92vw);
+  width: min(1500px, 100vw);
   min-height: min(100dvh, 100%);
   background: var(--brand-surface);
   display: flex;

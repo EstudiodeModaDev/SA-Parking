@@ -23,7 +23,7 @@ body {
   place-items: center; /* centra el .page en pantalla */
   background: var(--brand-bg); /* leve contraste con .page */
   color: var(--brand-text);
-  overflow: hidden;
+  overflow: scroll;
 }
 
 /* ====== Page layout ====== */
@@ -34,7 +34,7 @@ body {
   display: flex;
   flex-direction: column;
   border-radius: 12px;
-  overflow: scroll; /* recorta el bg del header si se sale */
+  overflow: hidden; /* recorta el bg del header si se sale */
 }
 
 /* Contenedores fluidos y centrados */

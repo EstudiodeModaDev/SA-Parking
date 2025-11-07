@@ -38,7 +38,7 @@ body {
 
 /* Contenedores fluidos y centrados */
 .section, .nav, .main {
-  width: min(1100px, 92vw);
+  width: min(1300px, 92vw);
   margin-inline: auto;
 }
 

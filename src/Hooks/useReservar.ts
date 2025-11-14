@@ -160,123 +160,142 @@ export function useReservar(
     [reservationsSvc]
   );
 
-  const reservar = React.useCallback(
-    async ({ vehicle, turn, dateISO }: ReserveArgs): Promise<ReserveResult> => {
-      // 0) Validación por tipo de turno respecto al usuario
+const reservar = React.useCallback(
+  async ({ vehicle, turn, dateISO }: ReserveArgs): Promise<ReserveResult> => {
+    if (turn === 'Dia') {
+      if (await hasActiveReservationAnyTurnSameDay(userMail, dateISO)) {
+        return {
+          ok: false,
+          message: `No puedes reservar día completo: ya tienes una reserva activa para el ${dateISO}.`,
+        };
+      }
+    } else {
+      if (await hasActiveReservationSameDay(userMail, dateISO, turn)) {
+        return {
+          ok: false,
+          message: `No puedes reservar: ya tienes una reserva activa para el ${dateISO} en el turno de la ${turn}.`,
+        };
+      }
+    }
+
+    const slotsFilter = [
+      `(fields/Activa eq 'Activa')`,
+      `fields/TipoCelda eq '${vehicle}'`,
+      `fields/Itinerancia eq 'Empleado Itinerante'`,
+    ].join(' and ');
+
+    const slots = await slotsSvc.getAll({ filter: slotsFilter, top: 2000 });
+    if (!Array.isArray(slots) || slots.length === 0) {
+      return { ok: false, message: `No existen celdas activas para ${vehicle}.` };
+    }
+
+    //IDs de celdas que van siempre al final
+    const LAST_GROUP_IDS = new Set<number>([5]);
+
+    const getSlotId = (slot: unknown): number | null => {
+      const rslot = slot as Record<string, unknown>;
+      const raw =
+        (rslot['ID'] as number | string | undefined) ??
+        (rslot['Id'] as number | string | undefined) ??
+        (rslot['id'] as number | string | undefined);
+      return raw == null ? null : Number(raw);
+    };
+
+    // 🔹 Particionamos: primero normales, luego “último grupo”
+    const primarySlots: unknown[] = [];
+    const lastGroupSlots: unknown[] = [];
+
+    for (const s of slots) {
+      const id = getSlotId(s);
+      if (id == null) continue;
+
+      if (LAST_GROUP_IDS.has(id)) lastGroupSlots.push(s);
+      else primarySlots.push(s);
+    }
+
+    const orderedSlots = [...primarySlots, ...lastGroupSlots];
+
+    console.log('[useReservar] Slots ordenados: ', orderedSlots);
+
+    // 2) Turnos a validar capacidad
+    const turnsToCheck: Exclude<TurnType, 'Dia'>[] =
+      turn === 'Dia' ? ['Manana', 'Tarde'] : [turn as Exclude<TurnType, 'Dia'>];
+
+    // 👉 Ahora iteramos sobre orderedSlots en vez de slots
+    for (const slot of orderedSlots) {
+      const rslot = slot as Record<string, unknown>;
+      const slotId =
+        (rslot['ID'] as number | string | undefined) ??
+        (rslot['Id'] as number | string | undefined) ??
+        (rslot['id'] as number | string | undefined);
+      const code =
+        (rslot['Title'] as string | undefined) ??
+        (rslot['Code'] as string | undefined) ??
+        (rslot['Name'] as string | undefined) ??
+        slotId;
+
+      if (slotId == null) continue;
+
+      let available = true;
+
       if (turn === 'Dia') {
-        // Día completo: bloquear si ya existe cualquier reserva del usuario ese día
-        if (await hasActiveReservationAnyTurnSameDay(userMail, dateISO)) {
-          return {
-            ok: false,
-            message: `No puedes reservar día completo: ya tienes una reserva activa para el ${dateISO}.`,
-          };
-        }
+        const any = await countReservations(slotId, dateISO, ['Manana', 'Tarde', 'Día completo']);
+        if (any > 0) available = false;
       } else {
-        // Mañana/Tarde: bloquear si el usuario ya tiene reserva en ese mismo turno o un 'Día completo'
-        if (await hasActiveReservationSameDay(userMail, dateISO, turn)) {
-          return {
-            ok: false,
-            message: `No puedes reservar: ya tienes una reserva activa para el ${dateISO} en el turno de la ${turn}.`,
-          };
-        }
-      }
-
-      // 1) Traer celdas activas del tipo solicitado (itinerantes)
-      const slotsFilter = [
-        `(fields/Activa eq 'Activa')`,
-        `fields/TipoCelda eq '${vehicle}'`,
-        `fields/Itinerancia eq 'Empleado Itinerante'`,
-      ].join(' and ');
-
-      const slots = await slotsSvc.getAll({ filter: slotsFilter, top: 2000 });
-      if (!Array.isArray(slots) || slots.length === 0) {
-        return { ok: false, message: `No existen celdas activas para ${vehicle}.` };
-      }
-      console.log('[useReservar] Slots: ', slots);
-
-      // 2) Turnos a validar capacidad (para 'Dia' valida mañana y tarde)
-      const turnsToCheck: Exclude<TurnType, 'Dia'>[] =
-        turn === 'Dia' ? ['Manana', 'Tarde'] : [turn as Exclude<TurnType, 'Dia'>];
-
-      for (const slot of slots) {
-        const rslot = slot as Record<string, unknown>;
-        const slotId =
-          (rslot['ID'] as number | string | undefined) ??
-          (rslot['Id'] as number | string | undefined) ??
-          (rslot['id'] as number | string | undefined);
-        const code =
-          (rslot['Title'] as string | undefined) ??
-          (rslot['Code'] as string | undefined) ??
-          (rslot['Name'] as string | undefined) ??
-          slotId;
-
-        if (slotId == null) continue;
-
-        // 3) Validar disponibilidad (capacidad por turno = 1, sin distinción por tipo de vehículo)
-        let available = true;
-
-        if (turn === 'Dia') {
-          // Debe estar libre en ambos turnos y sin 'Día completo' previo
-          const any = await countReservations(slotId, dateISO, ['Manana', 'Tarde', 'Día completo']);
-          if (any > 0) available = false;
-        } else {
-          // Mañana/Tarde: considera también 'Día completo' como bloqueo del turno
-          for (const t of turnsToCheck) {
-            const count = await countReservations(slotId, dateISO, [t, 'Día completo']);
-            if (count >= 1) { available = false; break; }
+        for (const t of turnsToCheck) {
+          const count = await countReservations(slotId, dateISO, [t, 'Día completo']);
+          if (count >= 1) {
+            available = false;
+            break;
           }
         }
-
-        if (!available) continue;
-
-        // 4) Crear **una** sola reserva en la primera celda disponible
-        const turnValue: TurnDb = (turn === 'Dia' ? 'Día completo' : (turn as TurnDb));
-
-        try {
-          const payload = {
-            Title: userMail,
-            Date: dateISO,
-            Turn: turnValue,
-            SpotIdLookupId: Number(slotId),
-            VehicleType: vehicle as VehicleType,
-            Status: 'Activa',
-            NombreUsuario: userName,
-          } satisfies ReservationCreate;
-
-          const created = await reservationsSvc.create(payload);
-
-          // 5) Refrescar listas/estado externo
-          await opts?.onAfterReserve?.();
-
-          const successMsg =
-            turn === 'Dia'
-              ? `Reserva de día completo creada en celda ${code} para ${dateISO}.`
-              : `Reserva creada en celda ${code} para ${dateISO} (${turn}).`;
-
-          return { ok: true, message: successMsg, reservation: created };
-        } catch (e) {
-          console.warn('[useReservar] Falló crear en celda', code, e);
-          // Si falla con esta celda, intenta con la siguiente
-          continue;
-        }
       }
 
-      // 6) Si ninguna celda tuvo cupo
-      const turnoTexto = turn === 'Dia' ? 'día completo' : String(turn).toLowerCase();
-      const msg = `No hay parqueaderos disponibles para ${vehicle} el ${dateISO} en ${turnoTexto}.`;
-      return { ok: false, message: msg };
-    },
-    [
-      reservationsSvc,
-      slotsSvc,
-      hasActiveReservationAnyTurnSameDay,
-      hasActiveReservationSameDay,
-      countReservations,
-      userMail,
-      userName,
-      opts,
-    ]
-  );
+      if (!available) continue;
+
+      const turnValue: TurnDb = turn === 'Dia' ? 'Día completo' : (turn as TurnDb);
+
+      try {
+        const payload = {
+          Title: userMail,
+          Date: dateISO,
+          Turn: turnValue,
+          SpotIdLookupId: Number(slotId),
+          VehicleType: vehicle as VehicleType,
+          Status: 'Activa',
+          NombreUsuario: userName,
+        } satisfies ReservationCreate;
+
+        const created = await reservationsSvc.create(payload);
+        await opts?.onAfterReserve?.();
+
+        const successMsg =
+          turn === 'Dia'
+            ? `Reserva de día completo creada en celda ${code} para ${dateISO}.`
+            : `Reserva creada en celda ${code} para ${dateISO} (${turn}).`;
+
+        return { ok: true, message: successMsg, reservation: created };
+      } catch (e) {
+        console.warn('[useReservar] Falló crear en celda', code, e);
+        continue;
+      }
+    }
+
+    const turnoTexto = turn === 'Dia' ? 'día completo' : String(turn).toLowerCase();
+    const msg = `No hay parqueaderos disponibles para ${vehicle} el ${dateISO} en ${turnoTexto}.`;
+    return { ok: false, message: msg };
+  },
+  [
+    reservationsSvc,
+    slotsSvc,
+    hasActiveReservationAnyTurnSameDay,
+    hasActiveReservationSameDay,
+    countReservations,
+    userMail,
+    userName,
+    opts,
+  ]
+);
 
   return {
     minDate,

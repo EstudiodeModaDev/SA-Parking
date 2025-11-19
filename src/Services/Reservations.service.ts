@@ -48,7 +48,7 @@ export class ReservationsService {
 
     //Definir codigo
   private async reservationCode(){
-      const items = await this.getAll();
+      const items = await this.getAll({top:20000});
       let codigo = '00001';
 
       if (Array.isArray(items)) {

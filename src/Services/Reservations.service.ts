@@ -47,12 +47,11 @@ export class ReservationsService {
   }
 
     //Definir codigo
-  private async reservationCode(){
-      const items = await this.getAll({top:20000});
+  private async reservationCode(number: number){
       let codigo = '00001';
 
-      if (Array.isArray(items)) {
-        codigo = format5(items.length + 1); // -> "00042"
+      if (number) {
+        codigo = format5(number + 1); // -> "00042"
       }
 
       return codigo;
@@ -109,6 +108,7 @@ export class ReservationsService {
   // ---------- CRUD ----------
   async create(record: Omit<Reservations, 'ID'>) {
     await this.ensureIds();
+    console.table(record)
 
     const fieldsPayload: any = {
       Title: record.Title,
@@ -119,7 +119,7 @@ export class ReservationsService {
       VehicleType: record.VehicleType, // o VehicleType si así se llama tu columna
       Status: record.Status,
       OData__ColorTag: record.OData__ColorTag,
-      Codigo: await this.reservationCode()
+      Codigo: await this.reservationCode(Number(record.Codigo))
     };
     console.log(fieldsPayload.Codigo)
     const res = await this.graph.post<any>(

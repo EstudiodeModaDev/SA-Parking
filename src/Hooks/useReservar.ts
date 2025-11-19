@@ -31,6 +31,7 @@ type ReservationCreate = {
   VehicleType: VehicleType; 
   Status: 'Activa' | 'Cancelada' | 'Rechazada' | 'Pendiente';
   NombreUsuario: string;
+  Codigo: string
 };
 
 // ---------- Hook ----------
@@ -255,6 +256,8 @@ const reservar = React.useCallback(
 
       const turnValue: TurnDb = turn === 'Dia' ? 'Día completo' : (turn as TurnDb);
 
+      const total = (await reservationsSvc.getAll({top:20000})).length
+
       try {
         const payload = {
           Title: userMail,
@@ -264,6 +267,7 @@ const reservar = React.useCallback(
           VehicleType: vehicle as VehicleType,
           Status: 'Activa',
           NombreUsuario: userName,
+          Codigo: total + 1
         } satisfies ReservationCreate;
 
         const created = await reservationsSvc.create(payload);

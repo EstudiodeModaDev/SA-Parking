@@ -2,10 +2,10 @@
 import * as React from 'react';
 import { addDays } from '../utils/date';
 import type { ReserveArgs, ReserveResult } from '../Models/Reservation';
-import type { TurnType } from '../Models/shared';
 import { ReservationsService } from '../Services/Reservations.service';
 import { ParkingSlotsService } from '../Services/ParkingSlot.service';
 import { SettingsService } from '../Services/Setting.service';
+import type { TurnType } from '../Models/shared';
 
 export type UseReservarReturn = {
   maxDate: Date | null;
@@ -179,11 +179,7 @@ const reservar = React.useCallback(
       }
     }
 
-    const slotsFilter = [
-      `(fields/Activa eq 'Activa')`,
-      `fields/TipoCelda eq '${vehicle}'`,
-      `fields/Itinerancia eq 'Empleado Itinerante'`,
-    ].join(' and ');
+    const slotsFilter = [`(fields/Activa eq 'Activa')`, `fields/TipoCelda eq '${vehicle}'`, `fields/Itinerancia eq 'Empleado Itinerante'`,].join(' and ');
 
     const slots = await slotsSvc.getAll({ filter: slotsFilter, top: 2000 });
     if (!Array.isArray(slots) || slots.length === 0) {
@@ -218,11 +214,8 @@ const reservar = React.useCallback(
 
     console.log('[useReservar] Slots ordenados: ', orderedSlots);
 
-    // 2) Turnos a validar capacidad
-    const turnsToCheck: Exclude<TurnType, 'Dia'>[] =
-      turn === 'Dia' ? ['Manana', 'Tarde'] : [turn as Exclude<TurnType, 'Dia'>];
+    const turnsToCheck: Exclude<TurnType, 'Dia'>[] = turn === 'Dia' ? ['Manana', 'Tarde'] : [turn as Exclude<TurnType, 'Dia'>];
 
-    // 👉 Ahora iteramos sobre orderedSlots en vez de slots
     for (const slot of orderedSlots) {
       const rslot = slot as Record<string, unknown>;
       const slotId =
@@ -245,10 +238,7 @@ const reservar = React.useCallback(
       } else {
         for (const t of turnsToCheck) {
           const count = await countReservations(slotId, dateISO, [t, 'Día completo']);
-          if (count >= 1) {
-            available = false;
-            break;
-          }
+          if (count >= 1) { available = false; break; }
         }
       }
 

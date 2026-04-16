@@ -128,7 +128,7 @@ const Availability: React.FC<Props> = ({ userEmail, userName }) => {
             <option value="Tarde">
               Tarde ({fmt(InicioTarde)}–{fmt(FinalTarde)})
             </option>
-            <option value="Dia">Día completo</option>
+            <option value="Día completo">Día completo</option>
           </select>
         </label>
 
@@ -169,7 +169,7 @@ const Availability: React.FC<Props> = ({ userEmail, userName }) => {
           <strong>Fecha:</strong> {date}
         </p>
         <p>
-          <strong>Turno:</strong> {turn === 'Dia' ? 'Día completo' : turn}
+          <strong>Turno:</strong> {turn === 'Día completo' ? 'Día completo' : turn}
         </p>
         <p>
           <strong>Vehículo:</strong> {vehicle}

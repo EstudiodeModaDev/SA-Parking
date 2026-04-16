@@ -7,14 +7,6 @@ import { ParkingSlotsService } from '../Services/ParkingSlot.service';
 import { SettingsService } from '../Services/Setting.service';
 import type { TurnType } from '../Models/shared';
 
-export type UseReservarReturn = {
-  maxDate: Date | null;
-  minDate: Date | null;
-  loading: boolean;
-  error: string | null;
-  reservar: (args: ReserveArgs) => Promise<ReserveResult>;
-};
-
 type UseReservarOptions = {
   onAfterReserve?: () => void | Promise<void>;
 };
@@ -35,14 +27,7 @@ type ReservationCreate = {
 };
 
 // ---------- Hook ----------
-export function useReservar(
-  reservationsSvc: ReservationsService,
-  slotsSvc: ParkingSlotsService,
-  settingsSvc: SettingsService,
-  userMail: string,
-  userName: string,
-  opts?: UseReservarOptions
-): UseReservarReturn {
+export function useReservar(reservationsSvc: ReservationsService, slotsSvc: ParkingSlotsService, settingsSvc: SettingsService, userMail: string, userName: string, opts?: UseReservarOptions) {
   const [maxDate, setMaxDate] = React.useState<Date | null>(null);
   const [minDate, setMinDate] = React.useState<Date | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -163,8 +148,9 @@ export function useReservar(
 
 const reservar = React.useCallback(
   async ({ vehicle, turn, dateISO }: ReserveArgs): Promise<ReserveResult> => {
-    if (turn === 'Dia') {
+    if (turn === 'Día completo') {
       if (await hasActiveReservationAnyTurnSameDay(userMail, dateISO)) {
+        console.log("Se tiene reservas ese dia")
         return {
           ok: false,
           message: `No puedes reservar día completo: ya tienes una reserva activa para el ${dateISO}.`,
@@ -172,6 +158,7 @@ const reservar = React.useCallback(
       }
     } else {
       if (await hasActiveReservationSameDay(userMail, dateISO, turn)) {
+        console.log("Se tiene reservas ese dia")
         return {
           ok: false,
           message: `No puedes reservar: ya tienes una reserva activa para el ${dateISO} en el turno de la ${turn}.`,
@@ -214,7 +201,7 @@ const reservar = React.useCallback(
 
     console.log('[useReservar] Slots ordenados: ', orderedSlots);
 
-    const turnsToCheck: Exclude<TurnType, 'Dia'>[] = turn === 'Dia' ? ['Manana', 'Tarde'] : [turn as Exclude<TurnType, 'Dia'>];
+    const turnsToCheck: Exclude<TurnType, 'Día completo'>[] = turn === 'Día completo' ? ['Manana', 'Tarde'] : [turn as Exclude<TurnType, 'Día completo'>];
 
     for (const slot of orderedSlots) {
       const rslot = slot as Record<string, unknown>;
@@ -232,7 +219,7 @@ const reservar = React.useCallback(
 
       let available = true;
 
-      if (turn === 'Dia') {
+      if (turn === 'Día completo') {
         const any = await countReservations(slotId, dateISO, ['Manana', 'Tarde', 'Día completo']);
         if (any > 0) available = false;
       } else {
@@ -244,7 +231,7 @@ const reservar = React.useCallback(
 
       if (!available) continue;
 
-      const turnValue: TurnDb = turn === 'Dia' ? 'Día completo' : (turn as TurnDb);
+      const turnValue: TurnDb = turn === 'Día completo' ? 'Día completo' : (turn as TurnDb);
 
       const total = (await reservationsSvc.getAll({top:20000})).length
 
@@ -264,7 +251,7 @@ const reservar = React.useCallback(
         await opts?.onAfterReserve?.();
 
         const successMsg =
-          turn === 'Dia'
+          turn === 'Día completo'
             ? `Reserva de día completo creada en celda ${code} para ${dateISO}.`
             : `Reserva creada en celda ${code} para ${dateISO} (${turn}).`;
 
@@ -275,7 +262,7 @@ const reservar = React.useCallback(
       }
     }
 
-    const turnoTexto = turn === 'Dia' ? 'día completo' : String(turn).toLowerCase();
+    const turnoTexto = turn === 'Día completo' ? 'día completo' : String(turn).toLowerCase();
     const msg = `No hay parqueaderos disponibles para ${vehicle} el ${dateISO} en ${turnoTexto}.`;
     return { ok: false, message: msg };
   },
@@ -297,5 +284,6 @@ const reservar = React.useCallback(
     loading,
     error,
     reservar,
+    countReservations
   };
 }

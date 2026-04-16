@@ -285,7 +285,7 @@ async function submitQuickReserve() {
               >
                 <option value="Manana">Mañana ({fmt(hours?.InicioManana)}–{fmt(hours?.FinalManana)})</option>
                 <option value="Tarde">Tarde ({fmt(hours?.InicioTarde)}–{fmt(hours?.FinalTarde)})</option>
-                <option value="Dia">Día completo</option>
+                <option value="Día completo">Día completo</option>
               </select>
             </label>
 

@@ -6,7 +6,7 @@ import {
   assignSlotToCollaborator,
   unassignSlotFromCollaborator,
 } from '../../Hooks/useAsignarCeldas';
-import type { Worker } from '../../Models/shared'
+import type { TurnType, VehicleType, Worker } from '../../Models/shared'
 import { nameProve } from '../../Services/Name.Service'
 
 // Auth + Graph + Services (Graph)
@@ -16,6 +16,8 @@ import { ReservationsService } from '../../Services/Reservations.service';
 import { ColaboradoresFijosService } from '../../Services/Colaboradoresfijos.service';
 import { ParkingSlotsService } from '../../Services/ParkingSlot.service';
 import type { Reservations } from '../../Models/Reservation';
+import { useGraphServices } from '../../graph/GraphServicesContext';
+import { useReservar } from '../../Hooks/useReservar';
 
 type Props = {open: boolean; slot: SlotUI | null; onClose: () => void; onChanged?: () => void;workers?: Worker[]; workersLoading?: boolean;};
 
@@ -185,7 +187,9 @@ const norm = (s: string) =>
   s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
 
 export default function SlotDetailsModal({open, slot, workers = [], workersLoading = false,onClose, onChanged,}: Props) {
-  const { ready, getToken } = useAuth();
+  const { ready, getToken, account} = useAuth();
+  const graph = useGraphServices()
+    
   const reservationsSvc = React.useMemo(() => {
     if (!ready) return null;
     const graph = new GraphRest(getToken);
@@ -209,15 +213,17 @@ export default function SlotDetailsModal({open, slot, workers = [], workersLoadi
   }, [ready, getToken]);
 
   const cellsScv = React.useMemo(() => {
-  if (!ready) return null;
-  const graph = new GraphRest(getToken);
-  return new ParkingSlotsService(
-    graph,
-    'estudiodemoda.sharepoint.com',
-    '/sites/TransformacionDigital/IN/SA',
-    'ParkingSlots'
-  );
-}, [ready, getToken]);
+    if (!ready) return null;
+    const graph = new GraphRest(getToken);
+    return new ParkingSlotsService(
+      graph,
+      'estudiodemoda.sharepoint.com',
+      '/sites/TransformacionDigital/IN/SA',
+      'ParkingSlots'
+    );
+  }, [ready, getToken]);
+
+  const { countReservations } = useReservar(reservationsSvc!, cellsScv!, graph.settings, account?.username ?? "", account?.name ?? "",);
 
   // ===== Estado asignación fija =====
   const [loading, setLoading] = React.useState(false);
@@ -232,7 +238,7 @@ export default function SlotDetailsModal({open, slot, workers = [], workersLoadi
   // ===== Reserva puntual =====
   const todayISO = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
   const [rvDate, setRvDate] = React.useState<string>(todayISO);
-  const [rvTurn, setRvTurn] = React.useState<'Manana' | 'Tarde' | 'Dia completo'>('Manana');
+  const [rvTurn, setRvTurn] = React.useState<'Manana' | 'Tarde' | 'Día completo'>('Manana');
   const [rvSaving, setRvSaving] = React.useState(false);
   const [rvError, setRvError] = React.useState<string | null>(null);
   const [rvName, setRvName] = React.useState('');
@@ -419,64 +425,89 @@ export default function SlotDetailsModal({open, slot, workers = [], workersLoadi
     }
   }, [assignee, onChanged, colaboradoresSvc]);
 
-  // Chequear choque (reserva) con Graph
-  const isBusy = React.useCallback(
-    async (spotId: number, dateISO: string, turn: 'Manana' | 'Tarde' | 'Dia completo') => {
-      if (!reservationsSvc) return false;
-      const res: any = await reservationsSvc.getAll({
-        select: ['ID'] as any,
-        top: 1 as any,
-        filter: `fields/SpotId eq ${spotId} and fields/Date eq '${dateISO}' and fields/Turn eq '${turn}' and (fields/Status ne 'Cancelada')`,
-      } as any);
-      const arr = (res?.data ?? res?.value ?? []) as any[];
-      return Array.isArray(arr) && arr.length > 0;
-    },
-    [reservationsSvc]
-  );
+  const onCreateReservation = React.useCallback(async () => {
+    try {
+      const slotId = Number(slot?.Id);
+      const dateISO = rvDate;
+      const turn = rvTurn;
+      const vehicle = slot?.TipoCelda as VehicleType;
 
-  // Crear reserva puntual (usa rvName/rvMail — obligatorios)
-  const onCreateReservation = React.useCallback(
-    async () => {
-      if (!slot || !reservationsSvc) return;
-
-      // Validación hard-stop
-      setRvTouched({ name: true, mail: true });
-      if (nameError || mailError) {
-        setRvError(nameError || mailError);
-        return;
+      if (!slotId || !dateISO || !turn || !vehicle) {
+        return {
+          ok: false,
+          message: "Faltan datos para crear la reserva.",
+        };
       }
 
-      setRvSaving(true);
-      setRvError(null);
-      try {
-        const busy = await isBusy(slot.Id, rvDate, rvTurn);
-        if (busy) {
-          setRvError('Ya existe una reserva para esa fecha y turno en esta celda.');
-          setRvSaving(false);
-          return;
+      // Validar disponibilidad
+      let available = true;
+
+      if (turn === "Día completo") {
+        const any = await countReservations(slotId, dateISO, ["Manana", "Tarde", "Día completo",]);
+
+        if (any > 0) {
+          available = false;
         }
+      } else {
+        const turnsToCheck: Exclude<TurnType, "Día completo">[] = [turn as Exclude<TurnType, "Día completo">];
 
-        await reservationsSvc.create({
-          SpotIdLookupId: Number(slot.Id),
-          Date: rvDate,
-          Turn: rvTurn,
-          Status: 'Activa',
-          NombreUsuario: rvName,
-          Title: rvMail,
-          VehicleType: slot.TipoCelda,
-        } as any);
-
-        await onChanged?.(); // refresca la lista
-        alert('Reserva creada correctamente.');
-        onClose(); // cerrar modal
-      } catch (e: any) {
-        setRvError(e?.message ?? 'No fue posible crear la reserva.');
-      } finally {
-        setRvSaving(false);
+        for (const t of turnsToCheck) {
+          const count = await countReservations(slotId, dateISO, [t, "Día completo"]);
+          if (count >= 1) {
+            available = false;
+            break;
+          }
+        }
       }
-    },
-    [slot, rvDate, rvTurn, rvName, rvMail, isBusy, onChanged, onClose, nameError, mailError, reservationsSvc]
-  );
+
+      if (!available) {
+        const turnoTexto = turn === "Día completo" ? "día completo" : String(turn).toLowerCase();
+        alert(`No hay parqueaderos disponibles para ${vehicle} el ${dateISO} en ${turnoTexto}.`)
+        return
+      }
+
+      // Convertir turno al valor de base de datos
+      const turnValue = turn === "Día completo" ? "Día completo" : (turn);
+
+      // Calcular consecutivo
+      const total = (await graph.reservations.getAll({ top: 20000 })).length;
+
+      // Crear payload
+      const payload = {
+        Title: account?.username ?? "",
+        Date: dateISO,
+        Turn: turnValue,
+        SpotIdLookupId: slotId,
+        VehicleType: vehicle,
+        Status: "Activa",
+        NombreUsuario: account?.name,
+        Codigo: total + 1,
+      };
+
+      // Guardar reserva
+      await graph.reservations.create(payload);
+
+      const successMsg =
+        turn === "Día completo"
+          ? `Reserva de día completo creada para ${dateISO}.`
+          : `Reserva creada para ${dateISO} (${turn}).`;
+
+      alert(successMsg)
+    } catch (e) {
+      console.warn("[useReservar] Error creando reserva", e);
+
+      return {
+        ok: false,
+        message: "Ocurrió un error al crear la reserva.",
+      };
+    }
+  }, [
+    slot,
+    rvDate,
+    rvTurn,
+    countReservations,
+    reservationsSvc,
+  ]);
 
   const onDeleteCell = React.useCallback(
     async () => {
@@ -721,11 +752,11 @@ export default function SlotDetailsModal({open, slot, workers = [], workersLoadi
                     <select
                       style={S.select}
                       value={rvTurn}
-                      onChange={(e) => setRvTurn(e.target.value as 'Manana' | 'Tarde' | 'Dia completo')}
+                      onChange={(e) => setRvTurn(e.target.value as 'Manana' | 'Tarde' | 'Día completo')}
                     >
                       <option value="Manana">AM (06:00–12:59)</option>
                       <option value="Tarde">PM (13:00–19:00)</option>
-                      <option value="Dia completo">Día completo</option>
+                      <option value="Día completo">Día completo</option>
                     </select>
                   </label>
                 </div>

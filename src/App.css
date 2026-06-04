@@ -1,3 +1,16 @@
+@font-face {
+  font-family: 'Objektiv Mk1';
+  src: url('/fonts/ObjektivMk1_Trial_Rg.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 200;
+}
+
+body, html {
+  font-family: 'Objektiv Mk1', sans-serif;
+  font-style: normal;
+  font-weight: 200;
+}
+
 /* =======================
    TOKENS / PALETA GLOBAL
    ======================= */

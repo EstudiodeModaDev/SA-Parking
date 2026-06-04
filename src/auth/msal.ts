@@ -5,8 +5,8 @@ let initialized = false;
 
 export const msal = new PublicClientApplication({
   auth: {
-    clientId: '60d9a880-0f6c-4e14-b17a-1cc06ea9ba8a',
-    //clientId: '4c033c56-8659-4150-a703-54b5fff7c588',
+    //clientId: '60d9a880-0f6c-4e14-b17a-1cc06ea9ba8a',
+    clientId: '4c033c56-8659-4150-a703-54b5fff7c588',
     authority: 'https://login.microsoftonline.com/cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c',
     redirectUri: window.location.origin,
   },

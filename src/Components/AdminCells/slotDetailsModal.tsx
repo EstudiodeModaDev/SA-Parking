@@ -18,6 +18,7 @@ import { ParkingSlotsService } from '../../Services/ParkingSlot.service';
 import type { Reservations } from '../../Models/Reservation';
 import { useGraphServices } from '../../graph/GraphServicesContext';
 import { useReservar } from '../../Hooks/useReservar';
+import ReservationsDisabledNotice, { RESERVATIONS_DISABLED } from '../Notices/ReservationsDisabledNotice';
 
 type Props = {open: boolean; slot: SlotUI | null; onClose: () => void; onChanged?: () => void;workers?: Worker[]; workersLoading?: boolean;};
 
@@ -679,7 +680,14 @@ export default function SlotDetailsModal({open, slot, workers = [], workersLoadi
           )}
 
           {/* ===== Reserva puntual (con selector de colaboradores) ===== */}
-          {mode === 'reserva' && (
+          {mode === 'reserva' && RESERVATIONS_DISABLED && (
+            <div style={S.card}>
+              <h4 style={{ margin: 0 }}>Reserva puntual por turno</h4>
+              <ReservationsDisabledNotice compact />
+            </div>
+          )}
+
+          {mode === 'reserva' && !RESERVATIONS_DISABLED && (
             <div style={S.card}>
               <h4 style={{ margin: 0 }}>Reserva puntual por turno</h4>
               <div style={{ ...S.muted, marginBottom: 8 }}>

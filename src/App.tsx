@@ -2,8 +2,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import './App.css';
 
-import Availability from './Components/Reservar/Reservar';
 import MisReservas from './Components/Mis-Reservas/mis-reservas';
+import ReservationsDisabledNotice from './Components/Notices/ReservationsDisabledNotice';
 import AdminCells from './Components/AdminCells/admin-cells';
 import AdminSettings from './Components/Admin-Settings/AdminSettings';
 import ColaboradoresInscritos from './Components/Colaboradores-Permanentes/Colaboradores';
@@ -290,10 +290,9 @@ function AppInner() {
         <main className="main">
           {!isAdmin && user?.mail && (
             <>
-              <div className="center">
-                <h2>Reservar Parqueadero</h2>
+              <div className="section">
+                <ReservationsDisabledNotice />
               </div>
-              <Availability userEmail={user.mail} userName={user.displayName!} />
               <MisReservas userMail={user.mail} isAdmin={false} />
             </>
           )}

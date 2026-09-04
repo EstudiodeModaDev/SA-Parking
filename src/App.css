@@ -597,3 +597,45 @@ body {
     0 0 0 2px #fff,
     0 0 0 4px #38bdf8;
 }
+
+/* ==========================================
+   Aviso: reservas nuevas deshabilitadas
+   ========================================== */
+.noticeBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-top: 32px;
+  padding: 20px 24px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, color-mix(in oklab, var(--brand-accent) 14%, #fff), color-mix(in oklab, var(--brand-primary) 8%, #fff));
+  border: 1px solid color-mix(in oklab, var(--brand-primary) 22%, #e2e8f0);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, .10);
+}
+
+.noticeIcon {
+  flex: 0 0 auto;
+  font-size: 32px;
+  line-height: 1;
+}
+
+.noticeText { flex: 1 1 auto; }
+
+.noticeTitle {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--brand-text);
+}
+
+.noticeMessage {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: #334155;
+}
+
+@media (max-width: 640px) {
+  .noticeBanner { flex-direction: column; align-items: flex-start; padding: 16px 18px; }
+  .noticeIcon { font-size: 26px; }
+}

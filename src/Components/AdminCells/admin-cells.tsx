@@ -9,6 +9,7 @@ import { useReservar } from '../../Hooks/useReservar';
 import type { TurnType, VehicleType } from '../../Models/shared';
 import { useGraphServices } from '../../graph/GraphServicesContext';
 import { useReporteria } from '../../Hooks/useReportes';
+import ReservationsDisabledNotice, { RESERVATIONS_DISABLED } from '../Notices/ReservationsDisabledNotice';
 
 const AdminCells: React.FC = () => {
   const {
@@ -255,6 +256,10 @@ async function submitQuickReserve() {
             <span className={styles.cardTitle}>Reserva rápida</span>
           </div>
 
+          {RESERVATIONS_DISABLED ? (
+            <ReservationsDisabledNotice compact />
+          ) : (
+          <>
           {(reservarError || hoursError) && (
             <div className={styles.error}>
               {reservarError || hoursError}
@@ -374,6 +379,8 @@ async function submitQuickReserve() {
               {qrSaving ? 'Reservando…' : 'Reservar'}
             </button>
           </div>
+          </>
+          )}
         </div>
       </div>
 

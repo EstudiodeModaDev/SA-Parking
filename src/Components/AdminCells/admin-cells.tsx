@@ -14,13 +14,13 @@ import ReservationsDisabledNotice, { RESERVATIONS_DISABLED } from '../Notices/Re
 const AdminCells: React.FC = () => {
   const {
     // estado base
-     error,
-    rows, pageIndex, hasNext,
+     error,rows, pageIndex, hasNext,
 
     // filtros y paginación
     search, setSearch, onSearchEnter,
     tipo, setTipo,
     itinerancia, setItinerancia,
+    estado, setEstado,
     pageSize, setPageSize,
     nextPage, prevPage,
 
@@ -410,6 +410,19 @@ async function submitQuickReserve() {
             <option value="Empleado Fijo">Empleado Fijo</option>
             <option value="Empleado Itinerante">Empleado Itinerante</option>
             <option value="Directivo">Directivo</option>
+          </select>
+        </div>
+
+        <div className={styles.pageSizeBox}>
+          <span>Estado</span>
+          <select
+            className={styles.pageSizeSelect}
+            value={estado}
+            onChange={(e) => setEstado(e.target.value as 'all' | 'Activa' | 'Inactiva')}
+          >
+            <option value="Activa">Activas</option>
+            <option value="Inactiva">Inactivas</option>
+            <option value="all">Todas</option>
           </select>
         </div>
 

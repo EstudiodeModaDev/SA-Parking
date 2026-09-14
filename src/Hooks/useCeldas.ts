@@ -26,6 +26,9 @@ export type UseParkingSlotsReturn = {
   itinerancia: 'all' | 'Empleado Fijo' | 'Empleado Itinerante' | 'Directivo';
   setItinerancia: (i: 'all' | 'Empleado Fijo' | 'Empleado Itinerante' | 'Directivo') => void;
 
+  estado: 'all' | 'Activa' | 'Inactiva';
+  setEstado: (e: 'all' | 'Activa' | 'Inactiva') => void;
+
   pageSize: number;
   setPageSize: (n: number) => void;
   pageIndex: number;
@@ -56,6 +59,7 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
   const [search, setSearch] = React.useState('');
   const [tipo, setTipo] = React.useState<'all' | 'Carro' | 'Moto'>('all');
   const [itinerancia, setItinerancia] = React.useState<'all' | 'Empleado Fijo' | 'Empleado Itinerante' | 'Directivo'>('Empleado Itinerante');
+  const [estado, setEstado] = React.useState<'all' | 'Activa' | 'Inactiva'>('Activa');
 
   const [pageSize, _setPageSize] = React.useState(50);
   const [pageIndex, setPageIndex] = React.useState(0);
@@ -171,10 +175,20 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
         : items;
 
       const ui = itemsFiltered.map(mapSlotToUI);
-      setAllRows(ui);
-      setRows(ui.slice(0, pageSize));
+
+      // filtro por estado (activa/inactiva) en cliente
+      const isActiva = (r: SlotUI) => r.Activa === 'Activa';
+      const uiPorEstado = estado === 'all'
+        ? ui
+        : ui.filter(r => (estado === 'Activa') === isActiva(r));
+
+      // activas primero, luego inactivas
+      const uiOrdenado = [...uiPorEstado].sort((a, b) => Number(isActiva(b)) - Number(isActiva(a)));
+
+      setAllRows(uiOrdenado);
+      setRows(uiOrdenado.slice(0, pageSize));
       setPageIndex(0);
-      setHasNext(ui.length > pageSize);
+      setHasNext(uiOrdenado.length > pageSize);
     } catch (e: any) {
       if (myId !== reqIdRef.current) return;
       console.error('[useCeldas] reloadAll error:', e);
@@ -184,7 +198,7 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
     } finally {
       if (myId === reqIdRef.current) setLoading(false);
     }
-  }, [svc, pageSize, tipo, itinerancia]);
+  }, [svc, pageSize, tipo, itinerancia, estado]);
 
   // -------- paginación ----------
   const setPageSize = React.useCallback((n: number) => {
@@ -236,7 +250,7 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
-  }, [search, tipo, itinerancia, reloadAll]);
+  }, [search, tipo, itinerancia, estado, reloadAll]);
 
   // Carga inicial
   React.useEffect(() => {
@@ -257,6 +271,9 @@ export function useCeldas(svc: ParkingSlotsService): UseParkingSlotsReturn {
 
     itinerancia,
     setItinerancia,
+
+    estado,
+    setEstado,
 
     pageSize,
     setPageSize,

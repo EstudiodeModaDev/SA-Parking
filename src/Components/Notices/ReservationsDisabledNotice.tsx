@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-export const RESERVATIONS_DISABLED = true;
+export const RESERVATIONS_DISABLED = false;
 export const RESERVATIONS_DISABLED_SINCE = '4 de septiembre';
 
 type Props = { compact?: boolean };

@@ -65,8 +65,15 @@ function Celdas() {
     <div className="flex flex-col gap-6 text-slate-800">
       {/* Encabezado */}
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="font-bold text-2xl text-slate-900 mt-1">Celdas</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="font-bold text-3xl text-slate-900">
+              Gestión de Celdas
+            </p>
+            <p className="font-light text-slate-500 mt-2">
+              Gestiona disponibilidad, asigna reservas pendientes y ubica vehículos puntuales de forma ágil.
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <button className="flex items-center gap-2 h-11 px-5 rounded-lg bg-blue-700 text-white text-sm font-semibold" onClick={abrirCrear}>

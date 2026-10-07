@@ -107,12 +107,12 @@ function UsuariosApp(props: Props) {
       <Popup
         isOpen={modalAbierto}
         onClose={cerrarModal}
-        titulo="Agregar colaborador"
+        titulo="Agregar Usuario App"
       >
         <form onSubmit={handleAgregar} className="flex flex-col gap-5 p-1">
           <label className="flex flex-col gap-2">
             <span className="font-medium text-slate-700">
-              Correo institucional
+              Correo Corporativo
             </span>
             <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition">
               <FiMail className="text-slate-500 shrink-0" size={18} />
@@ -168,7 +168,7 @@ function UsuariosApp(props: Props) {
               <tr className="uppercase text-sm tracking-wide text-slate-500">
                 <th className="px-6 py-4 font-semibold">Colaborador</th>
                 <th className="px-6 py-4 font-semibold">
-                  Correo institucional
+                  Correo corporativo
                 </th>
                 <th className="px-6 py-4 font-semibold text-right">Acciones</th>
               </tr>

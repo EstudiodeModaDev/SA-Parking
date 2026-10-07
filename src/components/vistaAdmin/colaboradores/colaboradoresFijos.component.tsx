@@ -9,6 +9,8 @@ import {
 import type { colaboradoresFijos } from "../../../types/colaboradores";
 import { FaMotorcycle } from "react-icons/fa";
 import { AiOutlineLoading } from "react-icons/ai";
+import { useCeldas } from "../../../hooks/useCeldas";
+import type { celda } from "../../../types/celdas";
 
 type NuevoColaboradorFijo = Omit<colaboradoresFijos, "ID">;
 
@@ -24,7 +26,7 @@ const formInicial: NuevoColaboradorFijo = {
 function FormNuevoColaboradorFijo() {
   const [form, setForm] = useState<NuevoColaboradorFijo>(formInicial);
   const useCreateColaboradorFijo = useCreateColaborador();
-
+  const celdas = useCeldas();
   const setCampo = <K extends keyof NuevoColaboradorFijo>(
     campo: K,
     valor: NuevoColaboradorFijo[K],
@@ -87,13 +89,15 @@ function FormNuevoColaboradorFijo() {
           value={form.Placa}
           onChange={(e) => setCampo("Placa", e.target.value)}
         />
-        <input
-          type="text"
-          placeholder="Celda asignada"
+        <select
           className={`${inputClass} font-mono`}
           value={form.SpotAsignado}
           onChange={(e) => setCampo("SpotAsignado", e.target.value)}
-        />
+        >
+          {celdas.data?.map((celda: celda) => {
+            return <option>{`${celda.Title}`}</option>;
+          })}
+        </select>
         <button
           type="submit"
           disabled={useCreateColaboradorFijo.isPending}

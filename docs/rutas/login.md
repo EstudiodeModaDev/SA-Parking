@@ -45,7 +45,7 @@ Inicio de sesión con la cuenta corporativa de Microsoft y pantallas de mensaje 
 
 ## Cerrar sesión
 
-El botón de salida de [layouts/adminAppBar.tsx](../../src/layouts/adminAppBar.tsx#L12) (presente en todas las páginas protegidas) llama a `logoutRedirect` con `postLogoutRedirectUri = <origen>/login`.
+El botón de salida de [layouts/adminAppBar.tsx](../../src/layouts/adminAppBar.tsx#L13) (presente en todas las páginas protegidas) llama a `logoutRedirect` con `postLogoutRedirectUri = <origen>/login`.
 
 ---
 

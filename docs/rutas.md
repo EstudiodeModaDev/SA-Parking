@@ -26,7 +26,7 @@ Las rutas de administrador se muestran dentro de `MainLayout` (AppBar + SideBar)
 | --- | --- | --- | --- |
 | `/reserva` | Admin | [Reservas](rutas/reservas.md) | `GET /reserva`, `GET /reserva/history`, `GET /settings/get` |
 | `/celdas` | Admin | [Celdas](rutas/celdas.md) | `GET /parkingSlots/getSlots`, `POST /parkingSlots/createSlot`, `PUT /parkingSlots/editSlot/:id`, `PUT /parkingSlots/activeSlot/:id`, `PUT /parkingSlots/inactiveSlot/:id`, `POST /reserva/createQuickAdm`, `POST /reserva/createPuntAdm`, `GET /colaboradores/all`, `GET /settings/get` |
-| `/colaboradores` | Admin | [Colaboradores](rutas/colaboradores.md) | `GET/POST/DELETE /colaboradores/fijos…`, `GET /colaboradores/mailList`, `POST /colaboradores/addUser`, `DELETE /colaboradores/remove`, `GET/POST/DELETE /registro-vehicular…` |
+| `/colaboradores` | Admin | [Colaboradores](rutas/colaboradores.md) | `GET/POST/DELETE /colaboradores/fijos…`, `GET /parkingSlots/getSlots`, `GET /colaboradores/mailList`, `POST /colaboradores/addUser`, `DELETE /colaboradores/remove`, `GET/POST/DELETE /registro-vehicular…` |
 | `/configuraciones` | Admin | [Configuraciones](rutas/configuraciones.md) | `GET /settings/get`, `PUT /settings/put` |
 
 ## Rutas de usuario
@@ -40,7 +40,7 @@ Las rutas de administrador se muestran dentro de `MainLayout` (AppBar + SideBar)
 | Endpoint | Hook | Dónde se usa |
 | --- | --- | --- |
 | `GET /usuarios/getRole` | `useRol` | `RedirectByRole` y `RequireRole`, para decidir el acceso. |
-| `GET /usuarios/infoMe` | `useInfoMe` | `AdminAppBar`, para mostrar nombre y cargo. |
+| `GET /usuarios/infoMe` | `useInfoMe` (vía `useUsuarioActual`) | `AdminAppBar`, para mostrar nombre y cargo. |
 | `GET /settings/get` | `useSettings` | `AdminAppBar` (vía `useTurnoActual`), para mostrar el turno actual. |
 
 La documentación de cada endpoint (validaciones, roles y respuestas) está en el repositorio **SA-Parking-Backend**, en `docs/rutas.md`.

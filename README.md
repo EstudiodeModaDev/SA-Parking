@@ -43,7 +43,7 @@ src/
 │   └── redirectByRole.tsx      # Redirige "/" a la página de inicio según el rol
 ├── layouts/                    # Estructura visual de las vistas de administrador
 │   ├── mainLayout.tsx          # AppBar + SideBar + contenido
-│   ├── adminAppBar.tsx         # Logo, turno actual, usuario y cerrar sesión
+│   ├── adminAppBar.tsx         # Logo, turno actual, instalar PWA, usuario y cerrar sesión
 │   └── sideBar.tsx             # Menú lateral
 ├── pages/                      # Una página por ruta
 ├── components/                 # Componentes compartidos y por vista
@@ -81,6 +81,26 @@ npm run lint      # eslint
 ## Despliegue
 
 Cada push a `main` dispara los workflows de [.github/workflows/](.github/workflows/), que compilan la app y la publican en **Azure Static Web Apps** (`app_location: "/"`, `output_location: "dist"`). La app se registra como PWA con `vite-plugin-pwa` ([vite.config.ts](vite.config.ts)) y se actualiza sola cuando hay una versión nueva.
+
+## Instalación como PWA
+
+El AppBar ([src/layouts/adminAppBar.tsx](src/layouts/adminAppBar.tsx)) muestra un botón de descarga que instala la app. Funciona así:
+
+1. **Captura temprana del evento.** El navegador lanza `beforeinstallprompt` una sola vez y muy pronto, mientras `main.tsx` todavía espera a MSAL (`initialize` y `handleRedirectPromise`). Por eso [src/main.tsx](src/main.tsx) lo escucha antes de montar React, cancela el aviso automático (`preventDefault`), lo guarda en `window.deferredPrompt` y lanza el evento propio `pwa-installable`.
+2. **El AppBar lo recoge.** Al montarse lee `window.deferredPrompt` (si el evento ya llegó) y escucha `pwa-installable` (si llega después).
+3. **Ya instalada.** Si la app corre en modo `standalone` (o `navigator.standalone` en iOS), o cuando se dispara `appinstalled`, el botón se oculta.
+4. **Clic.** Llama a `prompt()` y espera `userChoice`. El evento solo sirve una vez, así que después se borra del estado y de `window`.
+
+El botón solo aparece si hay un evento guardado y la app no está instalada.
+
+**Para probarlo:**
+
+- En `npm run dev` no hay manifest ni service worker (salvo que se agregue `devOptions: { enabled: true }` al plugin `VitePWA`), así que el evento no llega. Usa `npm run build && npm run preview`.
+- Si la app ya está instalada en ese navegador, Chrome no lanza el evento. Desinstálala para volver a probar.
+- En DevTools → **Application → Manifest** Chrome indica si la app es instalable y por qué no.
+- iOS/Safari no soporta `beforeinstallprompt`. Ahí se instala desde **Compartir → Agregar a pantalla de inicio**.
+
+> `includeAssets` en [vite.config.ts](vite.config.ts) referencia `favicon.ico`, `apple-touch-icon.png` y `masked-icon.svg`, pero [public/](public/) solo tiene `favicon.svg`, `pwa-192x192.png` y `pwa-512x512.png`. No impide la instalación, pero conviene corregirlo.
 
 ## Agregar una página nueva
 

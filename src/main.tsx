@@ -10,6 +10,14 @@ import NotificacionProvider from "./components/notificacion.component";
 
 import { registerSW } from 'virtual:pwa-register'
 registerSW({ immediate: true })
+
+// Capturamos el evento de instalación antes de que React monte,
+// porque el navegador lo lanza una sola vez y muy temprano
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  (window as any).deferredPrompt = e;
+  window.dispatchEvent(new Event("pwa-installable"));
+});
 const queryClient = new QueryClient();
 
 const AppProvider = () => (

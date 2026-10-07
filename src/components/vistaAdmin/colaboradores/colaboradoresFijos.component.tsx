@@ -94,9 +94,12 @@ function FormNuevoColaboradorFijo() {
           value={form.SpotAsignado}
           onChange={(e) => setCampo("SpotAsignado", e.target.value)}
         >
-          {celdas.data?.map((celda: celda) => {
-            return <option>{`${celda.Title}`}</option>;
-          })}
+          <option value="">Sin celda asignada</option>
+          {celdas.data?.map((celda: celda) => (
+            <option key={celda.Title} value={celda.Title}>
+              {celda.Title}
+            </option>
+          ))}
         </select>
         <button
           type="submit"

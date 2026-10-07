@@ -25,12 +25,15 @@ Administración de las personas que usan el parqueadero. La página tiene tres p
 
 ## Pestaña Colaboradores fijos
 
-- **Componentes:** `FormNuevoColaboradorFijo` y `ColaboradoresFijos` — [colaboradoresFijos.component.tsx:24](../../src/components/vistaAdmin/colaboradores/colaboradoresFijos.component.tsx#L24)
-- **Lógica:** al crear, la placa se guarda en mayúsculas y el correo sin espacios. El formulario se limpia solo si se crea.
+- **Componentes:** `FormNuevoColaboradorFijo` y `ColaboradoresFijos` — [colaboradoresFijos.component.tsx:26](../../src/components/vistaAdmin/colaboradores/colaboradoresFijos.component.tsx#L26)
+- **Lógica:**
+  - La celda asignada (`SpotAsignado`) se elige en un select con el `Title` de las celdas que trae `useCeldas`. La opción por defecto es "Sin celda asignada", que envía `SpotAsignado` vacío.
+  - Al crear, la placa se guarda en mayúsculas y el correo sin espacios. El formulario se limpia solo si se crea.
 
 | Acción | Hook | Endpoint |
 | --- | --- | --- |
 | Listar | `useColaboradores` | `GET /colaboradores/fijos` |
+| Celdas del select | `useCeldas` | `GET /parkingSlots/getSlots` |
 | Crear | `useCreateColaborador` | `POST /colaboradores/createFijo` |
 | Eliminar | `useDeleteColaborador` | `DELETE /colaboradores/deleteFijo/:id` |
 
@@ -41,7 +44,7 @@ Administración de las personas que usan el parqueadero. La página tiene tres p
 - **Componente:** `UsuariosApp` — [usuariosApp.comoponent.tsx:19](../../src/components/vistaAdmin/colaboradores/usuariosApp.comoponent.tsx#L19)
 - **Lógica:**
   - La búsqueda filtra por nombre, sin distinguir mayúsculas ni tildes, al enviar el formulario. Al vaciar el campo se muestra de nuevo la lista completa.
-  - **Agregar** abre un popup que pide el correo; se envía en minúsculas y sin espacios.
+  - **Agregar** abre el popup "Agregar Usuario App", que pide el correo corporativo; se envía en minúsculas y sin espacios.
   - Al eliminar un usuario se limpia el filtro para mostrar la lista actualizada.
 - **Efecto en el acceso:** quien está en este grupo obtiene rol `Usuario` y puede entrar a [Mi reserva](mi-reserva.md). Quien no está (ni en la lista de usuarios de la app) ve [`/sin-acceso`](login.md#sin-acceso).
 

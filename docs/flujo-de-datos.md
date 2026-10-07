@@ -26,12 +26,17 @@ Este documento describe el recorrido genérico que sigue la app: desde que arran
 
 ## 1. Arranque de la app
 
-[src/main.tsx](../src/main.tsx) ejecuta `iniciarApp()` antes de pintar nada:
+[src/main.tsx](../src/main.tsx) hace dos cosas apenas se carga el módulo, antes de MSAL y React:
+
+- Registra el service worker de la PWA (`registerSW({ immediate: true })`).
+- Captura el evento `beforeinstallprompt` y lo guarda en `window.deferredPrompt` (ver [Instalación como PWA](../README.md#instalación-como-pwa)).
+
+Luego ejecuta `iniciarApp()` antes de pintar nada:
 
 1. `pca.initialize()` prepara la instancia de MSAL definida en [src/auth/msal.ts](../src/auth/msal.ts) (`clientId`, `authority`, `redirectUri = window.location.origin` y caché en `localStorage`).
 2. `pca.handleRedirectPromise()` procesa la respuesta si el usuario viene del login de Microsoft y deja esa cuenta como **cuenta activa**.
 3. Si no viene del login pero ya había una sesión guardada (por ejemplo, recargó la página), toma la primera cuenta guardada como activa.
-4. Registra el service worker de la PWA (`registerSW`) y renderiza la app.
+4. Renderiza la app.
 
 ## 2. Providers
 
@@ -70,7 +75,7 @@ Los hooks de [src/hooks/](../src/hooks/) envuelven cada endpoint:
 
 | Hook | `queryKey` | Invalida al mutar |
 | --- | --- | --- |
-| `useRol`, `useInfoMe` | `['usuario', …]` | — |
+| `useRol`, `useInfoMe`, `useUsuarioActual` (combina los dos) | `['usuario', …]` | — |
 | `useSettings` / `useEditSettings` | `['settings', 'get']` | `['settings']` |
 | `useCeldas` / `useCreateCelda`, `useEditCelda`, `useActivateCelda`, `useDeactivateCelda` | `['celdas', 'get']` | `['celdas', 'get']` |
 | `useReservas(vista)` / `useCreateReserva`, `useCreateReservaAdmin`, `useCancelReserva` | `['reserva', vista]` | `['reserva']` |

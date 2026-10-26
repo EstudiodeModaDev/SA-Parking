@@ -1,0 +1,1 @@
+{"root":["./src/main.tsx","./src/router.tsx","./src/vite-env.d.ts","./src/hooks/usevistacolaboradores.ts","./src/hooks/usevistareservas.ts","./src/layouts/adminappbar.tsx","./src/layouts/mainlayout.tsx","./src/layouts/sidebar.tsx","./src/pages/colaboradores.tsx","./src/pages/login.tsx","./src/pages/reservas.tsx"],"errors":true,"version":"6.0.3"}
